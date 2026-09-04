@@ -113,9 +113,9 @@ texture = ExtResource("18")
 [node name="BedroomEnding" type="Node2D" parent="Rooms/Bedroom"]
 script = ExtResource("9")
 player = NodePath("../../../Player")
-wall_item = NodePath("WallItem")
-door_item = NodePath("DoorItem")
-end_item = NodePath("EndItem")
+wall_item = NodePath("../WallItem")
+door_item = NodePath("../DoorItem")
+end_item = NodePath("../EndItem")
 bedroom_spawn = Vector2(320, 948)
 living_room_door_pos = Vector2(1850, 948)
 

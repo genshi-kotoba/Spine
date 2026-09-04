@@ -3,7 +3,7 @@ extends CharacterBody2D
 ## Player — 关卡场景角色
 ## 仅支持左右移动（A/D 或方向键），带简单重力与地面碰撞。
 
-@export var move_speed: float = 200.0
+@export var move_speed: float = 400.0  # user: x2 speed
 
 ## 水平加速度（像素/秒²，规格⑩，新增）：有输入时逼近 move_speed
 @export var acceleration: float = 1200.0

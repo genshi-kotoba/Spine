@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/objects/AutoDoor.gd" id="1"]
+
+[sub_resource type="RectangleShape2D" id="body_col"]
+size = Vector2(20, 320)
+
+[sub_resource type="RectangleShape2D" id="detect_col"]
+size = Vector2(20, 320)
+
+[node name="AutoDoor" type="Area2D"]
+script = ExtResource("1")
+
+[node name="DetectionShape" type="CollisionShape2D" parent="."]
+shape = SubResource("detect_col")
+
+[node name="DoorBody" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DoorBody"]
+shape = SubResource("body_col")
+
+[node name="DoorVisual" type="Polygon2D" parent="DoorBody"]
+color = Color(0.55, 0.42, 0.3, 1)
+polygon = PackedVector2Array(-10, -160, 10, -160, 10, 160, -10, 160)

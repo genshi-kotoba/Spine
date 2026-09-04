@@ -1,0 +1,30 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/objects/LockedBedroomDoor.gd" id="1"]
+
+[sub_resource type="RectangleShape2D" id="detect_col"]
+size = Vector2(80, 340)
+
+[sub_resource type="RectangleShape2D" id="body_col"]
+size = Vector2(24, 340)
+
+[node name="LockedBedroomDoor" type="Area2D"]
+script = ExtResource("1")
+object_id = "c3_bedroom_door"
+initial_state = "locked"
+
+[node name="DetectionShape" type="CollisionShape2D" parent="."]
+shape = SubResource("detect_col")
+
+[node name="DoorBody" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DoorBody"]
+shape = SubResource("body_col")
+
+[node name="DoorVisual" type="Polygon2D" parent="DoorBody"]
+color = Color(0.25, 0.25, 0.3, 1)
+polygon = PackedVector2Array(-12, -170, 12, -170, 12, 170, -12, 170)
+
+[node name="LockMarker" type="Polygon2D" parent="DoorBody"]
+color = Color(0.9, 0.2, 0.2, 1)
+polygon = PackedVector2Array(-30, -8, 30, -8, 30, 8, -30, 8)

@@ -71,8 +71,9 @@ func begin() -> void:
 	GameState.set_process_flag("bedroom_interactions_done", false)
 	GameState.set_process_flag("bedroom_unlocked", false)
 	GameState.set_process_flag("end_white", false)
-	_move_player(bedroom_spawn)
-	print("[bedroom_ending] begin: respawn player to %s" % str(bedroom_spawn))
+	# 用卧室实例全局换算：bedroom_spawn 为卧室局部坐标，转全局后搬运主 Player（f2/f3）
+	_move_player(_bedroom_global(bedroom_spawn))
+	print("[bedroom_ending] begin: respawn player to %s" % str(_bedroom_global(bedroom_spawn)))
 
 
 ## 墙 item 每次交互回调：计数；达上限后一次：呼吸解除 + 门解锁 + 置 interactions_done。
@@ -112,17 +113,25 @@ func _move_player(to: Vector2) -> void:
 		return
 	var p := get_node_or_null(player)
 	if p is Node2D:
-		(p as Node2D).position = to
+		(p as Node2D).global_position = to
+
+
+## 把卧室局部坐标转全局（卧室实例在父节点下偏移；无父 Node2D 则原样）。
+func _bedroom_global(local: Vector2) -> Vector2:
+	var par := get_parent()
+	if par is Node2D:
+		return (par as Node2D).to_global(local)
+	return local
 
 
 ## 当前玩家位置（自检用；无玩家返回 bedroom_spawn 便于比对）。
 func _player_pos() -> Vector2:
 	if player == NodePath():
-		return bedroom_spawn
+		return _bedroom_global(bedroom_spawn)
 	var p := get_node_or_null(player)
 	if p is Node2D:
-		return (p as Node2D).position
-	return bedroom_spawn
+		return (p as Node2D).global_position
+	return _bedroom_global(bedroom_spawn)
 
 
 ## 取节点下首个 Polygon2D 子节点（白模占位视觉；无可返回 null）。
@@ -148,9 +157,11 @@ func _run_self_check() -> void:
 	var d := get_node_or_null(door_item) as BedroomDoorItem
 	var e := get_node_or_null(end_item) as BedroomEndItem
 
-	# —— A. 黑屏后重显卧室靠左 ——
+	# —— A. 黑屏后重显卧室靠左 (全局坐标≈bedroom_global(spawn)，容差) ——
 	begin()
-	checks.append("spawn_left1" if _player_pos() == bedroom_spawn else "spawn_left_FAIL1")
+	var target_spawn: Vector2 = _bedroom_global(bedroom_spawn)
+	var dspawn: float = _player_pos().distance_to(target_spawn)
+	checks.append("spawn_left1" if dspawn < 3.0 else "spawn_left_FAIL1")
 
 	# —— B. 卧室门默认 gate 未满足：touched 不触发（gate_blocked），墙交互前门不可用 ——
 	if d != null and d.gate_flag != "":

@@ -20,6 +20,18 @@
 [ext_resource type="Texture2D" path="res://assets/ui/e_key.png" id="18"]
 [ext_resource type="Texture2D" path="res://assets/ui/corridor_wall.png" id="20"]
 
+[sub_resource type="RectangleShape2D" id="floor_col"]
+size = Vector2(3840, 40)
+
+[sub_resource type="RectangleShape2D" id="ceiling_col"]
+size = Vector2(3840, 40)
+
+[sub_resource type="RectangleShape2D" id="wall_side_col"]
+size = Vector2(20, 817)
+
+[sub_resource type="RectangleShape2D" id="wall_lintel_col"]
+size = Vector2(20, 497)
+
 [sub_resource type="RectangleShape2D" id="blocker_col"]
 size = Vector2(40, 460)
 
@@ -125,6 +137,8 @@ living_room_door_pos = Vector2(1850, 948)
 position = Vector2(1920, 1008)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Floor"]
+shape = SubResource("floor_col")
+shape = SubResource("floor_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/Floor"]
 color = Color(0.5, 0.5, 0.5, 1)
@@ -134,6 +148,8 @@ polygon = PackedVector2Array(-1920, -20, 1920, -20, 1920, 20, -1920, 20)
 position = Vector2(1920, 231)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Ceiling"]
+shape = SubResource("ceiling_col")
+shape = SubResource("ceiling_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/Ceiling"]
 color = Color(0.5, 0.5, 0.5, 1)
@@ -143,6 +159,8 @@ polygon = PackedVector2Array(-1920, -20, 1920, -20, 1920, 20, -1920, 20)
 position = Vector2(0, 619.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLeft"]
+shape = SubResource("wall_side_col")
+shape = SubResource("wall_side_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/WallLeft"]
 color = Color(0.35, 0.33, 0.3, 1)
@@ -152,6 +170,8 @@ polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
 position = Vector2(3840, 619.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallRight"]
+shape = SubResource("wall_side_col")
+shape = SubResource("wall_side_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/WallRight"]
 color = Color(0.35, 0.33, 0.3, 1)
@@ -161,6 +181,8 @@ polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
 position = Vector2(1280, 459.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallStudyLiving"]
+shape = SubResource("wall_lintel_col")
+shape = SubResource("wall_lintel_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/WallStudyLiving"]
 color = Color(0.35, 0.33, 0.3, 1)
@@ -170,6 +192,8 @@ polygon = PackedVector2Array(-10, -248.5, 10, -248.5, 10, 248.5, -10, 248.5)
 position = Vector2(2560, 459.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLivingDining"]
+shape = SubResource("wall_lintel_col")
+shape = SubResource("wall_lintel_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/WallLivingDining"]
 color = Color(0.35, 0.33, 0.3, 1)
@@ -179,6 +203,7 @@ polygon = PackedVector2Array(-10, -248.5, 10, -248.5, 10, 248.5, -10, 248.5)
 position = Vector2(1280, 800)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/StudyGateBlocker"]
+disabled = true
 shape = SubResource("blocker_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/StudyGateBlocker"]
@@ -325,6 +350,7 @@ material = SubResource("wall_mat")
 color = Color(0.62, 0.60, 0.58, 1)
 texture = ExtResource("20")
 polygon = PackedVector2Array(0, 200, 2000, 200, 2000, 980, 0, 980)
+uv = PackedVector2Array(0, 0, 31, 0, 31, 12, 0, 12)
 
 [node name="Breath" type="Node" parent="."]
 script = ExtResource("5")

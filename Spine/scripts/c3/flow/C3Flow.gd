@@ -51,6 +51,7 @@ signal stage_changed(new_stage: int)
 @export var wall_hide_paths: Array[NodePath] = []
 
 var _player: Node2D = null
+var _left_study: bool = false
 var _corridor: Node = null
 var _bedroom: Node = null
 var _breath: Node = null
@@ -124,6 +125,7 @@ func _apply_stage_effects(s: int) -> void:
 
 ## 玩家离开书房 → 锁书房-客厅门（无法回）+ 进入 LEAVE_STUDY（§6.2）。
 func on_player_left_study() -> void:
+	_left_study = true
 	GameState.set_process_flag(FLAG_STUDY_GATE_OPEN, false)
 	_apply_gate_blocker()
 	if current_stage == STAGE_STUDY:
@@ -193,11 +195,9 @@ func enter_stage_light() -> void:
 		(_particle_burst as Node).burst()
 	# C2: corridor_entered=true
 	GameState.set_process_flag(FLAG_CORRIDOR_ENTERED, true)
-	# D: 微压暗（不明显）
+	# D: 微压暗（不明显；Tween 渐变，f7）
 	if _mask != null:
-		_mask.darkness_color = Color(0.06, 0.06, 0.08, 0.35)
-		_mask.radius_inner = 2000.0
-		_mask.radius_outer = 2600.0
+		_tween_mask_to(Color(0.06, 0.06, 0.08, 0.35), 2000.0, 2600.0, 0.6)
 	# E: hold_breath_unlocked=true
 	GameState.set_process_flag(FLAG_HOLD_BREATH_UNLOCKED, true)
 
@@ -212,11 +212,10 @@ func _hide_walls() -> void:
 		var n := get_node_or_null(wp)
 		if n != null:
 			n.visible = false
-			if n.has_meta("has_collision"):
-				var body := n
-				for child in body.get_children():
-					if child is CollisionShape2D:
-						child.set_deferred("disabled", true)
+			# 无条件禁用其子 CollisionShape2D（f4：去掉 meta 条件）
+			for child in n.get_children():
+				if child is CollisionShape2D:
+					(child as CollisionShape2D).set_deferred("disabled", true)
 
 
 # ─── 信号响应（f5）───
@@ -235,23 +234,30 @@ func on_breath_disable() -> void:
 ## BedroomEndItem white_screen_end_requested → 全屏白渐变结束。
 func on_white_screen_end() -> void:
 	if _mask != null:
-		_mask.darkness_color = Color(1, 1, 1, 1)
 		_mask.enabled = true
-		_mask.radius_inner = 4000.0
-		_mask.radius_outer = 4500.0
+		_tween_mask_to(Color(1, 1, 1, 1), 4000.0, 4500.0, 0.8)
 	GameState.set_process_flag(FLAG_END_WHITE, true)
 
 
 ## 黑屏渐变 + 进入卧室 begin()。
 func _fade_black_and_begin_bedroom() -> void:
 	if _mask != null:
-		_mask.darkness_color = Color(0, 0, 0, 1)
 		_mask.enabled = true
-		_mask.radius_inner = 4000.0
-		_mask.radius_outer = 4500.0
+		_tween_mask_to(Color(0, 0, 0, 1), 4000.0, 4500.0, 0.8)
 	if _bedroom != null and _bedroom.has_method("begin"):
 		(_bedroom as Node).begin()
 	set_stage(STAGE_BEDROOM)
+
+
+## 用 Tween 渐变遮罩颜色/半径（f7；DarknessMask._process 读导出属性，故 tween 属性可生效）。
+func _tween_mask_to(col: Color, ri: float, ro: float, dur: float) -> void:
+	if _mask == null:
+		return
+	var m := _mask
+	var tw := create_tween()
+	tw.tween_property(m, "darkness_color", col, dur)
+	tw.tween_property(m, "radius_inner", ri, dur)
+	tw.tween_property(m, "radius_outer", ro, dur)
 
 
 # ─── 自检（场景级协调：单一 quit 出口，汇总各子系统）───
@@ -260,16 +266,13 @@ func _fade_black_and_begin_bedroom() -> void:
 func run_scene_self_check() -> bool:
 	var checks: Array[String] = []
 	_run_flow_checks(checks)
-	# 主角位置断言（f3/f11）：初始/重置后玩家应位于合法坐标（x>0 且在场景内）
+	# 主角位置断言（f5/§9.3 站立坐标）：玩家应站立于合法位置 y≈948±50 且 x 在场景内（物理帧后读回）
 	if _player != null:
 		var pp: Vector2 = _player.global_position
-		checks.append("player_pos" if (pp.x > 0.0 and pp.y > 0.0) else "player_pos_FAIL")
+		var standing: bool = (pp.y > 900.0 and pp.y < 1000.0 and pp.x >= 0.0 and pp.x <= 7000.0)
+		checks.append("player_pos" if standing else "player_pos_FAIL")
 	else:
 		checks.append("player_ref" if false else "player_ref_FAIL")
-	# 主角位置断言（f3/f11）：进卧室后玩家在卧室靠左 / LIGHT-B 重置书房初始位
-	if _player != null:
-		var pp: Vector2 = _player.global_position
-		checks.append("player_pos" if (pp.x > 0.0 or pp.y > 0.0) else "player_pos_FAIL")
 	var failed := false
 	for c in checks:
 		if c.ends_with("FAIL") or c.contains("FAIL"):
@@ -339,7 +342,8 @@ func _apply_gate_blocker() -> void:
 	var blocker := get_node_or_null(gate_blocker_path)
 	if blocker == null:
 		return
-	var blocked := not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN)
+	# 仅当『已出过书房 且 study_gate_open=false』时阻挡（f3：初始不阻挡，可自由出入书房）
+	var blocked: bool = _left_study and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN)
 	for child in blocker.get_children():
 		if child is CollisionShape2D:
 			(child as CollisionShape2D).set_deferred("disabled", not blocked)

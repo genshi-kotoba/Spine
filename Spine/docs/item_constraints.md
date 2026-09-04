@@ -20,7 +20,7 @@
   - `Player`（CharacterBody2D，class_name Player）：A/D 移动 + 重力；`_physics_process` 先查 `StoryMonitor.input_locked`；player.tscn 自带 CollisionShape2D(32×64)、Visual(Polygon2D)、Camera2D；无组（group）配置。
   - `StoryMonitor.input_locked`（bool，默认 false）：一切输入处理必须先检查（仓库惯例）。
   - `GameState`：对象状态字典 + JSON 存档（InteractableObject 链路专用）。
-- 命名惯例（现状归纳，c3_floor_constraints.md §4.4）：节点名 PascalCase；场景文件名 snake_case（player.tscn / level_scene.tscn / c3_floor.tscn）；脚本文件名与 class_name 一致（PascalCase）；私有成员 `_` 前缀；信号 snake_case。**本模块脚本路径以用户规格为权威**（item.gd / test_item.gd），class_name 与节点名 PascalCase（假设 H1/H2）。
+- 命名惯例（现状归纳，c3_floor_constraints.md §4.4）：节点名 PascalCase；场景文件名 snake_case（player.tscn / level_scene.tscn / c3_floor.tscn）；脚本文件名与 class_name 一致（PascalCase）；私有成员 `_` 前缀；信号 snake_case。**本模块脚本路径以用户规格为权威**（item.gd / test_item.gd），class_name 与节点名 PascalCase（假设 H1）。
 - Godot 4.7 API 事实：Area2D 无 `overlaps_body()`（3.x 命名），4.x 等效为 `get_overlapping_bodies()`（§7）。
 - 白模惯例：零贴图，节点形状（Polygon2D / ColorRect）占位；`Spine/shots/` 为验证截图证据目录（已在 .gitignore）。
 
@@ -29,7 +29,7 @@
 **In scope（实现任务 t2 的改动范围；本文档只定义、不改动）**
 
 - 新增：`scripts/objects/item.gd`、`scripts/objects/test_item.gd`（.uid 伴随文件随实现提交，仓库现状惯例）；
-- 新增：`scenes/test_item.tscn`（测试场景）；
+- 新增：`scenes/test_item_demo.tscn`（测试场景）；
 - 修改：`scripts/player/Player.gd`（仅加 `interact_pressed` 信号 + `_unhandled_input` 发射；**改前先在同目录留 Player.gd.bak**，硬约束）；
 - 证据输出：`Spine/shots/*`（已在 .gitignore，不随模块提交）。
 
@@ -112,7 +112,7 @@ E 键(interact) → Player.interact_pressed ──→ TestItem.touched()
 - Player.gd 修改（**改前先留 `scripts/player/Player.gd.bak`**，同 c3 硬约束）：
   - 新增 `signal interact_pressed`（无参数；信号 snake_case 惯例）；
   - 新增 `_unhandled_input(event: InputEvent)`：先查 `StoryMonitor.input_locked`（仓库惯例，锁定时不发射）；`event.is_action_pressed("interact")` 时 `interact_pressed.emit()`（写法与 LevelScene 既有 E 键处理一致，每按一次发射一次）。
-- item 监听：scenes/test_item.tscn 内联连接（连接声明在测试场景中，脚本零耦合）：
+- item 监听：scenes/test_item_demo.tscn 内联连接（连接声明在测试场景中，脚本零耦合）：
   ```
   [connection signal="interact_pressed" from="Player" to="TestItem" method="touched"]
   ```
@@ -131,11 +131,11 @@ E 键(interact) → Player.interact_pressed ──→ TestItem.touched()
 
 - item 体系**不继承 InteractableObject**、不声明 object_id、不写 GameState、不触发剧情：与既有 E 键扫描链路完全隔离。
 - LevelScene 的 `find_children("*", "InteractableObject")` 按类型过滤，Item 子类不会被扫描、不会进入 `_overlapping` 列表、不会经 LevelScene 调 interact()。
-- 测试场景（test_item.tscn）不含 LevelScene → 两条链路在本模块测试场景零交叉。
+- 测试场景（test_item_demo.tscn）不含 LevelScene → 两条链路在本模块测试场景零交叉。
 - 未来正式关卡中两者并存时：同一次按 E，LevelScene 会对最近重叠的 InteractableObject 调 interact()，同时 Player 发射 interact_pressed → item touched()——两体系独立、无共享状态，按设计并行（本模块不实现并存场景，仅说明关系；假设 H6）。
 - 不得改动 InteractableObject.gd / LevelScene.gd / GameState.gd / StoryMonitor.gd（禁区，§3）。
 
-## 9. 测试场景结构（scenes/test_item.tscn）
+## 9. 测试场景结构（scenes/test_item_demo.tscn）
 
 ### 9.1 场景树（最小验证集，白模零贴图）
 
@@ -165,7 +165,7 @@ TestItemScene (Node2D)
 ### 9.3 自检（--self-check）契约
 
 - 用途：无 Godot MCP 下的 headless 读回校验（团队目标④）：无需人工按键即可验证 call_item → set_state → apply_state → Tween 全链路。
-- 触发：`godot.exe --headless --path ... res://scenes/test_item.tscn -- --self-check`（`--` 之后为用户参数，`OS.get_cmdline_user_args()`）。
+- 触发：`godot.exe --headless --path ... res://scenes/test_item_demo.tscn -- --self-check`（`--` 之后为用户参数，`OS.get_cmdline_user_args()`）。
 - 流程与退出：见 §5.2 自检契约；自检内部 `get_tree().quit()` 结束（不依赖 --quit-after；如需兜底可加 `--quit-after 600`）。
 - 覆盖点：call_item 汇入 set_state、状态 1 目标位置（上移 200px）、Tween 0.3s 完成后的落点。touched() / E 键 / 范围判定由四步验证第 4 步窗口运行覆盖。
 
@@ -178,7 +178,7 @@ TestItemScene (Node2D)
 
 - `docs/item_constraints.md`（本文档，先于代码）
 - `scripts/objects/item.gd`、`scripts/objects/test_item.gd`（含编辑器生成的 .uid 伴随文件）
-- `scenes/test_item.tscn`
+- `scenes/test_item_demo.tscn`
 - `scripts/player/Player.gd`（修改：interact_pressed 信号 + _unhandled_input 发射）+ 同目录 `Player.gd.bak`
 - （证据，不随模块提交）`Spine/shots/*`（已在 .gitignore）
 
@@ -201,7 +201,7 @@ git -C F:\Godot\Spine log --oneline --follow -- Spine/scripts/objects/item.gd
 Test-Path F:\Godot\Spine\Spine\scripts\player\Player.gd.bak   # True（改 Player.gd 前已备份）
 Test-Path F:\Godot\Spine\Spine\scripts\objects\item.gd        # True
 Test-Path F:\Godot\Spine\Spine\scripts\objects\test_item.gd   # True
-Test-Path F:\Godot\Spine\Spine\scenes\test_item.tscn          # True
+Test-Path F:\Godot\Spine\Spine\scenes\test_item_demo.tscn          # True
 Select-String -Path F:\Godot\Spine\Spine\scripts\objects\item.gd,F:\Godot\Spine\Spine\scripts\objects\test_item.gd,F:\Godot\Spine\Spine\scripts\player\Player.gd -Pattern ':= *(clamp|move_toward|lerp|min|max)\('
 #   → 无输出（显式类型红线，§10）
 Select-String -Path F:\Godot\Spine\Spine\scripts\objects\item.gd,F:\Godot\Spine\Spine\scripts\objects\test_item.gd -Pattern 'GameState|object_id|InteractableObject'
@@ -214,14 +214,14 @@ F:\Godot\godot\godot.exe --headless --path F:\Godot\Spine\Spine --quit-after 3
 #   → exit 0；stdout 无 SCRIPT ERROR / ERROR / Parse Error
 
 # ── 步骤三 测试场景 headless 加载 + 初始状态读回 + 自检读回 ──
-F:\Godot\godot\godot.exe --headless --path F:\Godot\Spine\Spine res://scenes/test_item.tscn --quit-after 3
+F:\Godot\godot\godot.exe --headless --path F:\Godot\Spine\Spine res://scenes/test_item_demo.tscn --quit-after 3
 #   → exit 0；stdout 含 [test_item] ready state=0（无脚本错误）
-F:\Godot\godot\godot.exe --headless --path F:\Godot\Spine\Spine res://scenes/test_item.tscn -- --self-check
+F:\Godot\godot\godot.exe --headless --path F:\Godot\Spine\Spine res://scenes/test_item_demo.tscn -- --self-check
 #   → exit 0；stdout 含 [test_item] SELF-CHECK PASS
 #     （call_item→set_state→apply_state→Tween 0.3s→落点上移 200px 全链路）
 
 # ── 步骤四 窗口运行 + E 键交互读回 + 证据 + git 卫生 ──
-F:\Godot\godot\godot.exe --path F:\Godot\Spine\Spine res://scenes/test_item.tscn
+F:\Godot\godot\godot.exe --path F:\Godot\Spine\Spine res://scenes/test_item_demo.tscn
 #   → 按 E（范围内）：stdout 依次含 [test_item] touched in_range=true 与 apply_state 目标 y 变化（0→1：y-200）
 #   → 再按 E（仍范围内，§9.2 判据）：toggle 回 0（y 还原）
 #   → 截图证据：初始态 / 状态 1 上移 200px 对比图 → Spine/shots/（已在 .gitignore）
@@ -241,11 +241,12 @@ git -C F:\Godot\Spine log --oneline -3     # 本地提交、英文信息、无 p
 - A6 item 状态不入 GameState/存档（规格未要求）。
 - A7 白模零贴图（Polygon2D 色块）；测试场景地板 StaticBody2D（验证必需）。
 - A8 读回打印与 --self-check：无 Godot MCP 的等效替代（团队目标④），仅测试链路，非玩法内容。
+- A9 测试场景文件名 `scenes/test_item_demo.tscn`：用户原始规格 prompt 原文即此名（captain 定夺，2026-09-05；升级自原假设 H2）。
 
 剩余假设（评审/集成前显式确认；均来自仓库既有约定或规格字面，无新增玩法设计）：
 
 - H1 脚本文件路径按用户规格原样：`scripts/objects/item.gd`、`scripts/objects/test_item.gd`；仓库惯例为「脚本文件名=class_name（PascalCase）」，本模块以用户规格路径为权威，class_name 取 PascalCase（Item / TestItem）。如需改 PascalCase 文件名，须用户确认。
-- H2 测试场景文件名 `scenes/test_item.tscn`（snake_case）：仓库现状证据（player.tscn / level_scene.tscn / c3_floor.tscn 与 c3_floor_constraints.md §4.4「场景文件名 snake_case」）；任务描述转述「命名 PascalCase」按 class_name/节点名理解（同句给出的脚本路径即小写）。如需 PascalCase 场景文件名，须用户确认。
+- H2 ~~原假设（场景文件名 snake_case，含仓库现状证据）~~ **已由 captain 定夺（2026-09-05）**：场景文件名取用户原始规格 prompt 原文 `scenes/test_item_demo.tscn`，升级为已定案 A9；原「须用户确认」事项关闭。
 - H3 size 默认值 Vector2(64, 64) 为工程建议；测试场景实际值见 §9.2 判据（可调）。
 - H4 默认物理层 1 可满足判定（不改 project.godot）；如环境不符，在测试场景内显式配置 layer/mask 兜底（仍不改 project.godot）。
 - H5 双向 toggle 演示需满足 §9.2 判据（状态 1 矩形仍覆盖玩家），否则「上移后够不到、toggle 不回来」——此为规格「toggle 0↔1」的测试可达性要求，非玩法变更。
@@ -253,4 +254,5 @@ git -C F:\Godot\Spine log --oneline -3     # 本地提交、英文信息、无 p
 
 ## 15. 变更记录
 
+- 2026-09-05 修订（captain 定夺）：测试场景文件名全文档由 `test_item.tscn` 统一改为 `test_item_demo.tscn`（用户原始规格 prompt 原文即此名）；原假设 H2 升级为已定案 A9。影响范围：仅 Spine/docs/item_constraints.md 文本修订。回滚要点：git revert 本次修订 commit。
 - 2026-09-05 初版：item 交互模块约束文档先行产出（t1 requirements）。内容：Item 基类与 TestItem API 契约、E 键信号流、范围判定、测试场景结构与四步运行验证清单。影响范围：仅新增 Spine/docs/item_constraints.md。回滚要点：删除本文件即可（未触碰任何代码/场景）。

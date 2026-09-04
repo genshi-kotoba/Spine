@@ -1,0 +1,8 @@
+# Normalize line endings (Windows workflow)
+* text=auto eol=crlf
+
+# Godot scene/resource text files keep LF semantics internally; text=auto handles it
+*.tscn text eol=lf
+*.tres text eol=lf
+*.gd text eol=lf
+*.godot text eol=lf

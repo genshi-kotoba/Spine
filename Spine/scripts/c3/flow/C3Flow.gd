@@ -45,6 +45,7 @@ func _ready() -> void:
 	if "--self-check" in OS.get_cmdline_user_args():
 		run_self_check()
 		get_tree().quit()
+	_ready_extra()
 
 
 ## 当前阶段。
@@ -192,3 +193,73 @@ func run_self_check() -> bool:
 		print("[c3_flow] CHECK " + c)
 	print("[c3_flow] SELF-CHECK " + ("PASS" if not failed else "FAIL"))
 	return not failed
+
+
+# ─── 场景编排（t6e 组装接线用）───
+
+## 玩家节点（用于出书房/阶段位置检测）。
+@export var player_path: NodePath
+## 走廊节点（Corridor），用于阶段 7+ 启用。
+@export var corridor_path: NodePath
+## 卧室结局控制器（BedroomEnding），用于黑屏后进入卧室。
+@export var bedroom_path: NodePath
+## 呼吸系统（BreathSystem），用于阶段推进/缺氧联动。
+@export var breath_path: NodePath
+## 书房右边界 x（玩家越过视为离开书房）。
+@export var study_right_x: float = 1280.0
+
+var _player: Node2D = null
+var _corridor: Node = null
+var _bedroom: Node = null
+var _breath: Node = null
+var _phase_debug_loaded: bool = false
+
+
+func _ready_extra() -> void:
+	_resolve_scene_refs()
+	_apply_phase_arg()
+
+
+func _resolve_scene_refs() -> void:
+	if player_path != NodePath():
+		var n := get_node_or_null(player_path)
+		if n is Node2D:
+			_player = n as Node2D
+	if corridor_path != NodePath():
+		_corridor = get_node_or_null(corridor_path)
+	if bedroom_path != NodePath():
+		_bedroom = get_node_or_null(bedroom_path)
+	if breath_path != NodePath():
+		_breath = get_node_or_null(breath_path)
+
+
+## 读取命令行 --phase=<1..9> 直接跳到对应阶段（调试入口；main.tscn 不动）。
+func _apply_phase_arg() -> void:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--phase="):
+			var p := int(arg.trim_prefix("--phase="))
+			if p >= STAGE_STUDY and p <= STAGE_BEDROOM:
+				debug_set_stage(p)
+				_apply_phase_side_effects(p)
+				_phase_debug_loaded = true
+
+
+## 按阶段应用可观测侧效（走廊启用/卧室 begin/呼吸解锁等），供 --phase 调试。
+func _apply_phase_side_effects(s: int) -> void:
+	if _corridor != null and _corridor.has_method("set_enabled"):
+		(_corridor as Node).set_enabled(s >= STAGE_CORRIDOR)
+	if _breath != null and s >= STAGE_LIGHT:
+		GameState.set_process_flag(FLAG_HOLD_BREATH_UNLOCKED, true)
+	if _bedroom != null and s == STAGE_BEDROOM and _bedroom.has_method("begin"):
+		(_bedroom as Node).begin()
+	if s >= STAGE_CORRIDOR_END:
+		GameState.set_process_flag(FLAG_CORRIDOR_END, true)
+
+
+func _process(_delta: float) -> void:
+	if _phase_debug_loaded:
+		return
+	# 出书房检测：玩家越过书房右边界 → 锁门 + 进入 LEAVE_STUDY
+	if _player != null and current_stage == STAGE_STUDY:
+		if _player.global_position.x >= study_right_x:
+			on_player_left_study()

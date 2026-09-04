@@ -1,0 +1,322 @@
+[gd_scene load_steps=18 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/room_bedroom_whitemodel.tscn" id="2"]
+[ext_resource type="Script" path="res://scripts/c3/flow/C3Flow.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/c3/flow/C3PaperItem.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/c3/breath/BreathSystem.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/c3/breath/Bubble.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/c3/corridor/Corridor.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/c3/corridor/CorridorEndItem.gd" id="8"]
+[ext_resource type="Script" path="res://scripts/c3/bedroom/BedroomEnding.gd" id="9"]
+[ext_resource type="Script" path="res://scripts/c3/bedroom/BedroomWallItem.gd" id="10"]
+[ext_resource type="Script" path="res://scripts/c3/bedroom/BedroomDoorItem.gd" id="11"]
+[ext_resource type="Script" path="res://scripts/c3/bedroom/BedroomEndItem.gd" id="12"]
+[ext_resource type="Script" path="res://scripts/components/InteractHint.gd" id="13"]
+[ext_resource type="Script" path="res://scripts/components/DarknessMask.gd" id="14"]
+[ext_resource type="Script" path="res://scripts/components/ParticleBurst.gd" id="15"]
+[ext_resource type="Script" path="res://scripts/components/ScreenShake.gd" id="16"]
+[ext_resource type="Script" path="res://scripts/objects/item.gd" id="17"]
+[ext_resource type="Texture2D" path="res://assets/ui/e_key.png" id="18"]
+
+[node name="C3Level" type="Node2D"]
+script = ExtResource("3")
+player_path = NodePath("Player")
+corridor_path = NodePath("Corridor")
+bedroom_path = NodePath("Rooms/Bedroom/BedroomEnding")
+breath_path = NodePath("Breath")
+
+[node name="Player" parent="." instance=ExtResource("1")]
+groups=["player"]
+position = Vector2(320, 948)
+
+[node name="Rooms" type="Node2D" parent="."]
+
+[node name="Bedroom" parent="Rooms" instance=ExtResource("2")]
+position = Vector2(4500, 0)
+
+[node name="WallItem" type="Area2D" parent="Rooms/Bedroom"]
+script = ExtResource("10")
+position = Vector2(560, 700)
+size = Vector2(120, 200)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/WallItem"]
+
+[node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/WallItem"]
+color = Color(0.45, 0.40, 0.35, 1)
+polygon = PackedVector2Array(-60, -100, 60, -100, 60, 100, -60, 100)
+
+[node name="InteractHint" type="Node2D" parent="Rooms/Bedroom/WallItem"]
+script = ExtResource("13")
+hint_texture = ExtResource("18")
+head_offset = Vector2(0, -50)
+
+[node name="Visual" type="Sprite2D" parent="Rooms/Bedroom/WallItem/InteractHint"]
+texture = ExtResource("18")
+
+[node name="DoorItem" type="Area2D" parent="Rooms/Bedroom"]
+script = ExtResource("11")
+position = Vector2(1000, 900)
+size = Vector2(120, 300)
+gate_flag = "bedroom_unlocked"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/DoorItem"]
+
+[node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/DoorItem"]
+color = Color(0.3, 0.32, 0.35, 1)
+polygon = PackedVector2Array(-50, -140, 50, -140, 50, 140, -50, 140)
+
+[node name="InteractHint" type="Node2D" parent="Rooms/Bedroom/DoorItem"]
+script = ExtResource("13")
+hint_texture = ExtResource("18")
+head_offset = Vector2(0, -60)
+
+[node name="Visual" type="Sprite2D" parent="Rooms/Bedroom/DoorItem/InteractHint"]
+texture = ExtResource("18")
+
+[node name="EndItem" type="Area2D" parent="Rooms/Bedroom"]
+script = ExtResource("12")
+position = Vector2(1900, 900)
+size = Vector2(120, 300)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/EndItem"]
+
+[node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/EndItem"]
+color = Color(0.35, 0.33, 0.30, 1)
+polygon = PackedVector2Array(-50, -140, 50, -140, 50, 140, -50, 140)
+
+[node name="InteractHint" type="Node2D" parent="Rooms/Bedroom/EndItem"]
+script = ExtResource("13")
+hint_texture = ExtResource("18")
+head_offset = Vector2(0, -60)
+
+[node name="Visual" type="Sprite2D" parent="Rooms/Bedroom/EndItem/InteractHint"]
+texture = ExtResource("18")
+
+[node name="BedroomEnding" type="Node2D" parent="Rooms/Bedroom"]
+script = ExtResource("9")
+player = NodePath("Player")
+wall_item = NodePath("WallItem")
+door_item = NodePath("DoorItem")
+end_item = NodePath("EndItem")
+bedroom_spawn = Vector2(320, 948)
+living_room_door_pos = Vector2(1850, 948)
+
+[node name="Environment" type="Node2D" parent="." z_index=-5]
+
+[node name="Floor" type="StaticBody2D" parent="Environment"]
+position = Vector2(1920, 1008)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Floor"]
+
+[node name="Visual" type="Polygon2D" parent="Environment/Floor"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(-1920, -20, 1920, -20, 1920, 20, -1920, 20)
+
+[node name="Ceiling" type="StaticBody2D" parent="Environment"]
+position = Vector2(1920, 231)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Ceiling"]
+
+[node name="Visual" type="Polygon2D" parent="Environment/Ceiling"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(-1920, -20, 1920, -20, 1920, 20, -1920, 20)
+
+[node name="WallLeft" type="StaticBody2D" parent="Environment"]
+position = Vector2(0, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLeft"]
+
+[node name="Visual" type="Polygon2D" parent="Environment/WallLeft"]
+color = Color(0.35, 0.33, 0.3, 1)
+polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
+
+[node name="WallRight" type="StaticBody2D" parent="Environment"]
+position = Vector2(3840, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallRight"]
+
+[node name="Visual" type="Polygon2D" parent="Environment/WallRight"]
+color = Color(0.35, 0.33, 0.3, 1)
+polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
+
+[node name="WallStudyLiving" type="StaticBody2D" parent="Environment"]
+position = Vector2(1280, 459.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallStudyLiving"]
+
+[node name="Visual" type="Polygon2D" parent="Environment/WallStudyLiving"]
+color = Color(0.35, 0.33, 0.3, 1)
+polygon = PackedVector2Array(-10, -248.5, 10, -248.5, 10, 248.5, -10, 248.5)
+
+[node name="WallLivingDining" type="StaticBody2D" parent="Environment"]
+position = Vector2(2560, 459.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLivingDining"]
+
+[node name="Visual" type="Polygon2D" parent="Environment/WallLivingDining"]
+color = Color(0.35, 0.33, 0.3, 1)
+polygon = PackedVector2Array(-10, -248.5, 10, -248.5, 10, 248.5, -10, 248.5)
+
+[node name="Items" type="Node2D" parent="."]
+
+[node name="PaperLiving" type="Area2D" parent="Items"]
+script = ExtResource("4")
+position = Vector2(1500, 900)
+size = Vector2(120, 200)
+paper_id = "paper_living"
+score = 100
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/PaperLiving"]
+
+[node name="Visual" type="Polygon2D" parent="Items/PaperLiving"]
+color = Color(0.95, 0.95, 0.9, 1)
+polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
+
+[node name="InteractHint" type="Node2D" parent="Items/PaperLiving"]
+script = ExtResource("13")
+hint_texture = ExtResource("18")
+head_offset = Vector2(0, -40)
+
+[node name="Visual" type="Sprite2D" parent="Items/PaperLiving/InteractHint"]
+texture = ExtResource("18")
+
+[node name="PaperKitchen" type="Area2D" parent="Items"]
+script = ExtResource("4")
+position = Vector2(2600, 900)
+size = Vector2(120, 200)
+paper_id = "paper_kitchen"
+score = 100
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/PaperKitchen"]
+
+[node name="Visual" type="Polygon2D" parent="Items/PaperKitchen"]
+color = Color(0.95, 0.95, 0.9, 1)
+polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
+
+[node name="InteractHint" type="Node2D" parent="Items/PaperKitchen"]
+script = ExtResource("13")
+hint_texture = ExtResource("18")
+head_offset = Vector2(0, -40)
+
+[node name="Visual" type="Sprite2D" parent="Items/PaperKitchen/InteractHint"]
+texture = ExtResource("18")
+
+[node name="StudyPaperA" type="Area2D" parent="Items"]
+script = ExtResource("4")
+position = Vector2(340, 900)
+size = Vector2(120, 200)
+paper_id = "study_a"
+score = 100
+gate_flag = "study_items_unlocked"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/StudyPaperA"]
+
+[node name="Visual" type="Polygon2D" parent="Items/StudyPaperA"]
+color = Color(0.95, 0.95, 0.9, 1)
+polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
+
+[node name="InteractHint" type="Node2D" parent="Items/StudyPaperA"]
+script = ExtResource("13")
+hint_texture = ExtResource("18")
+head_offset = Vector2(0, -40)
+
+[node name="Visual" type="Sprite2D" parent="Items/StudyPaperA/InteractHint"]
+texture = ExtResource("18")
+
+[node name="StudyPaperB" type="Area2D" parent="Items"]
+script = ExtResource("4")
+position = Vector2(600, 900)
+size = Vector2(120, 200)
+paper_id = "study_b"
+score = 99
+gate_flag = "study_items_unlocked"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/StudyPaperB"]
+
+[node name="Visual" type="Polygon2D" parent="Items/StudyPaperB"]
+color = Color(0.95, 0.95, 0.9, 1)
+polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
+
+[node name="InteractHint" type="Node2D" parent="Items/StudyPaperB"]
+script = ExtResource("13")
+hint_texture = ExtResource("18")
+head_offset = Vector2(0, -40)
+
+[node name="Visual" type="Sprite2D" parent="Items/StudyPaperB/InteractHint"]
+texture = ExtResource("18")
+
+[node name="BedroomHallDoor" type="Area2D" parent="Items"]
+script = ExtResource("17")
+position = Vector2(1920, 828)
+size = Vector2(120, 300)
+gate_flag = "bedroom_door_active"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/BedroomHallDoor"]
+
+[node name="Visual" type="Polygon2D" parent="Items/BedroomHallDoor"]
+color = Color(0.3, 0.32, 0.35, 1)
+polygon = PackedVector2Array(-50, -140, 50, -140, 50, 140, -50, 140)
+
+[node name="InteractHint" type="Node2D" parent="Items/BedroomHallDoor"]
+script = ExtResource("13")
+hint_texture = ExtResource("18")
+head_offset = Vector2(0, -60)
+
+[node name="Visual" type="Sprite2D" parent="Items/BedroomHallDoor/InteractHint"]
+texture = ExtResource("18")
+
+[node name="CorridorEndItem" type="Area2D" parent="Items"]
+script = ExtResource("8")
+position = Vector2(4700, 900)
+size = Vector2(120, 200)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/CorridorEndItem"]
+
+[node name="Visual" type="Polygon2D" parent="Items/CorridorEndItem"]
+color = Color(0.7, 0.6, 0.4, 1)
+polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
+
+[node name="InteractHint" type="Node2D" parent="Items/CorridorEndItem"]
+script = ExtResource("13")
+hint_texture = ExtResource("18")
+head_offset = Vector2(0, -40)
+
+[node name="Visual" type="Sprite2D" parent="Items/CorridorEndItem/InteractHint"]
+texture = ExtResource("18")
+
+[node name="Corridor" type="Node2D" parent="."]
+script = ExtResource("7")
+position = Vector2(3840, 0)
+player = NodePath("../Player")
+stop_center_x = 4480.0
+end_wall_x = 4700.0
+
+[node name="CorridorWall" type="Polygon2D" parent="Corridor"]
+color = Color(0.42, 0.40, 0.38, 1)
+polygon = PackedVector2Array(0, 200, 2000, 200, 2000, 980, 0, 980)
+
+[node name="Breath" type="Node" parent="."]
+script = ExtResource("5")
+bubble = NodePath("Bubble")
+darkness_mask = NodePath("../DarknessMask")
+player = NodePath("../Player")
+
+[node name="Bubble" type="Node2D" parent="Breath"]
+script = ExtResource("6")
+player_path = NodePath("../../Player")
+
+[node name="Effects" type="Node2D" parent="."]
+
+[node name="ParticleBurst" type="Node2D" parent="Effects"]
+script = ExtResource("15")
+position = Vector2(1280, 700)
+
+[node name="ScreenShake" type="Node2D" parent="Effects"]
+script = ExtResource("16")
+camera_path = NodePath("../../Player/Camera2D")
+
+[node name="DarknessMask" type="Node2D" parent="."]
+script = ExtResource("14")
+follow_player = true
+player_path = NodePath("Player")

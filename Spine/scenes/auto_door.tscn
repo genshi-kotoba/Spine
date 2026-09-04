@@ -3,10 +3,10 @@
 [ext_resource type="Script" path="res://scripts/objects/AutoDoor.gd" id="1"]
 
 [sub_resource type="RectangleShape2D" id="body_col"]
-size = Vector2(20, 320)
+size = Vector2(20, 280)
 
 [sub_resource type="RectangleShape2D" id="detect_col"]
-size = Vector2(20, 320)
+size = Vector2(20, 280)
 
 [node name="AutoDoor" type="Area2D"]
 script = ExtResource("1")
@@ -21,4 +21,4 @@ shape = SubResource("body_col")
 
 [node name="DoorVisual" type="Polygon2D" parent="DoorBody"]
 color = Color(0.55, 0.42, 0.3, 1)
-polygon = PackedVector2Array(-10, -160, 10, -160, 10, 160, -10, 160)
+polygon = PackedVector2Array(-10, -140, 10, -140, 10, 140, -10, 140)

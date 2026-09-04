@@ -28,9 +28,19 @@ func _ready() -> void:
 
 
 ## 根据状态设置本对象的 size、position、纹理图像（纹理用状态→贴图路径映射表配置）
+## states[state] = {"texture": 贴图路径, "size": Vector2, "position": Vector2}（键均可选）
 func apply_state(state: String) -> void:
-	# TODO: 从 states 映射表读取 size / position / 贴图路径并应用
-	pass
+	var config: Dictionary = states.get(state, {})
+	if config.has("position"):
+		position = config["position"]
+	if config.has("size"):
+		var collision := get_node_or_null("CollisionShape2D")
+		if collision and collision.shape is RectangleShape2D:
+			collision.shape.size = config["size"]
+	if config.has("texture"):
+		var sprite := get_node_or_null("Sprite2D")
+		if sprite:
+			sprite.texture = load(config["texture"])
 
 
 ## 切换状态机 → 更新 GameState → 调用 apply_state → 需要时播放对应动画

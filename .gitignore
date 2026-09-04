@@ -20,3 +20,9 @@ Spine/shots/
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Collaborator staging leftovers / dev backups (not build inputs, not in res://)
+godot.log
+*.bak
+backup/
+Spine/Spine/

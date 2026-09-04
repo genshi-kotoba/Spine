@@ -11,7 +11,9 @@ extends Node2D
 
 
 func _ready() -> void:
-	_camera.position = camera_position
+	# camera_position 为 ZERO 时保留场景文件中设置的位置
+	if camera_position != Vector2.ZERO:
+		_camera.position = camera_position
 	_camera.make_current()
 
 

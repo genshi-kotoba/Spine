@@ -3,6 +3,9 @@ extends CharacterBody2D
 ## Player — 关卡场景角色
 ## 仅支持左右移动（A/D 或方向键），带简单重力与地面碰撞。
 
+## 交互信号：按下 interact(E) 时发射，供 item 等低耦合监听（不写 GameState）
+signal interact_pressed
+
 @export var move_speed: float = 400.0  # user: x2 speed
 
 ## 水平加速度（像素/秒²，规格⑩，新增）：有输入时逼近 move_speed
@@ -29,3 +32,11 @@ func _physics_process(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, target_speed, rate * delta)
 
 	move_and_slide()
+
+
+## 按下 interact(E) 时发射 interact_pressed（先查输入锁；与 LevelScene 既有 E 键处理写法一致）
+func _unhandled_input(event: InputEvent) -> void:
+	if StoryMonitor.input_locked:
+		return
+	if event.is_action_pressed("interact"):
+		interact_pressed.emit()

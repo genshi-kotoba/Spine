@@ -32,7 +32,7 @@ polygon = PackedVector2Array(-55, -130, 55, -130, 55, 130, -55, 130)
 
 [node name="Leaf" type="Polygon2D" parent="DoorBody/FrontOpen"]
 position = Vector2(-54, 0)
-rotation = -1.65806
+modulate = Color(1, 1, 1, 0)
 color = Color(0.6, 0.46, 0.34, 1)
 polygon = PackedVector2Array(0, -128, 108, -128, 108, 128, 0, 128)
 

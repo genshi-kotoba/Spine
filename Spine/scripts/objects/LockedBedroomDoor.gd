@@ -50,7 +50,7 @@ func _on_body_exited(body: Node2D) -> void:
 		close()
 
 
-## 开门：门扇绕门轴摆开（正视门样式）
+## 开门：正视门扇「正着开向镜头」（缩放放大+淡出，不倾斜）
 func open() -> void:
 	_close_countdown = 0.0
 	if is_open:
@@ -78,8 +78,16 @@ func _do_close() -> void:
 
 
 func _animate_to(opening: bool) -> void:
+	# 用户定案 2026-09-05：正视门扇「正着开向镜头」——缩放放大 + 淡出，全程不倾斜。
 	if _tween != null:
 		_tween.kill()
-	var target_rotation: float = deg_to_rad(-95.0) if opening else _base_rotation
-	_tween = create_tween()
-	_tween.tween_property(_door_visual, "rotation", target_rotation, open_duration) 		.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	if opening:
+		_tween = create_tween()
+		_tween.tween_property(_door_visual, "scale", Vector2(1.5, 1.5), open_duration) \
+			.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+		_tween.parallel().tween_property(_door_visual, "modulate:a", 0.15, open_duration)
+	else:
+		_tween = create_tween()
+		_tween.tween_property(_door_visual, "scale", Vector2.ONE, open_duration) \
+			.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+		_tween.parallel().tween_property(_door_visual, "modulate:a", 1.0, open_duration)

@@ -66,8 +66,19 @@ func _ready() -> void:
 	_reset_flags()
 	_ready_extra()
 	if "--self-check" in OS.get_cmdline_user_args():
-		var ok := run_scene_self_check()
+		_run_self_check_async()
+	elif "--physical" in OS.get_cmdline_user_args():
+		var okp := await _physical_assertions()
+		print("[c3_flow] PHYSICAL-CHECK " + ("PASS" if okp else "FAIL"))
 		get_tree().quit()
+
+
+## --self-check：先跑逻辑自检，再跑物理运行断言（等物理帧稳定后读回），最后统一 quit。
+func _run_self_check_async() -> void:
+	var ok := run_scene_self_check()
+	var okp := await _physical_assertions()
+	print("[c3_flow] PHYSICAL-CHECK " + ("PASS" if (okp and ok) else "FAIL"))
+	get_tree().quit()
 
 
 ## 当前阶段。
@@ -305,6 +316,47 @@ func _run_flow_checks(checks: Array[String]) -> void:
 	_reset_flags()
 	on_bedroom_door_named()
 	checks.append("s8_bedroom_named" if GameState.get_process_flag(FLAG_BEDROOM_DOOR_ACTIVE) else "s8_bedroom_named_FAIL")
+
+
+## 物理运行断言（本轮验证升级：headless EXIT=0 不足以发现坠穿等致命缺陷）——
+## 等物理帧稳定后读回：①玩家站立 y≈948 不坠穿 ②卧室 begin 后玩家 x≈4820 ③LIGHT-C 后 WallRight.visible=false ④StudyGateBlocker 初始 disabled。
+func _physical_assertions() -> bool:
+	# 等物理帧稳定（~1s，让玩家落到地面）
+	await get_tree().create_timer(1.0).timeout
+	var checks: Array[String] = []
+	# ①StudyGateBlocker 初始 disabled（出生前不阻挡；_left_study=false 时 blocked=false）
+	if gate_blocker_path != NodePath():
+		var blocker := get_node_or_null(gate_blocker_path)
+		if blocker != null:
+			for child in blocker.get_children():
+				if child is CollisionShape2D:
+					var cs: CollisionShape2D = child as CollisionShape2D
+					checks.append("blocker_disabled" if cs.disabled else "blocker_disabled_FAIL")
+	# ②玩家站立（站立面 y=988，玩家脚≈980，y≈948；坠穿则 y 大幅>1000 或 <0）
+	if _player != null:
+		var py: float = _player.global_position.y
+		checks.append("stand_y" if (py > 900.0 and py < 1000.0) else "stand_y_FAIL(%.1f)" % py)
+	# ③卧室 begin → 玩家全局 x≈4820
+	if _bedroom != null and _bedroom.has_method("begin"):
+		(_bedroom as Node).begin()
+		await get_tree().process_frame
+		if _player != null:
+			var bx: float = _player.global_position.x
+			checks.append("bedroom_x" if (absf(bx - 4820.0) < 5.0) else "bedroom_x_FAIL(%.1f)" % bx)
+	# ④LIGHT-C → WallRight/WallStudyLiving 隐藏
+	set_stage(STAGE_LIGHT)
+	await get_tree().process_frame
+	for wp in wall_hide_paths:
+		var n := get_node_or_null(wp)
+		if n != null:
+			checks.append("hide_" + str(wp) if (not n.visible) else "hide_FAIL_" + str(wp))
+	var failed := false
+	for c in checks:
+		if c.ends_with("FAIL") or c.contains("FAIL"):
+			failed = true
+		print("[c3_flow] PHYS " + c)
+	print("[c3_flow] PHYSICAL " + ("PASS" if not failed else "FAIL"))
+	return not failed
 
 
 # ─── 场景编排 ───

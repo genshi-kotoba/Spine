@@ -28,15 +28,15 @@ visible = false
 
 [node name="Frame" type="Polygon2D" parent="DoorBody/FrontOpen"]
 color = Color(0.45, 0.34, 0.24, 1)
-polygon = PackedVector2Array(-55, -130, 55, -130, 55, 130, -55, 130)
+polygon = PackedVector2Array(-80, -160, 80, -160, 80, 160, -80, 160)
 
 [node name="Leaf" type="Polygon2D" parent="DoorBody/FrontOpen"]
-position = Vector2(-54, 0)
+position = Vector2(-78, 0)
 modulate = Color(1, 1, 1, 0)
 color = Color(0.6, 0.46, 0.34, 1)
-polygon = PackedVector2Array(0, -128, 108, -128, 108, 128, 0, 128)
+polygon = PackedVector2Array(0, -158, 156, -158, 156, 158, 0, 158)
 
 [node name="Knob" type="Polygon2D" parent="DoorBody/FrontOpen/Leaf"]
-position = Vector2(92, 0)
+position = Vector2(136, 0)
 color = Color(0.85, 0.75, 0.5, 1)
-polygon = PackedVector2Array(-5, -8, 5, -8, 5, 8, -5, 8)
+polygon = PackedVector2Array(-6, -10, 6, -10, 6, 10, -6, 10)

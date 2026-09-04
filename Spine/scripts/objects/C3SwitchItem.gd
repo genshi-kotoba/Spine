@@ -40,13 +40,13 @@ func _run_self_check() -> void:
 
 	# 1) gate 未满足（process_flag=false）→ touched() 不改变状态，发射 gate_blocked
 	await _test_gate_blocked(gate, checks)
-	# 2) gate 满足（process_flag=true）→ touched() 放行
-	current_state = 0
+	# 2) gate 满足（process_flag=true）→ touched() 放行；重置走 set_state（唯一状态变更入口，不绕过）
+	set_state(0)
 	await _test_gate_passed(gate, checks)
 	# 3) set_interaction_enabled(false) 阻止；恢复允许
 	await _test_interaction_switch(checks)
 	# 4) call_item 无视 gate（force-trigger 路径）→ 直接到目标状态
-	current_state = 0
+	set_state(0)
 	GameState.set_process_flag(gate, false)
 	call_item(1)
 	await get_tree().process_frame

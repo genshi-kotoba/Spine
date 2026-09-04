@@ -51,11 +51,15 @@ func _process(delta: float) -> void:
 	if _remaining <= 0.0:
 		_end_shake()
 		return
-	# 衰减：剩余时长比例
-	var falloff: float = clampf(_remaining / duration, 0.0, 1.0)
-	var amp_now := _amp * falloff * falloff
-	var ox := (randf() * 2.0 - 1.0) * amp_now
-	var oy := (randf() * 2.0 - 1.0) * amp_now
+	# attenuation 参与衰减曲线：剩余时长比例 ^ attenuation（越大回位越快；1=线性，2=二次加速回位）
+	var ratio: float = clampf(_remaining / duration, 0.0, 1.0)
+	var falloff: float = pow(ratio, attenuation)
+	var amp_now := _amp * falloff
+	# frequency 参与抖动步进：正弦主波(按 frequency) + 均匀随机分量混合（兼具规律与随机）
+	var wave_x: float = sin(_acc * frequency * TAU)
+	var wave_y: float = cos(_acc * frequency * TAU)
+	var ox := (wave_x * 0.5 + (randf() * 2.0 - 1.0) * 0.5) * amp_now
+	var oy := (wave_y * 0.5 + (randf() * 2.0 - 1.0) * 0.5) * amp_now
 	_camera.offset = _base_offset + Vector2(ox, oy)
 
 

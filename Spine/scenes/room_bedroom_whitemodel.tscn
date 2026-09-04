@@ -10,6 +10,7 @@ wall_height = 780.0
 stand_surface_y = 988.0
 door_pos = Vector2(960, 828)
 door_enabled = true
+spawn_pos = Vector2(320, 948)
 
 [node name="Player" parent="." instance=ExtResource("2")]
 position = Vector2(320, 948)

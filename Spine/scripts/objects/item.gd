@@ -110,8 +110,9 @@ func _apply_state_table(new_state: int) -> void:
 			sprite.texture = load(config["texture"])
 
 
-## 交互触发入口（E 键经 Player.interact_pressed 信号触发）：默认空实现，子类覆写。
+## 交互触发入口（E 键经 Player.interact_pressed 信号触发）：默认实现，子类**应覆写 _try_touch() 而非 touched()**。
 ## 触发前先做 gate / 交互开关检查（规格②：gate 未满足不触发并发射 gate_blocked）。
+## ⚠ 注意：若子类直接覆写 touched()（如早期 TestItem），会绕过本 gate 门控逻辑；新子类请覆写 _try_touch()。
 func touched() -> void:
 	if not _interaction_enabled:
 		interaction_available.emit(false)
@@ -125,8 +126,9 @@ func touched() -> void:
 	interaction_available.emit(true)
 
 
-## 子类覆写的实际触发逻辑（touched 通过 gate 检查后调用）。默认空。
+## 子类覆写的实际触发逻辑（touched 通过 gate/交互开关检查后调用）。默认空。
 ## 返回 true 表示本次触发已消费（用于 interaction_available(true) 联动）。
+## **新子类应覆写本方法而非 touched()**，以便完整走 gate 门控链路。
 func _try_touch() -> bool:
 	return false
 

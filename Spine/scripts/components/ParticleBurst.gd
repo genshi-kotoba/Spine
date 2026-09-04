@@ -61,7 +61,10 @@ func _process(delta: float) -> void:
 
 
 ## 一次性发射后复位（便于重复触发）。
+## emitting 作为发射主开关：emitting=false 时 burst() 为无操作（该系统被禁用）。
 func burst() -> void:
+	if not emitting:
+		return
 	_apply_material_params()
 	_particles.restart()
 	_particles.emitting = true

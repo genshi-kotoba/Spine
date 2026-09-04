@@ -104,7 +104,7 @@ InteractHint (Node2D; script = scripts/components/InteractHint.gd)   # 默认 vi
 - 参数（全部 @export）：
   - `@export var hint_texture: Texture2D`：Kenney「E」图标；**空 = Label 白模占位**（显示文本 "E"，零资产）。
   - `@export var head_offset: Vector2 = Vector2(0, -70)`：头顶上方偏移（相对 item 中心，白模按 size 可调）。
-  - `@export var scale: float = 1.0`；`@export var fade_duration: float = 0.15`（淡入淡出；0=即时）。
+  - `@export var scale_factor: float = 1.0`（命名避开 Node2D 内建 `scale` 属性，避免遮蔽 Godot 节点缩放——原稿写作 `scale`，实现更名 `scale_factor`）；`@export var fade_duration: float = 0.15`（淡入淡出；0=即时）。
 - 行为：`_ready()` 取父 Area2D `owner_area`，连接 `body_entered`/`body_exited`，判 `body is Player` → `show_hint()`/`hide_hint()`。**组件自接线，零配置**（符合 DepthParallax 可复用哲学）。
 - `func show_hint() -> void` / `func hide_hint() -> void`：切 visible + 可选 Tween 淡入淡出。
 - 额外手动接口 `func set_visible_forced(v: bool) -> void` 供流程直接控制（如 gate 未满足时隐藏）。
@@ -118,7 +118,7 @@ InteractHint (Node2D; script = scripts/components/InteractHint.gd)   # 默认 vi
 ### 5.5 验收（E 提示）
 - 靠近（body_entered, body is Player）→ 显示；离开（body_exited）→ 隐藏。
 - InteractHint 可挂 Item 与 InteractableObject 各一（复用性，演示场景两节点验证）。
-- 参数齐全（hint_texture / head_offset / scale / fade_duration）；无纹理时 Label 白模仍可显示「E」。
+- 参数齐全（hint_texture / head_offset / scale_factor / fade_duration）；无纹理时 Label 白模仍可显示「E」。
 - Kenney 资产落盘 assets/ui + `.import` + CREDITS.md。
 
 ---
@@ -145,6 +145,8 @@ InteractHint (Node2D; script = scripts/components/InteractHint.gd)   # 默认 vi
   - **强制触发**：玩家进入 `force_trigger_node`（一个定位触发区的 Node2D/Area2D）时，**无视 gate / 输入锁**，调用 `call_item(force_trigger_state)`。
   - 实现：`_ready` 解析 `get_node_or_null(force_trigger_node)`；若是 Area2D，连接其 `body_entered` 判 `body is Player` → `call_item(force_trigger_state)`。`force_trigger_state < 0` 时忽略。
 - `func set_interaction_enabled(enabled: bool) -> void`：外部门控（流程可调用）。`touched()` 前先查；`enabled=false` 时不触发。与 `gate_flag` 可并用（`enabled=false` 优先）。
+- `func is_interaction_available() -> bool`：当前是否可交互（交互开关开启 AND gate 满足），供 ItemMarker 等门控联动只读读取。
+- `func _try_touch() -> bool`：gate/交互开关检查**通过后**才被 `touched()` 调用；**新子类应覆写 `_try_touch()` 而非 `touched()`**（直接覆写 `touched()` 会绕过上述 gate 门控链路，如早期 TestItem）。
 
 ### 6.3 切换 / 触发路径图（扩展后）
 ```
@@ -196,7 +198,7 @@ E 键(interact) → Player.interact_pressed ─→ Item.touched()
 ### 7.4 定案
 **采用方案 B（挖孔 canvas_item shader）**，封装为 `DarknessMask` 组件：
 - `scripts/components/DarknessMask.gd`（Node2D，内部一个全视口 `ColorRect` 挂 `ShaderMaterial`（`scripts/components/darkness_mask.gdshader`）+ 可选 `CanvasLayer`）。
-- 导出参数：`center_global: Vector2`（挖孔中心全局坐标，默认跟随玩家/可手指定）、`follow_player: bool = true`、`radius_inner: float`、`radius_outer: float`、`darkness_color: Color`、`softness: float`、`enabled: bool`、`layer: int`（CanvasLayer 层级，默认 -9，在 Decor 之上/特效之下）。
+- 导出参数：`center_global: Vector2`（挖孔中心全局坐标，默认跟随玩家/可手指定）、`follow_player: bool = true`、`radius_inner: float`、`radius_outer: float`、`darkness_color: Color`、`softness: float`、`enabled: bool`、`layer: int`（CanvasLayer 层级，**默认 1**——置于默认画布内容之上，遮罩才能压暗场景并挖孔显示；原稿写作 -9 因处于默认画布之后会整块被遮挡而不可用，实现更改为 1；如需置于特效之前/之后可再调）。
 - 复用：一个 DarknessMask 挂到任意 LevelScene/FloorTemplate 即启用；参数可**运行时改**（供 C3「光影切换」：切换 center/radius/颜色/开合）。可通过组 `fx_darkness` 或信号由流程控制。
 - 说明：方案 A 记为「真实光感后期升级路径」，本阶段不采用。
 
@@ -293,7 +295,7 @@ Room (Node2D; script = scripts/scenes/RoomBase.gd，可选)
 
 | # | 规格 | 验收标准 | 证据方式 |
 |---|---|---|---|
-| ① | E 提示 | InteractHint 组件；item 靠近(body_entered)显示、离开(body_exited)隐藏；可挂 Item 与 InteractableObject；参数齐全（texture/head_offset/scale/fade）；无纹理时 Label 白模可显示；Kenney 资产落盘 assets/ui + CREDITS.md | 代码走查 + headless 加载 + 窗口运行读回 + 截图 |
+| ① | E 提示 | InteractHint 组件；item 靠近(body_entered)显示、离开(body_exited)隐藏；可挂 Item 与 InteractableObject；参数齐全（texture/head_offset/scale_factor/fade）；无纹理时 Label 白模可显示；Kenney 资产落盘 assets/ui + CREDITS.md | 代码走查 + headless 加载 + 窗口运行读回 + 截图 |
 | ② | item 状态机扩展 | GameState.`process_flags` 读写+存档往返（向后兼容）；Item.`gate_flag` 满足/不满足分支（`gate_blocked`）；`set_interaction_enabled`；`force_trigger_node` 强制触发（无视 gate）；`states` 表驱动 apply_state；既有 TestItem 行为不变 | 代码走查 + Select-String + headless 自检 + 运行 |
 | ③ | 光影遮罩 | DarknessMask（挖孔 canvas_item shader）；参数 center/radius/color/softness/enabled；白模场景加载 0 错误；`follow_player` 时「只留玩家所在区域」；方案 B 定案 + 白模可行性依据 | headless 加载 + 窗口运行截图 + 代码走查 |
 | ④ | 特效库 | ParticleBurst/ScreenShake/ItemShake 组件、参数齐全、方法触发；全屏撼动=screen_shake+房间边沿burst；部分撼动=item_shake；组件可复用（无房间/关卡字面量） | headless 加载 + 窗口运行读回 + 截图 |
@@ -404,6 +406,7 @@ git -C F:\Godot\Spine log --oneline -3     # 本地提交、英文信息、无 p
   - `@export var star_color: Color = Color(1, 0.84, 0.18, 1)`（黄）、`@export var star_size: float = 12.0`、`@export var star_texture: Texture2D`（空 → Polygon2D 星形占位）、`@export var room_id: String = ""`（空 → 由 item.x 派生）、`@export var room_table_path: NodePath`、`@export var player_path: NodePath`、`@export var offset: Vector2 = Vector2(0, -40)`。
   - 行为：`_ready` 取 `item = get_parent()`（须为 Item），连接 `item.interaction_available`；取 player（`player_path` 或组 `player`）；取 RoomTable（`room_table_path`）。`_process` 计算 `visible = interaction_available_flag and same_room()` → 设 visible。`func set_interactable(flag: bool)`（信号回调）。
   - **不侵入** InteractHint.gd / item.gd 现有契约（item.gd 已暴露 interaction_available 只读信号；ItemMarker 只读，不写、不改二者）。
+  - **fail-open 语义**：`same_room()` 在**无 RoomTable 或玩家不可得**时退化为 `true`（即仅按 `interaction_available` 显示，不因缺房间表误隐藏）。**适用前提**：仅在配置了 RoomTable（房间 x 区间）的场景才启用「异房隐藏」；未配置房间表时默认同一房间、恒显示。依赖 RoomTable 的房间判定需显式设置 `room_table_path`。
 - **`scripts/components/RoomTable.gd`**（数据源，可复用，不含房间名/关卡字面量）：
   - `var rooms: Dictionary = {}`（room_id → `{x_min: float, x_max: float}`）；`func set_rooms(rooms: Dictionary)`；`func get_room_of(x: float) -> String`（含 x 的 room_id，否则 `""`）。
   - 三房 x 区间由场景配置（白模三房 [0,1280]/[1280,2560]/[2560,3840]），代码零硬编码。

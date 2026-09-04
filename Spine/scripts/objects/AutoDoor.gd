@@ -20,7 +20,6 @@ signal door_closed
 @onready var _detection_shape: CollisionShape2D = $DetectionShape
 @onready var _door_body: StaticBody2D = $DoorBody
 @onready var _door_visual: Polygon2D = $DoorBody/DoorVisual
-@onready var _front_open: Node2D = $DoorBody/FrontOpen
 
 var is_open: bool = false
 var _tween: Tween = null
@@ -83,20 +82,10 @@ func _set_blocking(blocking: bool) -> void:
 
 
 func _animate_to(opening: bool) -> void:
-	# 用户定案 2026-09-05：通过时从侧视（门板收成窄边）变为正视开门状态。
-	# 正视门扇「正着开向镜头」：缩放放大 + 淡出，全程不倾斜。
+	# 用户定案 2026-09-05：同一扇门做开合（20×280 侧板，水平收边开/归位关），无正视门、无虚影。
 	if _tween != null:
 		_tween.kill()
-	var _front_leaf := _front_open.get_node("Leaf") as Polygon2D
 	var target_scale := Vector2(0.06, 1.0) if opening else Vector2(1.0, 1.0)
 	_tween = create_tween()
 	_tween.tween_property(_door_visual, "scale", target_scale, open_duration) \
 		.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	if opening:
-		_front_open.visible = true
-		_tween.parallel().tween_property(_front_leaf, "scale", Vector2(1.5, 1.5), open_duration)
-		_tween.parallel().tween_property(_front_leaf, "modulate:a", 0.15, open_duration)
-	else:
-		_tween.tween_property(_front_leaf, "scale", Vector2.ONE, open_duration)
-		_tween.tween_property(_front_leaf, "modulate:a", 0.0, open_duration)
-		_tween.tween_callback(func() -> void: _front_open.visible = false)

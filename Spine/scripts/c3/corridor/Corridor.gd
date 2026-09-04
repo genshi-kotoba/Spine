@@ -131,6 +131,7 @@ func _enter_moving() -> void:
 	_next_special = 0
 	_reset_special_reached()
 	_apply_wall_offset()
+	GameState.set_process_flag(corridor_entered_flag, true)
 	corridor_entered.emit()
 
 
@@ -370,6 +371,11 @@ func _get_player() -> Node2D:
 
 
 # ─── 自检（--self-check；验证 移动进入 / 屏息通过与未屏息传送 / 三特异点 / 有限化）───
+
+## 开关走廊（供 C3Flow/流程控制；false → 不干涉角色/墙壁）。
+func set_enabled(enabled_value: bool) -> void:
+	enabled = enabled_value
+
 
 func run_self_check() -> bool:
 	var checks: Array[String] = []

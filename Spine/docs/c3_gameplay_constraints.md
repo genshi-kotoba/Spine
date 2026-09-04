@@ -38,16 +38,17 @@ C3 关卡是一次**线性单人流程**（书房→客厅→厨房→回书房�
 ### 2.2 前置组件契约（docs/c3_prelude_constraints.md 定案，直接复用；字段名以此为准）
 - **GameState.process_flags**（bool）：`set_process_flag(name, value: bool)` / `get_process_flag(name) -> bool`；与 `object_states` 并存、互不读写；存档含 process_flags（向后兼容）。
 - **Item**：`gate_flag: String`（gate 未满足→touched 不发 `gate_blocked` 不触发）、`set_interaction_enabled(enabled: bool)`（enabled=false 不触发）、`force_trigger_node: NodePath` + `force_trigger_state: int`（玩家进入该节点→`call_item(force_trigger_state)` 强制触发，无视 gate）、`states: Dictionary`（state:int→{position,size,color,texture}，基类 apply_state 查表）、`initial_state: int`、`interaction_available(enabled: bool)`、`gate_blocked`、`touched()`/`call_item(new_state)`（汇入 `set_state`→`apply_state`）。
-- **InteractHint**：`hint_texture` / `head_offset` / `scale` / `fade_duration`；`show_hint()`/`hide_hint()`/`set_visible_forced(v)`；自接线父 Area2D body_entered/body_exited（判 body is Player）。
-- **DarknessMask**（方案 B 挖孔 canvas_item shader）：`center_global: Vector2`、`follow_player: bool`、`radius_inner: float`、`radius_outer: float`、`darkness_color: Color`、`softness: float`、`enabled: bool`、`layer: int`（默认 -9）。
+- **InteractHint**：`hint_texture` / `head_offset` / `scale_factor`（改名自 spec 稿 `scale`，避 Node2D 内建 scale 遮蔽）/ `fade_duration`；`show_hint()`/`hide_hint()`/`set_visible_forced(v)`；自接线父 Area2D body_entered/body_exited（判 body is Player）。
+- **DarknessMask**（方案 B 挖孔 canvas_item shader）：`center_global: Vector2`、`follow_player: bool`、`radius_inner: float`、`radius_outer: float`、`darkness_color: Color`、`softness: float`、`enabled: bool`、`layer: int`（**默认 1**——置于默认画布内容之上才能压暗并挖孔；spec 稿 -9 会因在画布之后被整块遮挡而不可用）。
 - **特效库**（组件式）：`ParticleBurst`（`burst()`/`set_color(color)`/amount/color/lifetime/spread/initial_velocity/gravity/size）、`ScreenShake`（`shake(amp,dur)`/amplitude/frequency/duration/attenuation）、`ItemShake`（`shake(amp,dur)`/amplitude/duration/axis/flip_random）。
 - **卧室 room 白模**：`room_bedroom_whitemodel.tscn` + `RoomBase.gd`（room_width/wall_height/stand_surface_y/floor_color/wall_color/door_pos/spawn_pos/door_enabled）。
 
 ### 2.3 本模块新增组件（t6 实现；均为脚本，不含房间名/关卡字面量，可复用）
-- `scripts/components/BreathSystem.gd`（呼吸机制：气泡/计时/缺氧/屏息解锁，驱动 DarknessMask 缺氧）。
-- `scripts/components/Bubble.gd`（蓝色气泡视觉+破裂/恢复）。
-- `scripts/scenes/C3Flow.gd`（流程控制器：阶段状态机 + 阶段切换 + 几何/门/墙体/走廊/卧室衔接 + 调试 phase 参数）。
-- `scripts/scenes/Corridor.gd`（无限/有限走廊：墙壁移动/纹理滚动/特异点序列/传送）。
+- `scripts/c3/breath/BreathSystem.gd`（实际路径为 `scripts/c3/breath/`；呼吸机制：气泡/计时/缺氧/屏息解锁，驱动 DarknessMask 缺氧）。
+- `scripts/c3/breath/Bubble.gd`（实际路径 `scripts/c3/breath/`；蓝色气泡视觉+破裂/恢复）。
+- `scripts/c3/flow/C3Flow.gd`（实际路径 `scripts/c3/flow/`；流程控制器：阶段状态机 + 阶段切换 + LIGHT 序列 + 调试 phase 参数）。
+- `scripts/c3/corridor/Corridor.gd`（实际路径 `scripts/c3/corridor/`；无限/有限走廊：墙壁移动/纹理滚动/特异点序列/传送）。
+- `scripts/c3/flow/C3PaperItem.gd`（考卷 item 子类）、`scripts/c3/bedroom/{BedroomEnding,BedroomWallItem,BedroomDoorItem,BedroomEndItem}.gd`（卧室结局）。
 ## 3. 流程状态机与进程旗标
 
 ### 3.1 C3Flow 阶段（int，运行时状态，不持久化）
@@ -293,7 +294,7 @@ BED-D  右手靠墙 item：InteractHint 显示 E；touched → end_white=true �
 - 本地提交、不 push（push 需用户确认）。
 
 ### 11.2 前置组件接入清单（复用 docs/c3_prelude_constraints.md 的组件，不改其脚本逻辑）
-- **InteractHint**：挂到考卷 item / 卧室门 / 走廊尽头 item / 卧室面前墙 item / 右手靠墙 item —— 靠近显示 E。
+- **InteractHint**（参数名 `scale_factor`（避内建 scale）、`hint_texture/head_offset/fade_duration`）：挂到考卷 item / 卧室门 / 走廊尽头 item / 卧室面前墙 item / 右手靠墙 item —— 靠近显示 E。
 - **Item 门控**：考卷（StudyPaper gate_flag=`study_items_unlocked`）、卧室门（gate_flag=`bedroom_door_active`/`bedroom_unlocked`）、走廊尽头 item（两段式）、卧室 item（三态）；均复用前置 Item 基类（gate_flag / states / touched / call_item / set_interaction_enabled）。
 - **DarknessMask**：缺氧（follow_player、非全黑、半径渐缩）+ 光影（除书房外全黑、黑屏渐变、环境微压暗）+ 走廊尽头黑屏 —— 同一组件不同配置。
 - **特效库**：ParticleBurst / ScreenShake / ItemShake（光影粒子震撼、房间边沿粒子、item 局部震）。

@@ -1,9 +1,10 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/room_bedroom_whitemodel.tscn" id="2"]
 [ext_resource type="Script" path="res://scripts/c3/flow/C3Flow.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/c3/flow/C3PaperItem.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/c3/flow/C3DoorEntryItem.gd" id="19"]
 [ext_resource type="Script" path="res://scripts/c3/breath/BreathSystem.gd" id="5"]
 [ext_resource type="Script" path="res://scripts/c3/breath/Bubble.gd" id="6"]
 [ext_resource type="Script" path="res://scripts/c3/corridor/Corridor.gd" id="7"]
@@ -16,8 +17,14 @@
 [ext_resource type="Script" path="res://scripts/components/DarknessMask.gd" id="14"]
 [ext_resource type="Script" path="res://scripts/components/ParticleBurst.gd" id="15"]
 [ext_resource type="Script" path="res://scripts/components/ScreenShake.gd" id="16"]
-[ext_resource type="Script" path="res://scripts/objects/item.gd" id="17"]
 [ext_resource type="Texture2D" path="res://assets/ui/e_key.png" id="18"]
+[ext_resource type="Texture2D" path="res://assets/ui/corridor_wall.png" id="20"]
+
+[sub_resource type="RectangleShape2D" id="blocker_col"]
+size = Vector2(40, 460)
+
+[sub_resource type="CanvasItemMaterial" id="wall_mat"]
+texture_repeat = 1
 
 [node name="C3Level" type="Node2D"]
 script = ExtResource("3")
@@ -25,6 +32,12 @@ player_path = NodePath("Player")
 corridor_path = NodePath("Corridor")
 bedroom_path = NodePath("Rooms/Bedroom/BedroomEnding")
 breath_path = NodePath("Breath")
+darkness_mask_path = NodePath("DarknessMask")
+screen_shake_path = NodePath("Effects/ScreenShake")
+particle_burst_path = NodePath("Effects/ParticleBurst")
+corridor_end_item_path = NodePath("Items/CorridorEndItem")
+gate_blocker_path = NodePath("Environment/StudyGateBlocker")
+wall_hide_paths = [NodePath("Environment/WallRight"), NodePath("Environment/WallStudyLiving")]
 
 [node name="Player" parent="." instance=ExtResource("1")]
 groups=["player"]
@@ -34,6 +47,10 @@ position = Vector2(320, 948)
 
 [node name="Bedroom" parent="Rooms" instance=ExtResource("2")]
 position = Vector2(4500, 0)
+
+[node name="Player" parent="Rooms/Bedroom" index="0"]
+process_mode = 3
+visible = false
 
 [node name="WallItem" type="Area2D" parent="Rooms/Bedroom"]
 script = ExtResource("10")
@@ -95,7 +112,7 @@ texture = ExtResource("18")
 
 [node name="BedroomEnding" type="Node2D" parent="Rooms/Bedroom"]
 script = ExtResource("9")
-player = NodePath("Player")
+player = NodePath("../../../Player")
 wall_item = NodePath("WallItem")
 door_item = NodePath("DoorItem")
 end_item = NodePath("EndItem")
@@ -157,6 +174,16 @@ position = Vector2(2560, 459.5)
 [node name="Visual" type="Polygon2D" parent="Environment/WallLivingDining"]
 color = Color(0.35, 0.33, 0.3, 1)
 polygon = PackedVector2Array(-10, -248.5, 10, -248.5, 10, 248.5, -10, 248.5)
+
+[node name="StudyGateBlocker" type="StaticBody2D" parent="Environment"]
+position = Vector2(1280, 800)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/StudyGateBlocker"]
+shape = SubResource("blocker_col")
+
+[node name="Visual" type="Polygon2D" parent="Environment/StudyGateBlocker"]
+color = Color(0.35, 0.33, 0.3, 1)
+polygon = PackedVector2Array(-20, -230, 20, -230, 20, 230, -20, 230)
 
 [node name="Items" type="Node2D" parent="."]
 
@@ -247,7 +274,7 @@ head_offset = Vector2(0, -40)
 texture = ExtResource("18")
 
 [node name="BedroomHallDoor" type="Area2D" parent="Items"]
-script = ExtResource("17")
+script = ExtResource("19")
 position = Vector2(1920, 828)
 size = Vector2(120, 300)
 gate_flag = "bedroom_door_active"
@@ -291,9 +318,12 @@ position = Vector2(3840, 0)
 player = NodePath("../Player")
 stop_center_x = 4480.0
 end_wall_x = 4700.0
+wall_material_path = NodePath("CorridorWall")
 
 [node name="CorridorWall" type="Polygon2D" parent="Corridor"]
-color = Color(0.42, 0.40, 0.38, 1)
+material = SubResource("wall_mat")
+color = Color(0.62, 0.60, 0.58, 1)
+texture = ExtResource("20")
 polygon = PackedVector2Array(0, 200, 2000, 200, 2000, 980, 0, 980)
 
 [node name="Breath" type="Node" parent="."]

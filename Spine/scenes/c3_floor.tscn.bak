@@ -12,47 +12,48 @@ size = Vector2(1920, 40)
 size = Vector2(1920, 40)
 
 [sub_resource type="RectangleShape2D" id="wall_side_col"]
-size = Vector2(20, 1080)
+size = Vector2(20, 817)
 
 [sub_resource type="RectangleShape2D" id="wall_lintel_col"]
-size = Vector2(20, 760)
+size = Vector2(20, 497)
 
 [node name="C3Floor" instance=ExtResource("1")]
-player_spawn_position = Vector2(320, 1080)  # F5: 出生点留 8px 空隙，避免与地板共线导致穿地
+player_spawn_position = Vector2(320, 948)  # 2.35:1 layout: spawn keeps 8px gap above stand surface 988 (F5 lesson)
 camera_smoothing = 0.0
-camera_position_offset = Vector2(0, -508)
+camera_position_offset = Vector2(0, -336.5)  # fixed framing center (960,619.5): player stands at y=956
 
 [node name="DepthParallax" type="Node2D" parent="." z_index=-10]
 script = ExtResource("4")
+anchor_point = Vector2(960, 619.5)
 
 [node name="LayerFar" type="Node2D" parent="DepthParallax"]
-position = Vector2(960, 599.7)
+position = Vector2(960, 599.2)
 metadata/_depth_factor = 0.04
 
 [node name="Rect" type="Polygon2D" parent="DepthParallax/LayerFar"]
 color = Color(0.18, 0.16, 0.15, 1)
-polygon = PackedVector2Array(-1152, -530, 1152, -530, 1152, 530, -1152, 530)
+polygon = PackedVector2Array(-1152, -390, 1152, -390, 1152, 390, -1152, 390)
 
 [node name="LayerMid" type="Node2D" parent="DepthParallax"]
-position = Vector2(960, 574.3)
+position = Vector2(960, 592)
 metadata/_depth_factor = 0.09
 
 [node name="Rect" type="Polygon2D" parent="DepthParallax/LayerMid"]
 color = Color(0.28, 0.25, 0.23, 1)
-polygon = PackedVector2Array(-1152, -530, 1152, -530, 1152, 530, -1152, 530)
+polygon = PackedVector2Array(-1152, -375, 1152, -375, 1152, 375, -1152, 375)
 
 [node name="LayerNear" type="Node2D" parent="DepthParallax"]
-position = Vector2(960, 548.9)
+position = Vector2(960, 582)
 metadata/_depth_factor = 0.14
 
 [node name="Rect" type="Polygon2D" parent="DepthParallax/LayerNear"]
 color = Color(0.38, 0.34, 0.32, 1)
-polygon = PackedVector2Array(-1152, -530, 1152, -530, 1152, 530, -1152, 530)
+polygon = PackedVector2Array(-1152, -385, 1152, -385, 1152, 385, -1152, 385)
 
 [node name="Environment" type="Node2D" parent="." z_index=-5]
 
 [node name="Floor" type="StaticBody2D" parent="Environment"]
-position = Vector2(960, 1140)
+position = Vector2(960, 1008)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Floor"]
 shape = SubResource("floor_col")
@@ -62,7 +63,7 @@ color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(-960, -20, 960, -20, 960, 20, -960, 20)
 
 [node name="Ceiling" type="StaticBody2D" parent="Environment"]
-position = Vector2(960, 100)
+position = Vector2(960, 231)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Ceiling"]
 shape = SubResource("ceiling_col")
@@ -72,52 +73,52 @@ color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(-960, -20, 960, -20, 960, 20, -960, 20)
 
 [node name="WallLeft" type="StaticBody2D" parent="Environment"]
-position = Vector2(0, 620)
+position = Vector2(0, 619.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLeft"]
 shape = SubResource("wall_side_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/WallLeft"]
 color = Color(0.35, 0.33, 0.3, 1)
-polygon = PackedVector2Array(-10, -540, 10, -540, 10, 540, -10, 540)
+polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
 
 [node name="WallRight" type="StaticBody2D" parent="Environment"]
-position = Vector2(1920, 620)
+position = Vector2(1920, 619.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallRight"]
 shape = SubResource("wall_side_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/WallRight"]
 color = Color(0.35, 0.33, 0.3, 1)
-polygon = PackedVector2Array(-10, -540, 10, -540, 10, 540, -10, 540)
+polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
 
 [node name="WallStudyLiving" type="StaticBody2D" parent="Environment"]
-position = Vector2(640, 460)
+position = Vector2(640, 459.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallStudyLiving"]
 shape = SubResource("wall_lintel_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/WallStudyLiving"]
 color = Color(0.35, 0.33, 0.3, 1)
-polygon = PackedVector2Array(-10, -380, 10, -380, 10, 380, -10, 380)
+polygon = PackedVector2Array(-10, -248.5, 10, -248.5, 10, 248.5, -10, 248.5)
 
 [node name="WallLivingDining" type="StaticBody2D" parent="Environment"]
-position = Vector2(1280, 460)
+position = Vector2(1280, 459.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLivingDining"]
 shape = SubResource("wall_lintel_col")
 
 [node name="Visual" type="Polygon2D" parent="Environment/WallLivingDining"]
 color = Color(0.35, 0.33, 0.3, 1)
-polygon = PackedVector2Array(-10, -380, 10, -380, 10, 380, -10, 380)
+polygon = PackedVector2Array(-10, -248.5, 10, -248.5, 10, 248.5, -10, 248.5)
 
 [node name="Doors" type="Node2D" parent="." z_index=-1]
 
 [node name="AutoDoorStudyLiving" parent="Doors" instance=ExtResource("2")]
-position = Vector2(640, 980)
+position = Vector2(640, 868)
 
 [node name="AutoDoorLivingDining" parent="Doors" instance=ExtResource("2")]
-position = Vector2(1280, 980)
+position = Vector2(1280, 868)
 
 [node name="LockedBedroomDoor" parent="Doors" instance=ExtResource("3")]
-position = Vector2(960, 950)
+position = Vector2(960, 818)

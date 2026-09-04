@@ -3,10 +3,7 @@
 [ext_resource type="Script" path="res://scripts/objects/LockedBedroomDoor.gd" id="1"]
 
 [sub_resource type="RectangleShape2D" id="detect_col"]
-size = Vector2(80, 340)
-
-[sub_resource type="RectangleShape2D" id="body_col"]
-size = Vector2(24, 340)
+size = Vector2(200, 360)
 
 [node name="LockedBedroomDoor" type="Area2D"]
 script = ExtResource("1")
@@ -18,13 +15,21 @@ shape = SubResource("detect_col")
 
 [node name="DoorBody" type="StaticBody2D" parent="."]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="DoorBody"]
-shape = SubResource("body_col")
+[node name="DoorFrame" type="Polygon2D" parent="DoorBody"]
+color = Color(0.4, 0.32, 0.24, 1)
+polygon = PackedVector2Array(-55, -130, 55, -130, 55, 130, -55, 130)
 
-[node name="DoorVisual" type="Polygon2D" parent="DoorBody"]
+[node name="DoorLeaf" type="Polygon2D" parent="DoorBody"]
+position = Vector2(-54, 0)
 color = Color(0.25, 0.25, 0.3, 1)
-polygon = PackedVector2Array(-12, -170, 12, -170, 12, 170, -12, 170)
+polygon = PackedVector2Array(0, -128, 108, -128, 108, 128, 0, 128)
 
-[node name="LockMarker" type="Polygon2D" parent="DoorBody"]
+[node name="DoorKnob" type="Polygon2D" parent="DoorBody/DoorLeaf"]
+position = Vector2(92, 0)
+color = Color(0.85, 0.75, 0.5, 1)
+polygon = PackedVector2Array(-5, -8, 5, -8, 5, 8, -5, 8)
+
+[node name="LockMarker" type="Polygon2D" parent="DoorBody/DoorLeaf"]
+position = Vector2(60, 0)
 color = Color(0.9, 0.2, 0.2, 1)
-polygon = PackedVector2Array(-30, -8, 30, -8, 30, 8, -30, 8)
+polygon = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)

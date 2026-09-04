@@ -18,7 +18,7 @@ size = Vector2(20, 1080)
 size = Vector2(20, 760)
 
 [node name="C3Floor" instance=ExtResource("1")]
-player_spawn_position = Vector2(320, 1088)
+player_spawn_position = Vector2(320, 1080)  # F5: 出生点留 8px 空隙，避免与地板共线导致穿地
 camera_smoothing = 0.0
 camera_position_offset = Vector2(0, -508)
 

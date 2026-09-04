@@ -48,6 +48,8 @@ func _ready() -> void:
 	_sync_collision_shape()
 	_setup_force_trigger()
 	_apply_state_table(initial_state)
+	# 初始化后广播当前交互可用性（供 ItemMarker 等门控联动；与 E 提示「靠近才显示」独立）
+	interaction_available.emit(is_interaction_available())
 
 
 ## 把 size 同步到子节点 CollisionShape2D 的 RectangleShape2D（节点名沿用 player.tscn 惯例）
@@ -134,7 +136,15 @@ func call_item(new_state: int) -> void:
 	set_state(new_state)
 
 
+## 当前交互是否可用（交互开关开启 且 gate 满足）。供 ItemMarker 等门控联动读取。
+func is_interaction_available() -> bool:
+	var gate_ok := true
+	if gate_flag != "":
+		gate_ok = GameState.get_process_flag(gate_flag)
+	return _interaction_enabled and gate_ok
+
+
 ## 外部门控：流程可调用。enabled=false 时 touched() 不触发（优先于 gate_flag）。
 func set_interaction_enabled(enabled: bool) -> void:
 	_interaction_enabled = enabled
-	interaction_available.emit(enabled)
+	interaction_available.emit(is_interaction_available())

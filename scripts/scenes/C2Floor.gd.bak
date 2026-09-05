@@ -38,11 +38,21 @@ const CAMERA_CENTER_TIME: float = 1.5
 ## 相机回玩家跟随位时长（秒）
 const CAMERA_RETURN_TIME: float = 0.75
 
+## lego 脉冲动画参数（v2.2：基础 0.01 → 0.5s 升至 0.1 → 0.5s 降回 → 停 3s 循环）
+const PULSE_BASE: Vector2 = Vector2(0.01, 0.01)
+const PULSE_PEAK: Vector2 = Vector2(0.1, 0.1)
+const PULSE_UP_TIME: float = 0.5
+const PULSE_DOWN_TIME: float = 0.5
+const PULSE_HOLD_TIME: float = 3.0
+
 ## ladder 音效路径（文件暂缺：禁止 preload，运行时存在性检查后加载，缺失仅 warning）
 @export var ladder_sfx_path: String = "res://assets/audio/ladder.mp3"
 
 ## 相机接管标志：true 时 _update_camera 挂起（Tween 接管相机），false 恢复逐帧跟随
 var _camera_locked: bool = false
+
+## lego 脉冲 Tween 表（key = state_id；lego 消失时 kill 并移除）
+var _pulse_tweens: Dictionary = {}
 
 @onready var _ladder: Ladder = $Items/Ladder
 @onready var _curten: Area2D = $Items/Curten
@@ -55,6 +65,32 @@ func _ready() -> void:
 	super._ready()
 	GameState.state_changed.connect(_on_state_changed)
 	_restore_progress()
+	_start_lego_pulse()
+
+
+## lego 脉冲（v2.2）：未消失的 lego Sprite 循环 0.01→0.1→0.01→停 3s
+func _start_lego_pulse() -> void:
+	for id: String in LEGO_IDS:
+		if GameState.get_object_state(id) == "1":
+			continue
+		var sprite: Sprite2D = get_node_or_null("Items/Lego" + id.trim_prefix("c2_lego") + "/Sprite2D")
+		if sprite == null:
+			continue
+		sprite.scale = PULSE_BASE
+		var tween: Tween = create_tween().set_loops()
+		tween.tween_property(sprite, "scale", PULSE_PEAK, PULSE_UP_TIME) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween.tween_property(sprite, "scale", PULSE_BASE, PULSE_DOWN_TIME) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween.tween_interval(PULSE_HOLD_TIME)
+		_pulse_tweens[id] = tween
+
+
+## lego 消失（交互/读档）→ 终止其脉冲
+func _stop_lego_pulse(object_id: String) -> void:
+	if _pulse_tweens.has(object_id):
+		_pulse_tweens[object_id].kill()
+		_pulse_tweens.erase(object_id)
 
 
 ## 相机接管：锁定期间挂起 LevelScene 的逐帧跟随（虚方法分派，LevelScene 零改动）
@@ -66,6 +102,7 @@ func _update_camera(delta: float) -> void:
 
 func _on_state_changed(object_id: String, new_state: String) -> void:
 	if LEGO_IDS.has(object_id) and new_state == "1":
+		_stop_lego_pulse(object_id)
 		_run_lego_sequence()
 	elif object_id == Ladder.STATE_KEY and new_state == "3":
 		_enable_curten()

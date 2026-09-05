@@ -155,3 +155,5 @@ v1 定案沿用（未被 v2 覆盖的部分）：
 - 2026-09-06 v2：按用户指令改 lego 时序（音效+对话 → 相机 0.75s 至正中 → 换 ladder 贴图 → 0.75s 回玩家）与结局触发（ladder=3 后 curten 可交互化，E 触发结局）；影响 C2Floor.gd 与 c2_floor.tscn 的 Curten 节点；LevelScene 零改动（覆写接管）。回滚要点：`git checkout 859f7b2 -- scripts/scenes/C2Floor.gd scenes/c2_floor.tscn` 并还原本文件 v1。
 - 2026-09-06 v2.1：移至正中时长 0.75s→1.5s；回程改为「对话结束后才触发」（`await dialogue_finished`，活跃预判防挂起）；回程时长 0.75s 不变。仅影响 C2Floor.gd。回滚要点：`git checkout d9ecb8c -- scripts/scenes/C2Floor.gd`。
 - 2026-09-06 v2.2：lego 未交互时 Sprite 脉冲循环（0.01→0.1 @0.5s → 回 0.01 @0.5s → 停 3s）；交互/读档消失即终止。影响 C2Floor.gd + 场景 lego Sprite 初始 scale。回滚要点：`git checkout 6cf4ee0 -- scripts/scenes/C2Floor.gd scenes/c2_floor.tscn`。
+- 2026-09-06 v2.3：lego Sprite 贴图 item_icon.png → lego.png（400×400，ext id 7 换指向）。
+- 2026-09-06 v2.4（bug 修正）：结局 `_start_ending` 切场景前补 `StoryMonitor.unlock_input()`——StoryMonitor 是 Autoload 不随场景销毁，锁带入 computer_screen 导致图标全不可点（与 desktop_screens v1.1 同因）。

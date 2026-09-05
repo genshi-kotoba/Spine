@@ -193,6 +193,8 @@ func _start_ending() -> void:
 	# 纯白保持 3 秒
 	await get_tree().create_timer(3.0).timeout
 	_window_sfx.stop()
+	# 切场景前必须解锁：StoryMonitor 是 Autoload，不随场景销毁，锁会带进 computer_screen
+	StoryMonitor.unlock_input()
 	get_tree().change_scene_to_file(ENDING_SCENE)
 
 

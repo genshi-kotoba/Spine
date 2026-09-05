@@ -958,7 +958,7 @@ func _on_item_succeeded(it: Node) -> void:
 			pop.show_ok(pos)
 
 
-## E 键按下 → 对范围内（get_overlapping_bodies 含 Player）的 item 调 touched()。
+## E 键按下 → 对统一范围判定命中的 item 调 touched()。
 func _on_interact_pressed() -> void:
 	if _player == null:
 		return

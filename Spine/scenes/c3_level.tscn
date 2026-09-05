@@ -62,6 +62,7 @@ gate_blocker_path = NodePath("WhiteModel/Environment/StudyGateBlocker")
 room_table_path = NodePath("RoomTable")
 items_root_path = NodePath("Items")
 bedroom_items_path = NodePath("Rooms/Bedroom")
+bedroom_left_wall_path = NodePath("Rooms/Bedroom/Environment/WallLeft")
 parallax_path = NodePath("WhiteModel/DepthParallax")
 ok_popup_path = NodePath("OkPopup")
 camera_path = NodePath("Player/Camera2D")
@@ -344,7 +345,7 @@ offset = Vector2(0, -80)
 script = ExtResource("7")
 position = Vector2(3840, 0)
 player = NodePath("../Player")
-stop_center_x = 4480.0
+stop_center_x = 4460.0
 end_wall_x = 4700.0
 wall_material_path = NodePath("CorridorWall")
 

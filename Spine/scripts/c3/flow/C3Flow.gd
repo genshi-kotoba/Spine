@@ -94,6 +94,8 @@ signal stage_changed(new_stage: int)
 @export var study_right_x: float = 1280.0
 ## LIGHT-C 需隐藏的门/墙（NodePath；如 书房-客厅墙、auto_door、最右侧墙）。
 @export var wall_hide_paths: Array[NodePath] = []
+## 卧室白模左墙（RoomBase 程序化 WallLeft；全局碰撞面 x=4480 恰好挡在走廊触发点）。走廊阶段禁其碰撞，避免玩家无法走到 stop_center_x 触发墙滑（t3 修复）。
+@export var bedroom_left_wall_path: NodePath
 
 var _player: Node2D = null
 var _left_study: bool = false
@@ -173,6 +175,11 @@ func _apply_stage_effects(s: int) -> void:
 	if s >= STAGE_BEDROOM:
 		GameState.set_process_flag(FLAG_BEDROOM_UNLOCKED, true)
 		GameState.set_process_flag(FLAG_BEDROOM_INTERACTIONS_DONE, true)
+	# t3 修复：走廊阶段禁用卧室白模左墙碰撞（墙碰撞面 x=4480 恰挡在触发点），进卧室后再启用。
+	if s >= STAGE_CORRIDOR and s < STAGE_BEDROOM:
+		_set_bedroom_left_wall_collision(false)
+	elif s >= STAGE_BEDROOM:
+		_set_bedroom_left_wall_collision(true)
 	if _corridor != null:
 		if _corridor.has_method("set_enabled"):
 			(_corridor as Node).set_enabled(s >= STAGE_CORRIDOR)
@@ -343,6 +350,17 @@ func _hide_room_structures() -> void:
 			continue
 		n.visible = false
 		_disable_collisions_recursive(n)
+
+
+func _set_bedroom_left_wall_collision(active: bool) -> void:
+	if bedroom_left_wall_path == NodePath():
+		return
+	var wall := get_node_or_null(bedroom_left_wall_path)
+	if wall == null:
+		return
+	for child in wall.get_children():
+		if child is CollisionShape2D:
+			(child as CollisionShape2D).set_deferred("disabled", not active)
 
 
 func _disable_collisions_recursive(n: Node) -> void:

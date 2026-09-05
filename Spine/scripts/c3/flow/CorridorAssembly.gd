@@ -38,6 +38,10 @@ func _ready() -> void:
 	if not enabled:
 		return
 	_resolve_refs()
+	# 频闪根因修正：墙/地面视觉挂在 CorridorSegment（Corridor 子节点）上，初始段排布覆盖三房区域。
+	# 隐藏 Corridor 整体（段视觉+特异点全隐），进入走廊阶段（corridor_entered 旗标）再显示。
+	if _corridor != null and _corridor is CanvasItem:
+		(_corridor as CanvasItem).visible = false
 	if _external_driver_active():
 		# 测试/调试隔离：外部 runner（如 special_layer_selftest）会在入树前把 C3Flow._phase_debug_loaded
 		# 置 true 以自行驱动走廊（自建层/自移除旧节点）。组装层让位，避免第二份特异点层先装饰段、
@@ -61,6 +65,13 @@ func _external_driver_active() -> bool:
 
 
 func _process(_delta: float) -> void:
+	# 走廊进入（corridor_entered 旗标）后显示 Corridor 整体与视觉层（频闪修复：三房阶段不渲染）。
+	var entered: bool = GameState.get_process_flag("corridor_entered")
+	if entered:
+		if _corridor is CanvasItem and not (_corridor as CanvasItem).visible:
+			(_corridor as CanvasItem).visible = true
+		if _visual != null and not _visual.visible:
+			_visual.visible = true
 	# 走廊微压暗：进入墙壁移动后一次性应用（LIGHT 序列由 C3Flow 独占掩码，此处不抢先）。
 	if _atmosphere_applied or not atmosphere_on_corridor:
 		return
@@ -70,9 +81,6 @@ func _process(_delta: float) -> void:
 	if mode != 1:
 		return
 	_atmosphere_applied = true
-	# 走廊视觉层在进入移动模式时显示（频闪修复：三房阶段不渲染走廊视觉）。
-	if _visual != null and not _visual.visible:
-		_visual.visible = true
 	if _mask == null and darkness_mask_path != NodePath():
 		_mask = get_node_or_null(darkness_mask_path)
 	if _mask != null and _visual != null and _visual.has_method("apply_atmosphere_to"):

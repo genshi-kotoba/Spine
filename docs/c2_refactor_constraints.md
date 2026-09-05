@@ -39,7 +39,7 @@
 
 ### 4.1 C2Floor.gd（在 v1 基础上改）
 
-- 新增常量：`SCENE_CENTER: Vector2 = Vector2(1920, 619.5)`（地图正中间视野中心）；`CAMERA_MOVE_TIME: float = 0.75`。
+- 新增常量：`SCENE_CENTER: Vector2 = Vector2(1920, 619.5)`（地图正中间视野中心）；`CAMERA_CENTER_TIME: float = 1.5`（移至正中时长，v2.1）；`CAMERA_RETURN_TIME: float = 0.75`（回玩家时长）。
 - 新增成员：`var _camera_locked: bool = false`。
 - **相机接管**：`func _update_camera(delta: float) -> void` 覆写——`_camera_locked` 为真直接 return；否则 `super._update_camera(delta)`。
 - `_on_state_changed(object_id, new_state)`：
@@ -49,10 +49,11 @@
 - **`_run_lego_sequence()`（v2 时序核心，async）**：
   1. `_play_ladder_sfx()`（缺失 push_warning 降级，不变）；
   2. `n = _lego_count()`；`DIALOGUE_PATHS.has(n)` → `DialogueManager.start_dialogue(DIALOGUE_PATHS[n], MODE_INTERACTIVE)`；
-  3. `_camera_locked = true`；Tween `_camera.global_position` → `SCENE_CENTER - _camera.offset`（= (1920, 956)，视野中心正好落在地图正中），时长 0.75s，`TRANS_SINE + EASE_IN_OUT`（缓慢平滑）；`await` 完成；
+  3. `_camera_locked = true`；Tween `_camera.global_position` → `SCENE_CENTER - _camera.offset`（= (1920, 956)，视野中心正好落在地图正中），时长 **1.5s**（v2.1），`TRANS_SINE + EASE_IN_OUT`（缓慢平滑）；`await` 完成；
   4. `_ladder.advance_state()`（此刻才换贴图）；
-  5. Tween `_camera.global_position` → `Vector2(_follow_target_x(), _player.global_position.y)`（回到跟随位），0.75s 同样缓动；`await` 完成；
-  6. `_camera_locked = false`（恢复 LevelScene 逐帧跟随，目标 x 与 clamp 结果一致，无缝衔接）。
+  5. **等待对话结束**（v2.1）：对话已唤起且仍活跃 → `await DialogueManager.dialogue_finished`；唤起前已结束/未唤起（n 无对应文件）→ 不等待直接继续（防永久挂起，决策 E7）；
+  6. Tween `_camera.global_position` → `Vector2(_follow_target_x(), _player.global_position.y)`（回到跟随位），时长 0.75s 同样缓动；`await` 完成；
+  7. `_camera_locked = false`（恢复 LevelScene 逐帧跟随，目标 x 与 clamp 结果一致，无缝衔接）。
 - `_follow_target_x() -> float`：复现 clamp 语义——half=视口宽/2×zoom；min>max 倒挂时返回地图中心 x；否则 `clamp(_player.position.x, map_min_x+half, map_max_x-half)`（显式类型，红线）。
 - `_play_ladder_sfx()` / `_lego_count()` / `LEGO_IDS` / `DIALOGUE_PATHS` / `ID_CURTEN` / `FLAG_ENDING` / `ladder_sfx_path`：同 v1 不变。
 - **删除 v1 部件**：`DialogueManager.dialogue_finished` 连接与 `_on_dialogue_finished()`（结局不再由对话结束触发）。
@@ -81,9 +82,9 @@
 ```
 E → LegoN.touched() → set_state(1) → GameState["c2_legoN"]="1"（VanishItem 隐藏）
   → C2Floor._run_lego_sequence：
-      LadderSfx（缺失仅 warning）→ start_dialogue(c2_dialogue{n}) 锁输入
-      → 相机锁 + 0.75s 平滑到场景正中 → Ladder.advance_state() 换贴图
-      → 0.75s 平滑回玩家 → 相机解锁恢复跟随
+	  LadderSfx（缺失仅 warning）→ start_dialogue(c2_dialogue{n}) 锁输入
+	  → 相机锁 + 0.75s 平滑到场景正中 → Ladder.advance_state() 换贴图
+	  → 0.75s 平滑回玩家 → 相机解锁恢复跟随
 GameState["c2_ladder"]="3" → C2Floor：curten.set_interaction_enabled(true)
 E → Curten.touched() → set_state(1) → GameState["c2_curten"]="1"（VanishItem 隐藏）
   → C2Floor._start_ending：lock_input → WindowSfx → 4s 渐白 → 3s 纯白 → computer_screen
@@ -129,6 +130,7 @@ v2 新增定案：
 - E4 结局中途退出重进：清 flag 补播结局（防死档）。
 - E5 相机目标：正中 = 视野中心 (1920,619.5)（相机 global_position 目标 (1920,956)）；返回目标 = clamp 后跟随 x + 玩家 y，与 LevelScene 逐帧写值一致保证无缝。
 - E6 缓动统一 `TRANS_SINE + EASE_IN_OUT`（"缓慢平滑"）。
+- E7（v2.1）回程等待：对话活跃才 `await dialogue_finished`；1 行对话可能在 1.5s 移动内播完，用 `is_dialogue_active()` 预判防挂起。
 
 v1 定案沿用（未被 v2 覆盖的部分）：
 
@@ -143,3 +145,4 @@ v1 定案沿用（未被 v2 覆盖的部分）：
 
 - 2026-09-06 v1 初版：c2 重构约束文档先行产出（prompt §1~6 全覆盖）。
 - 2026-09-06 v2：按用户指令改 lego 时序（音效+对话 → 相机 0.75s 至正中 → 换 ladder 贴图 → 0.75s 回玩家）与结局触发（ladder=3 后 curten 可交互化，E 触发结局）；影响 C2Floor.gd 与 c2_floor.tscn 的 Curten 节点；LevelScene 零改动（覆写接管）。回滚要点：`git checkout 859f7b2 -- scripts/scenes/C2Floor.gd scenes/c2_floor.tscn` 并还原本文件 v1。
+- 2026-09-06 v2.1：移至正中时长 0.75s→1.5s；回程改为「对话结束后才触发」（`await dialogue_finished`，活跃预判防挂起）；回程时长 0.75s 不变。仅影响 C2Floor.gd。回滚要点：`git checkout d9ecb8c -- scripts/scenes/C2Floor.gd`。

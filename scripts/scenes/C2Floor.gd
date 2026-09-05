@@ -32,8 +32,11 @@ const ENDING_SCENE: String = "res://scenes/computer_screen.tscn"
 ## 场景正中间视野中心（地图 3840 宽 × 游戏带 y∈[211,1028] 的几何中心）
 const SCENE_CENTER: Vector2 = Vector2(1920, 619.5)
 
-## 相机强制移动时长（秒）
-const CAMERA_MOVE_TIME: float = 0.75
+## 相机强制移动至场景正中时长（秒，v2.1：0.75 → 1.5）
+const CAMERA_CENTER_TIME: float = 1.5
+
+## 相机回玩家跟随位时长（秒）
+const CAMERA_RETURN_TIME: float = 0.75
 
 ## ladder 音效路径（文件暂缺：禁止 preload，运行时存在性检查后加载，缺失仅 warning）
 @export var ladder_sfx_path: String = "res://assets/audio/ladder.mp3"
@@ -70,26 +73,32 @@ func _on_state_changed(object_id: String, new_state: String) -> void:
 		_start_ending()
 
 
-## v2 lego 时序（async）：音效+对话 → 相机至正中(0.75s) → ladder 换贴图 → 相机回玩家(0.75s)
+## v2.1 lego 时序（async）：音效+对话 → 相机至正中(1.5s) → ladder 换贴图
+##   → 等对话结束 → 相机回玩家(0.75s) → 恢复跟随
 func _run_lego_sequence() -> void:
 	_play_ladder_sfx()
 	var n: int = _lego_count()
+	var dialogue_started: bool = false
 	if DIALOGUE_PATHS.has(n):
 		print("[c2_floor] lego count=%d, start dialogue %d" % [n, n])
 		DialogueManager.start_dialogue(DIALOGUE_PATHS[n], DialogueManager.MODE_INTERACTIVE)
+		dialogue_started = true
 	# 相机强制移动到场景正中间（global_position 目标 = 视野中心 - offset）
 	_camera_locked = true
 	var tween_in: Tween = create_tween()
 	tween_in.tween_property(_camera, "global_position",
-			SCENE_CENTER - _camera.offset, CAMERA_MOVE_TIME) \
+			SCENE_CENTER - _camera.offset, CAMERA_CENTER_TIME) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	await tween_in.finished
 	# 此刻才更换 ladder 贴图
 	_ladder.advance_state()
+	# v2.1：对话结束后相机才回程（活跃预判：1 行对话可能在移动期间已播完，防永久挂起）
+	if dialogue_started and DialogueManager.is_dialogue_active():
+		await DialogueManager.dialogue_finished
 	# 平滑回到玩家跟随位（x 与 clamp 结果一致，解锁后无缝衔接）
 	var back: Vector2 = Vector2(_follow_target_x(), _player.global_position.y)
 	var tween_out: Tween = create_tween()
-	tween_out.tween_property(_camera, "global_position", back, CAMERA_MOVE_TIME) \
+	tween_out.tween_property(_camera, "global_position", back, CAMERA_RETURN_TIME) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	await tween_out.finished
 	_camera_locked = false

@@ -46,8 +46,10 @@ polygon = PackedVector2Array(-60, -120, 60, -120, 60, 120, -60, 120)
 
 [node name="ItemMarker" type="Node2D" parent="Item"]
 script = ExtResource("4")
-star_color = Color(1, 0.84, 0.18, 1)
-star_size = 14.0
-offset = Vector2(0, -150)
+far_outline_color = Color(1, 1, 1, 1)
+near_outline_color = Color(1, 0.84, 0.18, 1)
+outline_width = 5.0
+outline_padding = 0.0
+offset = Vector2(0, 0)
 room_table_path = NodePath("../../RoomTable")
 player_path = NodePath("../../Player")

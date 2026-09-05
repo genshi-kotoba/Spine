@@ -389,7 +389,9 @@ func _run_light_particles() -> void:
 # ─── 信号响应（f5）───
 
 ## CorridorEndItem end_confirmed → 黑屏 → 进入卧室 begin()。
-func on_corridor_end_confirmed() -> void:
+## 信号 end_confirmed(state: int) 带 1 参——Godot 4 连接要求形参一致（t6 联调实测：0 参处理器在
+## emit 时报 "Method expected 0 argument(s), but called with 1" 且调用被拒）。
+func on_corridor_end_confirmed(_state: int) -> void:
 	_fade_black_and_begin_bedroom()
 
 

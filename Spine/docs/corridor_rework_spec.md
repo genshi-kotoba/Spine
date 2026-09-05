@@ -219,6 +219,8 @@ F:\Godot\godot\godot.exe --headless --path F:\Godot\Spine\Spine res://scenes/c3_
 
 ## 9. 变更记录（中文倒序）
 
+- 集成闭环（本回合，captain/t9）：走廊重做三模块（CorridorSegment 段循环/CorridorVisualLayer 视觉/ SpecialPointLayer 特异点）+ CorridorAssembly 组装 + CorridorCamera 相机组件全部实现；评审链 t8 pass（移动/视觉/屏息/组装/白模 5 项全 PASS，MCP 真实行走独立复核）；B2 视觉门禁截图 45.6%；修复既有断链 bug（C3Flow.on_corridor_end_confirmed 信号参数）。影响：走廊模块整体替换（Corridor.gd 段管理改造 + 新目录 corridor_visual/corridor_specials/camera）；回滚要点：git revert 本提交链（或还原 Corridor.gd.bak 旧实现+删除新组件目录）。验证：--phase=1..9 全 PASS、三 runner 49 项、MCP 全流程真实行走 E×2→卧室重显 (4820,956)。
+
 - v1.1（本回合，researcher/t2，captain 修订要求）：① 按 captain 指示把 t1 调研报告移入仓库 docs/corridor_reuse_report.md 并更新本文引用；② B1 修复契约显式写入 t3 契约（§3.3 修复契约语句 + §3.4 硬性验收）；③ B2 修复契约显式写入 t4 契约（§5.1 修复契约语句 + §5.5 硬性验收）。影响：t3/t4 实现与 t7 验证以 v1.1 为准；回滚要点：还原文档到 v1.0 即回退。
 
 - v1.0（本回合，researcher/t2）：初稿——基于 t1 调研（四来源）定案 D-R1..D-R6（段循环/Parallax2D 远景/滚动 shader/物理地面不动/运行时构建并行安全/屏息判定口径）；给出 t3/t4/t5 模块契约与 t6 组装清单、验收表 V1-V9。影响：t3/t4/t5 实现与 t7 验证按本文执行；回滚要点：本文为约束文档，不涉及工程回滚；若某决策被推翻，按条改对应契约即可。

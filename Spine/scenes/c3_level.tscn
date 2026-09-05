@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=22 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/room_bedroom_whitemodel.tscn" id="2"]
@@ -23,6 +23,7 @@
 [ext_resource type="Script" path="res://scripts/components/RoomTable.gd" id="22"]
 [ext_resource type="PackedScene" path="res://scenes/c3_floor.tscn" id="23"]
 [ext_resource type="Script" path="res://scripts/components/OkPopup.gd" id="24"]
+[ext_resource type="Script" path="res://scripts/c3/flow/CorridorAssembly.gd" id="25"]
 
 [sub_resource type="RectangleShape2D" id="floor_col"]
 size = Vector2(3840, 40)
@@ -364,6 +365,12 @@ color = Color(0.5, 0.55, 0.5, 1)
 texture = ExtResource("20")
 polygon = PackedVector2Array(-1500, -20, 1500, -20, 1500, 20, -1500, 20)
 uv = PackedVector2Array(0, 0, 32, 0, 32, 1, 0, 1)
+
+[node name="CorridorAssembly" type="Node2D" parent="."]
+script = ExtResource("25")
+position = Vector2(4460, 0)
+corridor_path = NodePath("../Corridor")
+darkness_mask_path = NodePath("../DarknessMask")
 
 [node name="Breath" type="Node" parent="."]
 script = ExtResource("5")

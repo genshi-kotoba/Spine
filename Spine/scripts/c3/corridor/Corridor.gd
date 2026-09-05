@@ -1,7 +1,8 @@
 class_name Corridor
 extends Node2D
-## Corridor — C3 无限走廊控制器（spec ⑤ §8）
-## 角色走到屏幕几何中心后停止移动角色，改为每帧沿 -x 平移走廊子节点（墙/地面/特异点），
+## Corridor — C3 无限走廊控制器（spec ⑤ §8 + corridor_rework_spec §3 t3 重做）
+## 角色走到屏幕几何中心后停止移动角色，改为每帧沿 -x 驱动无限段 CorridorSegment 循环（t3 新机制：
+## segment_count 段 2048px 克隆平铺 + fposmod 回跳，Galawana snap-back 等价；墙/地面/特异点视觉随段移动），
 ## 并让墙壁平铺纹理滚动以表现无限前进（texture_offset.x -= speed*delta）。
 ## 特异点节奏：3/4 屏出第一个，此后每 1/4 屏出一个；三特异点 = 贴墙奖状 / 地上书山 / 墙上悬浮文本框。
 ## 屏息判定（§8.3/J4：长按空格=屏息）：经过特异点须处于屏息态（breathe 长按 ≥ hold_threshold 且解锁）；
@@ -53,6 +54,14 @@ signal end_wall_reached                    ## 有限化后角色走到尽头墙�
 ## 总开关（false → 不干涉角色/墙壁；供流程关闭）。
 @export var enabled: bool = true
 
+## —— 无限段循环（t3 新机制：段管理替换整体平移）——
+## 单段宽度（px；须 ≥ 视口宽 1920，默认 2048）。
+@export var segment_width: float = 2048.0
+## 段数量（克隆平铺；3 段无缝覆盖 [base-2W, base+W]，屏幕 base±960 恒被覆盖）。
+@export var segment_count: int = 3
+## 段锚基（世界 x；0 → 运行时取 stop_center_x）。
+@export var anchor_x: float = 0.0
+
 ## 模式。
 const MODE_IDLE := 0
 const MODE_MOVING := 1
@@ -70,11 +79,14 @@ var _player: Node2D = null
 var _container: Node2D = null
 var _wall_mat: Material = null
 var _special_nodes: Array[Node] = []
+var _segments: Array[CorridorSegment] = []
+var _last_applied_travel: float = 0.0
 
 
 func _ready() -> void:
 	add_to_group("c3corridor")
 	_resolve_refs()
+	_build_segments()
 	_ensure_input()
 	_reset_special_reached()
 	if "--self-check" in OS.get_cmdline_user_args():
@@ -128,6 +140,7 @@ func _enter_moving() -> void:
 	_start_local_x = position.x
 	_cbx = global_position.x
 	_travel_dist = 0.0
+	_last_applied_travel = 0.0
 	_next_special = 0
 	_reset_special_reached()
 	_apply_wall_offset()
@@ -147,8 +160,15 @@ func _process_moving(delta: float) -> void:
 	_check_finite()
 
 
-## 让走廊（含墙/特异点）随行进左移：position.x = 进入时位置 - travel。
+## 让走廊（含墙/特异点）随行进左移（t3 新机制）：对每段 seg.advance(增量) 驱动 + fposmod 回跳；
+## 段不存在时回退整体平移（老行为，headless 兼容兜底）。
 func _apply_wall_offset() -> void:
+	if _segments.size() > 0:
+		var delta: float = _travel_dist - _last_applied_travel
+		for seg in _segments:
+			seg.advance(delta)
+		_last_applied_travel = _travel_dist
+		return
 	if _container != null:
 		_container.position.x = _start_local_x - _travel_dist
 
@@ -222,6 +242,129 @@ func _reset_special_reached() -> void:
 	_special_reached.clear()
 	for i in range(special_count):
 		_special_reached.append(false)
+
+
+# ─── 无限段管理（t3：CorridorSegment 克隆平铺 + 段 API 供 t4/t5）───
+
+## 程序化创建 segment_count 段 CorridorSegment（挂到 corridor_container 下）。
+## 每段独立锚 = base + (i-1)*segment_width（数学上必须：同锚会让 fposmod 把各段塌缩到同一位置）；
+## 各段回跳区间 (锚-W, 锚] 恰好无缝平铺 [base-2W, base+W]，屏幕 base±960 恒被覆盖（无限不露黑）。
+## 段内容（墙/地面/特异点视觉）由 t4/t5 经 decorate_segment 挂接（本任务留空调用点）。
+func _build_segments() -> void:
+	if _segments.size() > 0:
+		return
+	if _container == null:
+		_container = _resolve_container()
+	if _container == null:
+		return
+	for i in range(segment_count):
+		var seg := CorridorSegment.new()
+		seg.name = "CorridorSegment%d" % i
+		seg.segment_width = segment_width
+		seg.scroll_ratio = 1.0
+		_container.add_child(seg)
+		var seg_anchor: float = _segment_anchor(i)
+		seg.global_position.x = seg_anchor
+		seg.setup(seg_anchor)
+		_segments.append(seg)
+		decorate_segment(seg)
+
+
+## 第 i 段回跳锚点（世界 x）：base + (i-1)*W。
+func _segment_anchor(i: int) -> float:
+	return get_anchor_x() + float(i - 1) * segment_width
+
+
+## 段锚基（世界 x）：anchor_x 非 0 用之，否则 stop_center_x（屏幕几何中心世界坐标）。
+func get_anchor_x() -> float:
+	if anchor_x != 0.0:
+		return anchor_x
+	return stop_center_x
+
+
+## 稳定 API（t4/t5/t6）：已建无限段列表。
+func get_segments() -> Array[CorridorSegment]:
+	return _segments
+
+
+## 段装饰挂钩（t4 视觉 / t5 特异点内容）：本任务留空调用点；t6 接线到 SpecialPointLayer.decorate。
+func decorate_segment(seg: CorridorSegment) -> void:
+	pass
+
+
+## 段当前相位（0..W）：fposmod(base - seg.global_x, W) = 当前周期内已行进距离。
+## 供 t5 按相位在段上摆特异点内容（内容随段回跳循环，判定仍随 travel）。
+func get_segment_phase(seg: CorridorSegment) -> float:
+	return fposmod(get_anchor_x() - seg.global_position.x, segment_width)
+
+
+## 每段 global.x == 段锚 - fposmod(travel, W)（±0.5）且落在 (锚-W, 锚] 内（回跳有界断言）。
+func _segments_at_travel(travel: float) -> bool:
+	if _segments.is_empty():
+		return false
+	var expect_off: float = fposmod(travel, segment_width)
+	for seg in _segments:
+		var expect: float = seg.get_anchor_x() - expect_off
+		var gx: float = seg.global_position.x
+		if absf(gx - expect) > 0.5:
+			return false
+		if gx <= seg.get_anchor_x() - segment_width or gx > seg.get_anchor_x():
+			return false
+	return true
+
+
+## 视口（base±960）是否被段并集无缝覆盖：最左左缘 ≤ base-960、最右右缘 ≥ base+960、相邻段无缝隙。
+func _viewport_covered() -> bool:
+	if _segments.is_empty():
+		return false
+	var base: float = get_anchor_x()
+	var min_left: float = INF
+	var max_right: float = -INF
+	for seg in _segments:
+		min_left = minf(min_left, seg.global_position.x)
+		max_right = maxf(max_right, seg.global_position.x + segment_width)
+	if min_left > base - 960.0 + 0.5 or max_right < base + 960.0 - 0.5:
+		return false
+	for i in range(_segments.size() - 1):
+		var g0: float = _segments[i].global_position.x + segment_width
+		var g1: float = _segments[i + 1].global_position.x
+		if absf(g0 - g1) > 0.5:
+			return false
+	return true
+
+
+## 屏幕中心（base）是否落在某段覆盖区间内（首段覆盖屏幕中心断言）。
+func _center_covered() -> bool:
+	var base: float = get_anchor_x()
+	for seg in _segments:
+		if seg.global_position.x < base and base <= seg.global_position.x + segment_width:
+			return true
+	return false
+
+
+## 模拟连续行进 total（步进 97px）：每步段并集覆盖视口、每段位移连续
+## （正常帧位移=步进；回跳帧位移=步进-W，内容周期 W 故视觉无缝；其他跳变视为断裂）。
+func _simulate_travel_cover(total: float) -> bool:
+	var step: float = 97.0
+	var t: float = 0.0
+	_travel_dist = 0.0
+	_last_applied_travel = 0.0
+	_apply_wall_offset()
+	var prev_positions: Array[float] = []
+	for seg in _segments:
+		prev_positions.append(seg.global_position.x)
+	while t < total:
+		t += step
+		_travel_dist = t
+		_apply_wall_offset()
+		if not _viewport_covered():
+			return false
+		for i in range(_segments.size()):
+			var moved: float = prev_positions[i] - _segments[i].global_position.x
+			if moved < step - segment_width - 0.5 or moved > step + 0.5:
+				return false
+			prev_positions[i] = _segments[i].global_position.x
+	return true
 
 
 # ─── 引用解析 / 白模特异点构建 ───
@@ -387,10 +530,17 @@ func run_self_check() -> bool:
 	# —— 1. 到达屏幕中心 → 进入墙壁移动 ——
 	_enter_moving()
 	checks.append("enter_moving1" if _mode == MODE_MOVING else "enter_moving_FAIL1")
-	# 墙壁随行进左移：position.x = 进入时 - travel
+	# 无限段创建成功：segment_count 段且首段（锚=base）覆盖屏幕中心
+	checks.append("segments3" if _segments.size() == segment_count and _segments.size() >= 3 else "segments3_FAIL1")
+	checks.append("center_cover1" if _center_covered() else "center_cover_FAIL1")
+	# 墙壁随行进左移（新机制）：每段 global.x = 段锚 - travel（travel < W 时无回跳）
 	_travel_dist = 123.0
 	_apply_wall_offset()
-	checks.append("wall_offset1" if absf(position.x - (_start_local_x - 123.0)) < 0.5 else "wall_offset_FAIL1")
+	checks.append("wall_offset1" if _segments_at_travel(123.0) else "wall_offset_FAIL1")
+	# 回跳有界：travel 推进 2W+512 后每段恰为 锚-512（fposmod 正余数，无负值抖动）
+	_travel_dist = segment_width * 2.0 + 512.0
+	_apply_wall_offset()
+	checks.append("wall_loop1" if _segments_at_travel(512.0) else "wall_loop_FAIL1")
 
 	# —— 2. 未屏息过第一特异点 → 传送到第一特异点前 1/4 ——
 	_hold_time = 0.0
@@ -399,6 +549,8 @@ func run_self_check() -> bool:
 	_next_special = 0
 	_handle_specials()
 	checks.append("teleport1" if (absf(_travel_dist - (first_special_dist - special_span)) < 0.5 and _next_special == 0) else "teleport_FAIL1")
+	# 传送回退后段同步回跳（travel=680）：视觉与判定一致
+	checks.append("wall_rewind1" if _segments_at_travel(first_special_dist - special_span) else "wall_rewind_FAIL1")
 
 	# —— 3. 屏息通过第一特异点 → 进度推进 ——
 	GameState.set_process_flag(hold_breath_unlocked_flag, true)
@@ -421,6 +573,12 @@ func run_self_check() -> bool:
 	# —— 5. 三特异点内容存在（证书墙/书山/悬浮文本）——
 	var has_special := _special_nodes.size() >= 3
 	checks.append("three_special1" if has_special else "three_special_FAIL1")
+
+	# —— 6. 无限不露黑：任意行进态下段并集无缝覆盖视口（base±960）——
+	checks.append("cover1" if _viewport_covered() else "cover_FAIL1")
+
+	# —— 7. 模拟连续行进 10×segment_width：每步视口全覆盖 + 位移连续（回跳帧按步进-W 合法）——
+	checks.append("loop10x1" if _simulate_travel_cover(segment_width * 10.0) else "loop10x_FAIL1")
 
 	GameState.set_process_flag(hold_breath_unlocked_flag, false)
 	var failed := false

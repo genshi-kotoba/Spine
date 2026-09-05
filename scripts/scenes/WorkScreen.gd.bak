@@ -4,7 +4,7 @@ extends CanvasLayer
 ## 与 mailbox 同骨架：Dim + Panel + 背景 + DragBar 拖拽 + 右上角关闭 + 滚轮文本框。
 ## 打开时载入当前版本 work 文本；work_version_changed 期间即时替换；无 pre/next。
 ## 「工作」按钮：链接序列 —— 0.4s 渐黑 → 1s → link{v} 第一行(加粗斜体) → 2s →
-##   第二行 0.4s 淡入 → 3s → 解锁输入并切场景（v1→c2_floor / v2→c3_level / v3→c4_floor / v4 禁用）。
+##   第二行 0.4s 淡入 → 3s → 切场景（v1→c2_floor / v2→c3_level / v3→c4_floor / v4 禁用）。
 ## work_screen.png 缺失：占位方案（纯色背景 + @export 路径，补图后自动按图尺寸生效）。
 
 ## 弹层已关闭
@@ -85,7 +85,7 @@ func _update_work_button() -> void:
 	_work_button.disabled = MailWorkManager.get_work_version() >= 4
 
 
-## 「工作」链接序列（防重入；切场景前解锁输入——StoryMonitor 是 Autoload 不随场景销毁）
+## 「工作」链接序列（防重入；切场景前无需解锁输入——场景销毁自然释放）
 func _on_work_pressed() -> void:
 	if _link_running:
 		return
@@ -112,8 +112,6 @@ func _on_work_pressed() -> void:
 	await tween_body.finished
 	# 等 3 秒后切场景
 	await get_tree().create_timer(3.0).timeout
-	# 切场景前必须解锁：StoryMonitor 是 Autoload，不随场景销毁，锁会带进下一场景
-	StoryMonitor.unlock_input()
 	get_tree().change_scene_to_file(LINK_TARGETS[v])
 
 

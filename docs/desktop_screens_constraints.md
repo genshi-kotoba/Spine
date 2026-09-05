@@ -176,3 +176,4 @@ Select-String -Path project.godot -Pattern 'MailWorkManager'
 ## 10. 变更记录
 
 - 2026-09-06 初版：desktop_screens 约束文档先行产出（prompt §1~7 全覆盖）。回滚要点：删除本文件即可。
+- 2026-09-06 v1.1（bug 修正）：prompt §5「切场景前无需解锁输入（场景销毁自然释放）」**假设错误**——StoryMonitor 是 Autoload，切场景不销毁，锁状态会带入下一场景（实测：链接序列进 c2 后键盘失效）。修正：`_on_work_pressed` 切场景前显式 `StoryMonitor.unlock_input()`。本节取代 prompt 该句与 §4.3 第 5 步括注。

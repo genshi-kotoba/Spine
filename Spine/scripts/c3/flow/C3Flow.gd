@@ -92,6 +92,11 @@ signal stage_changed(new_stage: int)
 @export var door_living_dining_path: NodePath
 @export var study_spawn: Vector2 = Vector2(320, 948)
 @export var study_right_x: float = 1280.0
+## t14 锁门余量：玩家完全出书房（过门洞+门板，x ≥ study_lock_x）才锁门+启用 blocker（防门洞夹人）。
+@export var study_lock_x: float = 1320.0
+## t14 兜底轮询区间（STAGE_STUDY）：玩家 x 进入该区间且书房-客厅左门未开 → 直接 open()（每帧，幂等）。
+@export var door_fallback_min_x: float = 1220.0
+@export var door_fallback_max_x: float = 1292.0
 ## LIGHT-C 需隐藏的门/墙（NodePath；如 书房-客厅墙、auto_door、最右侧墙）。
 @export var wall_hide_paths: Array[NodePath] = []
 ## 卧室白模左墙（RoomBase 程序化 WallLeft；全局碰撞面 x=4480 恰好挡在走廊触发点）。走廊阶段禁其碰撞，避免玩家无法走到 stop_center_x 触发墙滑（t3 修复）。
@@ -776,10 +781,26 @@ func _process(delta: float) -> void:
 	if _player == null:
 		return
 	if current_stage == STAGE_STUDY:
-		if _player.global_position.x >= study_right_x:
+		_poll_study_door_fallback()
+		# t14 锁门余量：x ≥ study_lock_x（完全出书房）才触发 on_player_left_study（锁门+blocker）。
+		if _player.global_position.x >= study_lock_x:
 			on_player_left_study()
 	elif current_stage == STAGE_LIGHT:
 		_process_light(delta)
+
+
+## t14 兜底轮询：窗口环境 body_entered 信号偶发丢失时，STAGE_STUDY 玩家接近书房-客厅左门
+## （x ∈ [door_fallback_min_x, door_fallback_max_x]）且门未开 → 直接 open()（每帧检查，open 幂等）。
+func _poll_study_door_fallback() -> void:
+	if _door_study_living == null:
+		return
+	var is_open: bool = bool(_door_study_living.get("is_open"))
+	if is_open:
+		return
+	var px: float = _player.global_position.x
+	if px >= door_fallback_min_x and px <= door_fallback_max_x:
+		if _door_study_living.has_method("open"):
+			_door_study_living.open()
 
 
 ## LIGHT 分步驱动：A→B 依玩家出门；B→C 依二次靠门；C→D→E 依计时。

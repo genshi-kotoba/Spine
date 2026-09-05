@@ -159,6 +159,12 @@ living_room_door_pos = Vector2(1850, 948)
 
 [node name="WhiteModel" parent="." instance=ExtResource("23")]
 
+[node name="AutoDoorStudyLiving" parent="WhiteModel/Doors" index="0"]
+trigger_margin = 80.0
+
+[node name="AutoDoorLivingDining" parent="WhiteModel/Doors" index="1"]
+trigger_margin = 80.0
+
 [node name="Player" parent="WhiteModel" index="0"]
 process_mode = 3
 visible = false

@@ -151,6 +151,8 @@ func _apply_stage_effects(s: int) -> void:
 		GameState.set_process_flag(FLAG_LIGHT_PHASE_DONE, true)
 	if s >= STAGE_CORRIDOR:
 		GameState.set_process_flag(FLAG_CORRIDOR_ENTERED, true)
+		# 屏息解锁与走廊阶段同生（与 _finish_light_show 一致；--phase 调试入口直接可用）
+		GameState.set_process_flag(FLAG_HOLD_BREATH_UNLOCKED, true)
 	if s == STAGE_CORRIDOR_END:
 		GameState.set_process_flag(FLAG_CORRIDOR_END, true)
 	if s >= STAGE_BEDROOM:

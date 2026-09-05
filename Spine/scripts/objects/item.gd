@@ -37,6 +37,9 @@ signal interaction_available(enabled: bool)
 ## 信号：gate 未满足、交互被阻止时发射。
 signal gate_blocked
 
+## 信号：确定交互成功（gate 满足 且 _try_touch 消费成功）后发射，供 'ok' 占位提示/特效联动。
+signal interaction_succeeded
+
 ## 状态机当前状态（int；状态集合由子类定义）
 var current_state: int = 0
 
@@ -124,6 +127,7 @@ func touched() -> void:
 	if not _try_touch():
 		return
 	interaction_available.emit(true)
+	interaction_succeeded.emit()
 
 
 ## 子类覆写的实际触发逻辑（touched 通过 gate/交互开关检查后调用）。默认空。

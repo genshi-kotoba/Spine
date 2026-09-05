@@ -22,6 +22,7 @@
 [ext_resource type="Script" path="res://scripts/components/ItemMarker.gd" id="21"]
 [ext_resource type="Script" path="res://scripts/components/RoomTable.gd" id="22"]
 [ext_resource type="PackedScene" path="res://scenes/c3_floor.tscn" id="23"]
+[ext_resource type="Script" path="res://scripts/components/OkPopup.gd" id="24"]
 
 [sub_resource type="RectangleShape2D" id="floor_col"]
 size = Vector2(3840, 40)
@@ -58,6 +59,7 @@ gate_blocker_path = NodePath("WhiteModel/Environment/StudyGateBlocker")
 room_table_path = NodePath("RoomTable")
 items_root_path = NodePath("Items")
 parallax_path = NodePath("WhiteModel/DepthParallax")
+ok_popup_path = NodePath("OkPopup")
 wall_hide_paths = [NodePath("WhiteModel/Environment/WallRight"), NodePath("WhiteModel/Environment/WallStudyLiving")]
 
 [node name="Player" parent="." instance=ExtResource("1")]
@@ -371,3 +373,6 @@ script = ExtResource("14")
 follow_player = true
 player_path = NodePath("Player")
 enabled = false
+
+[node name="OkPopup" type="CanvasLayer" parent="."]
+script = ExtResource("24")

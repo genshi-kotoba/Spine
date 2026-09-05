@@ -48,6 +48,7 @@ signal stage_changed(new_stage: int)
 @export var room_table_path: NodePath
 @export var items_root_path: NodePath
 @export var parallax_path: NodePath
+@export var ok_popup_path: NodePath
 @export var study_spawn: Vector2 = Vector2(320, 948)
 @export var study_right_x: float = 1280.0
 ## LIGHT-C 需隐藏的门/墙（NodePath；如 书房-客厅墙、auto_door、最右侧墙）。
@@ -399,6 +400,10 @@ func _connect_scene_signals() -> void:
 	# E 键 → 范围内 item touched()（问题三：补 Player.interact_pressed 链路）
 	if _player != null and _player.has_signal("interact_pressed"):
 		_player.connect("interact_pressed", Callable(self, "_on_interact_pressed"))
+	# ok 占位提示：连接每个 item 的 interaction_succeeded → OkPopup.show_ok
+	for it in _find_items():
+		if it.has_signal("interaction_succeeded"):
+			it.connect("interaction_succeeded", Callable(self, "_on_item_succeeded").bind(it))
 	if _bedroom != null:
 		if _bedroom.has_signal("breath_disable_requested"):
 			_bedroom.connect("breath_disable_requested", Callable(self, "on_breath_disable"))
@@ -415,6 +420,15 @@ func _connect_scene_signals() -> void:
 
 func _on_corridor_entered() -> void:
 	GameState.set_process_flag(FLAG_CORRIDOR_ENTERED, true)
+
+
+## item 确定交互成功 → ok 占位提示（黑字，短暂显示）。
+func _on_item_succeeded(it: Node) -> void:
+	if ok_popup_path != NodePath():
+		var pop := get_node_or_null(ok_popup_path)
+		if pop != null and pop.has_method("show_ok"):
+			var pos: Vector2 = it.global_position if it is Node2D else Vector2.ZERO
+			pop.show_ok(pos)
 
 
 ## E 键按下 → 对范围内（get_overlapping_bodies 含 Player）的 item 调 touched()。

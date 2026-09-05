@@ -28,11 +28,21 @@ func _resolve_flow() -> void:
 	_flow = get_tree().get_first_node_in_group("c3flow")
 
 
-## 实际触发（gate 检查已由基类完成）：标记得卷 + 通知流程。
+## 实际触发（gate 检查已由基类完成）：标记得卷 + 物品系消失 + 通知流程。
 func _try_touch() -> bool:
 	set_state(1)
+	_disappear()
 	_notify_flow()
 	return true
+
+
+## 物品系：拿到（state 置 1）后 item 消失（白模：hidden + 禁碰撞），不再可交互。
+## 场景系(非 C3PaperItem)不消失、多段 E 封顶逻辑各自保留不重叠。
+func _disappear() -> void:
+	visible = false
+	for child in get_children():
+		if child is CollisionShape2D:
+			(child as CollisionShape2D).set_deferred("disabled", true)
 
 
 func _notify_flow() -> void:

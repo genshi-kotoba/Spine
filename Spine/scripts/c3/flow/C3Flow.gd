@@ -51,6 +51,8 @@ signal stage_changed(new_stage: int)
 @export var parallax_path: NodePath
 @export var ok_popup_path: NodePath
 @export var camera_path: NodePath
+@export var door_study_living_path: NodePath
+@export var door_living_dining_path: NodePath
 @export var study_spawn: Vector2 = Vector2(320, 948)
 @export var study_right_x: float = 1280.0
 ## LIGHT-C 需隐藏的门/墙（NodePath；如 书房-客厅墙、auto_door、最右侧墙）。
@@ -59,6 +61,8 @@ signal stage_changed(new_stage: int)
 var _player: Node2D = null
 var _left_study: bool = false
 var _corridor: Node = null
+var _door_study_living: Node = null
+var _door_living_dining: Node = null
 var _bedroom: Node = null
 var _breath: Node = null
 var _mask: Node = null
@@ -372,8 +376,50 @@ func _ready_extra() -> void:
 	_activate_camera()
 	_setup_room_table()
 	_setup_parallax()
+	_bind_doors()
 	_connect_scene_signals()
 	_apply_phase_arg()
+
+
+## 绑定主 Player 到两个自动门（左门按流程锁定/解锁，右门常开）。
+## 不改 c3_floor.tscn/FloorTemplate.gd/player.tscn：仅在此连接，与 FloorTemplate 既有连接并存无害(body 不匹配不触发)。
+func _bind_doors() -> void:
+	if door_study_living_path != NodePath():
+		var d := get_node_or_null(door_study_living_path)
+		if d is Area2D:
+			_door_study_living = d
+			(d as Area2D).body_entered.connect(_on_door_body_entered.bind(d))
+			(d as Area2D).body_exited.connect(_on_door_body_exited.bind(d))
+	if door_living_dining_path != NodePath():
+		var d2 := get_node_or_null(door_living_dining_path)
+		if d2 is Area2D:
+			_door_living_dining = d2
+			(d2 as Area2D).body_entered.connect(_on_door_body_entered.bind(d2))
+			(d2 as Area2D).body_exited.connect(_on_door_body_exited.bind(d2))
+
+
+## 玩家进入门检测区：右门常开；左门按锁定(已出书房且 study_gate_open=false)禁开+强制关。
+func _on_door_body_entered(body: Node2D, door: Node) -> void:
+	if body == null or body is Player == false:
+		return
+	if body != _player:
+		return
+	if door == _door_study_living:
+		# 左门锁定：不 open 且强制 close（blocker 物理兜底）
+		if _left_study and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN):
+			if door.has_method("close"):
+				door.close()
+			return
+	if door.has_method("open"):
+		door.open()
+
+
+## 玩家离开门检测区：关闭门。
+func _on_door_body_exited(body: Node2D, door: Node) -> void:
+	if body == null or body != _player:
+		return
+	if door.has_method("close"):
+		door.close()
 
 
 ## 使主相机当前(玩家 Camera2D)——OkPopup 世界→屏幕换算需相机变换。

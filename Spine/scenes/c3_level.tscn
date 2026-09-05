@@ -62,6 +62,8 @@ bedroom_items_path = NodePath("Rooms/Bedroom")
 parallax_path = NodePath("WhiteModel/DepthParallax")
 ok_popup_path = NodePath("OkPopup")
 camera_path = NodePath("Player/Camera2D")
+door_study_living_path = NodePath("WhiteModel/Doors/AutoDoorStudyLiving")
+door_living_dining_path = NodePath("WhiteModel/Doors/AutoDoorLivingDining")
 wall_hide_paths = [NodePath("WhiteModel/Environment/WallRight"), NodePath("WhiteModel/Environment/WallStudyLiving")]
 
 [node name="Player" parent="." instance=ExtResource("1")]

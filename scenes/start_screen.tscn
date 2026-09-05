@@ -41,6 +41,7 @@ object_id = "init_button"
 initial_state = "idle"
 
 [node name="Background" type="ColorRect" parent="InitButton"]
+mouse_filter = 2
 offset_left = -92.5
 offset_top = -24.0
 offset_right = 92.5
@@ -48,6 +49,7 @@ offset_bottom = 24.0
 color = Color(0.15, 0.15, 0.18, 1)
 
 [node name="Text" type="Label" parent="InitButton"]
+mouse_filter = 2
 offset_left = -92.5
 offset_top = -24.0
 offset_right = 92.5

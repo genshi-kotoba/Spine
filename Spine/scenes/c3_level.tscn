@@ -355,6 +355,15 @@ texture = ExtResource("20")
 polygon = PackedVector2Array(0, 200, 2000, 200, 2000, 980, 0, 980)
 uv = PackedVector2Array(0, 0, 31, 0, 31, 12, 0, 12)
 
+[node name="CorridorFloorVisual" type="Polygon2D" parent="Corridor"]
+position = Vector2(1500, 1008)
+z_index = 1
+material = SubResource("wall_mat")
+color = Color(0.5, 0.55, 0.5, 1)
+texture = ExtResource("20")
+polygon = PackedVector2Array(-1500, -20, 1500, -20, 1500, 20, -1500, 20)
+uv = PackedVector2Array(0, 0, 32, 0, 32, 1, 0, 1)
+
 [node name="Breath" type="Node" parent="."]
 script = ExtResource("5")
 bubble = NodePath("Bubble")

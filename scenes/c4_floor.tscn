@@ -105,7 +105,8 @@ state_id = "c4_waste1"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste1"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("9")
 
 [node name="Waste2" type="Area2D" parent="Items" index="1" unique_id=1782051187]
@@ -119,7 +120,8 @@ state_id = "c4_waste2"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste2"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("9")
 
 [node name="Waste3" type="Area2D" parent="Items" index="2" unique_id=1133858405]
@@ -133,7 +135,8 @@ state_id = "c4_waste3"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste3"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("9")
 
 [node name="Waste4" type="Area2D" parent="Items" index="3" unique_id=1502052986]
@@ -147,7 +150,8 @@ state_id = "c4_waste4"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste4"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("10")
 
 [node name="Waste5" type="Area2D" parent="Items" index="4" unique_id=1541335262]
@@ -161,7 +165,8 @@ state_id = "c4_waste5"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste5"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("10")
 
 [node name="Waste6" type="Area2D" parent="Items" index="5" unique_id=1543465472]
@@ -175,7 +180,8 @@ state_id = "c4_waste6"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste6"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("10")
 
 [node name="Waste7" type="Area2D" parent="Items" index="6" unique_id=1519675565]
@@ -189,7 +195,8 @@ state_id = "c4_waste7"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste7"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("11")
 
 [node name="Waste8" type="Area2D" parent="Items" index="7" unique_id=558999481]
@@ -203,7 +210,8 @@ state_id = "c4_waste8"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste8"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("11")
 
 [node name="Waste9" type="Area2D" parent="Items" index="8" unique_id=181711911]
@@ -217,7 +225,8 @@ state_id = "c4_waste9"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste9"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("12")
 
 [node name="Waste10" type="Area2D" parent="Items" index="9" unique_id=250548103]
@@ -231,7 +240,8 @@ state_id = "c4_waste10"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste10"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("12")
 
 [node name="Waste11" type="Area2D" parent="Items" index="10" unique_id=1939180963]
@@ -245,7 +255,8 @@ state_id = "c4_waste11"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste11"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("13")
 
 [node name="Waste12" type="Area2D" parent="Items" index="11" unique_id=72253428]
@@ -259,7 +270,8 @@ state_id = "c4_waste12"
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste12"]
-position = Vector2(0, -14.5)
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
 texture = ExtResource("13")
 
 [connection signal="interact_pressed" from="Player" to="Doors/BedroomDoor" method="touched"]

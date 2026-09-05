@@ -584,6 +584,17 @@ func _run_flow_checks(checks: Array[String]) -> void:
 		and is_equal_approx((gameplay_camera as CorridorCamera).map_left, world_camera_left) \
 		and is_equal_approx((gameplay_camera as CorridorCamera).map_right, world_camera_right)
 	checks.append("s0_camera_bounds" if initial_camera_bounds else "s0_camera_bounds_FAIL")
+	# The white-model floor inherits a template Player for standalone floor previews. C3 has its
+	# own gameplay Player, so the inherited preview body must stay fully inert and never own a camera.
+	var white_model_player := get_node_or_null("WhiteModel/Player") as Player
+	var white_model_shape := get_node_or_null("WhiteModel/Player/CollisionShape2D") as CollisionShape2D
+	var white_model_camera := get_node_or_null("WhiteModel/Player/Camera2D") as Camera2D
+	var duplicate_player_disabled := white_model_player != null \
+		and white_model_player.process_mode == Node.PROCESS_MODE_DISABLED \
+		and not white_model_player.visible \
+		and white_model_shape != null and white_model_shape.disabled \
+		and white_model_camera != null and not white_model_camera.enabled
+	checks.append("s0_white_model_player_disabled" if duplicate_player_disabled else "s0_white_model_player_disabled_FAIL")
 	var aspect_keep := str(ProjectSettings.get_setting("display/window/stretch/aspect", "keep")) == "keep"
 	checks.append("s0_aspect_keep" if aspect_keep else "s0_aspect_keep_FAIL")
 	# The living-room bedroom door is intentionally a proximity-visible no-op before the

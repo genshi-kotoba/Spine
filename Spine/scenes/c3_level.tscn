@@ -138,6 +138,16 @@ bedroom_spawn = Vector2(220, 948)
 [node name="WhiteModel" parent="." unique_id=191051874 instance=ExtResource("23")]
 map_max_x = 11520.0
 
+[node name="Player" parent="WhiteModel" index="0"]
+process_mode = 4
+visible = false
+
+[node name="CollisionShape2D" parent="WhiteModel/Player" index="0"]
+disabled = true
+
+[node name="Camera2D" parent="WhiteModel/Player" index="2"]
+enabled = false
+
 [node name="Items" type="Node2D" parent="." unique_id=589056481]
 
 [node name="EndItem" type="Area2D" parent="Items" unique_id=2131572749]

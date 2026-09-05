@@ -527,12 +527,17 @@ func _physical_assertions() -> bool:
 		var sdu: float = float(_screen_shake.get("duration"))
 		checks.append("light_shake5" if sdu >= 4.9 else "light_shake5_FAIL(%.1f)" % sdu)
 	checks.append("light_breath" if GameState.get_process_flag(FLAG_HOLD_BREATH_UNLOCKED) else "light_breath_FAIL")
-	# ⑤走廊地板：传送玩家到走廊中心（stop_center_x=4480），物理稳定后不坠穿（y≈948 站立）
+	# ⑤走廊地板：传送玩家到走廊中心（stop_center_x=4480），物理稳定 ≥2s 后不坠穿（y≈948 站立）+ 地板左边界覆盖玩家 x（t36）
 	if _player != null:
 		_player.global_position = Vector2(4480.0, 940.0)
-		await get_tree().create_timer(0.6).timeout
+		await get_tree().create_timer(2.0).timeout
 		var cy: float = _player.global_position.y
 		checks.append("corridor_stand" if (cy > 900.0 and cy < 1000.0) else "corridor_stand_FAIL(%.1f)" % cy)
+		# 地板左边界（静态根 CorridorFloor 全局 x - 半宽 1500）须 ≤ 玩家 x（玩家在地板上；t36 体感取舍：移动感由墙/特异点承担）
+		var cf_node: Node = get_node_or_null("CorridorFloor")
+		if cf_node != null:
+			var floor_left: float = cf_node.global_position.x - 1500.0
+			checks.append("floor_covers_x" if floor_left <= _player.global_position.x else "floor_covers_x_FAIL(%.1f)" % floor_left)
 	var failed := false
 	for c in checks:
 		if c.ends_with("FAIL") or c.contains("FAIL"):

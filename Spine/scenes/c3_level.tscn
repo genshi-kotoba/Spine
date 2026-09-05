@@ -381,8 +381,8 @@ follow_player = true
 player_path = NodePath("Player")
 enabled = false
 
-[node name="CorridorFloor" type="StaticBody2D" parent="Corridor"]
-position = Vector2(1500, 1008)
+[node name="CorridorFloor" type="StaticBody2D" parent="."]
+position = Vector2(5000, 1008)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CorridorFloor"]
 shape = SubResource("corridor_floor_col")

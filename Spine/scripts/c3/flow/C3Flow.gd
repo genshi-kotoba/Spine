@@ -33,46 +33,18 @@ const FLAG_END_WHITE := "end_white"
 var current_stage: int = STAGE_STUDY
 var _study_papers_collected: int = 0
 
-# ─── LIGHT 分步子步骤（§7.2 A-E；t32 重做为分步时序：A 书房外全黑→B 出门黑屏重显+重置→C 二次靠门触发消散+震动+粒子→D 微压暗→E 解锁屏息）───
-const LIGHT_NONE := 0
-const LIGHT_A := 1
-const LIGHT_B := 2
-const LIGHT_C := 3
-const LIGHT_D := 4
-const LIGHT_E := 5
-
-## LIGHT 时序常量（s）。
-const LIGHT_A_WAIT := 1.0
-const LIGHT_B_WAIT := 1.4
-const LIGHT_C_DUR := 1.8
-const LIGHT_D_DUR := 1.5
-const LIGHT_PARTICLE_DUR := 2.5
+# ─── 光影演出（用户 2026-09-05 定案重做：无任何遮罩；四试卷后等角色走到右侧靠近房门时触发震撼演出）───
+## 触发判定：角色 x 越过该阈值（靠近书房右侧门）即触发震撼。
+const LIGHT_TRIGGER_X := 1100.0
 const LIGHT_SHAKE_DUR := 5.0
-const LIGHT_B_REVEAL := 1.2
+const LIGHT_PARTICLE_DUR := 2.5
 ## 主相机竖向取景偏移（参照 c3_floor camera_position_offset=(0,-336.5) 口径；视口 1920x1240）：
 ## 让角色视觉站画幅地面位置而非竖正中（t34 gap ①，不改 player.tscn）。
 const CAMERA_FRAME_OFFSET := Vector2(0, -336.5)
 
-## LIGHT 遮罩参数（白模：亮区=书房/跟随玩家，四周全黑；C 后亮区扩大；D 微压暗氛围）。
-const LIGHT_A_INNER := 500.0
-const LIGHT_A_OUTER := 900.0
-const LIGHT_A_COLOR := Color(0.01, 0.01, 0.02, 1)
-const LIGHT_BLACK := Color(0.0, 0.0, 0.0, 1.0)
-const LIGHT_EXPAND_INNER := 900.0
-const LIGHT_EXPAND_OUTER := 1350.0
-const LIGHT_DIM_COLOR := Color(0.05, 0.05, 0.07, 0.30)
-const LIGHT_DIM_INNER := 150.0
-const LIGHT_DIM_OUTER := 360.0
-## LIGHT-A 亮区固定中心（书房中心 x=640；t34 gap ③：A 以书房为亮区，play follow_player=false）。
-const LIGHT_STUDY_CENTER := Vector2(640, 594)
-
-## LIGHT 分步运行状态（t32；过场化：A/B 改为计时驱动，演出全程锁输入）。
-var _light_step: int = LIGHT_NONE
-var _light_b_reset_done: bool = false
-var _light_a_t: float = 0.0
-var _light_b_t: float = 0.0
-var _light_c_t: float = 0.0
-var _light_d_t: float = 0.0
+## 光影演出运行状态（无遮罩版）。
+var _light_triggered: bool = false
+var _light_show_t: float = 0.0
 
 signal stage_changed(new_stage: int)
 
@@ -82,6 +54,8 @@ signal stage_changed(new_stage: int)
 @export var bedroom_path: NodePath
 @export var breath_path: NodePath
 @export var darkness_mask_path: NodePath
+@export var black_screen_path: NodePath
+@export var white_screen_path: NodePath
 @export var screen_shake_path: NodePath
 @export var particle_burst_path: NodePath
 @export var corridor_end_item_path: NodePath
@@ -160,12 +134,8 @@ func _reset_flags() -> void:
 	GameState.set_process_flag(FLAG_END_WHITE, false)
 	current_stage = STAGE_STUDY
 	_study_papers_collected = 0
-	_light_step = LIGHT_NONE
-	_light_b_reset_done = false
-	_light_a_t = 0.0
-	_light_b_t = 0.0
-	_light_c_t = 0.0
-	_light_d_t = 0.0
+	_light_triggered = false
+	_light_show_t = 0.0
 
 
 ## 设置阶段；进入关键阶段时应用旗标/序列。
@@ -196,8 +166,6 @@ func _apply_stage_effects(s: int) -> void:
 			(_corridor as Node).set_enabled(s >= STAGE_CORRIDOR)
 		else:
 			_corridor.set("enabled", s >= STAGE_CORRIDOR)
-	if s == STAGE_LIGHT:
-		_start_light_a()
 
 
 # ─── 事件钩子（场景/t16 接线调用）───
@@ -251,105 +219,28 @@ func on_enter_bedroom() -> void:
 	_fade_black_and_begin_bedroom()
 
 
-# ─── LIGHT 序列（§7.2 A-E 分步时序；t32 重做）───
-## 进入 STAGE_LIGHT 只起步 A（书房外全黑，亮区跟随玩家）；B/C/D/E 由 _process_light 依玩家事件 / 计时推进。
+# ─── 光影演出（无遮罩版；用户定案：四试卷后等角色走到右侧靠近房门触发震撼）───
 
-## A 步：遮罩全黑（书房为亮区）。过场化：全程锁输入（演出自动播放，玩家不可操作）。
-func _start_light_a() -> void:
-	if _light_step != LIGHT_NONE:
+## 触发震撼演出：房间间隔结构消散 + 震动 5s + 粒子震撼；无任何遮罩。
+## 演出期间锁输入；5 秒后解锁并进入走廊阶段。
+func _trigger_light_show() -> void:
+	if _light_triggered:
 		return
-	_light_step = LIGHT_A
-	_light_b_reset_done = false
-	_light_a_t = 0.0
-	_light_b_t = 0.0
-	_light_c_t = 0.0
-	_light_d_t = 0.0
+	_light_triggered = true
+	_light_show_t = 0.0
 	StoryMonitor.lock_input()
-	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR, false, LIGHT_STUDY_CENTER)
-
-
-## B 步：玩家出门 → 黑屏渐变 → 重置书房初始位 → 重显（亮区回 A 态），随后等待二次靠门。
-func _enter_light_b() -> void:
-	if _light_step != LIGHT_A and _light_step != LIGHT_B:
-		return
-	_light_step = LIGHT_B
-	_light_b_reset_done = false
-	if _mask == null:
-		_light_b_reset_done = true
-		_reset_player_to_study()
-		return
-	_mask.enabled = true
-	# t34 gap ③：B 保持固定书房亮区（follow_player=false），重显回 A 态（书房为亮区）
-	_mask.follow_player = false
-	_mask.center_global = LIGHT_STUDY_CENTER
-	var tw := create_tween()
-	# 黑屏渐变（A 态 → 全黑）
-	tw.tween_property(_mask, "darkness_color", LIGHT_BLACK, 0.5)
-	tw.tween_property(_mask, "radius_inner", 12.0, 0.5)
-	tw.tween_property(_mask, "radius_outer", 24.0, 0.5)
-	# 黑屏中点重置玩家 → 重显回 A 态（亮区）
-	tw.tween_callback(Callable(self, "_reset_player_to_study"))
-	tw.tween_property(_mask, "darkness_color", LIGHT_A_COLOR, LIGHT_B_REVEAL)
-	tw.tween_property(_mask, "radius_inner", LIGHT_A_INNER, LIGHT_B_REVEAL)
-	tw.tween_property(_mask, "radius_outer", LIGHT_A_OUTER, LIGHT_B_REVEAL)
-	tw.tween_callback(Callable(self, "_mark_light_b_reset_done"))
-
-
-## C 步：二次靠门 → 房间间隔门/墙全部消散 + 震动 5 秒 + 粒子震撼沿边沿衔接 + 遮罩亮区缓缓展开。
-func _enter_light_c() -> void:
-	if _light_step != LIGHT_B:
-		return
-	_light_step = LIGHT_C
-	_light_c_t = 0.0
 	_hide_room_structures()
 	_run_light_shake()
 	_run_light_particles()
-	if _mask != null and _mask.enabled:
-		# t34 gap ④：亮区随角色向走廊走、缓缓展开（follow_player=true + 1.5-2s Tween 扩向走廊）
-		_mask.follow_player = true
-		_tween_mask_to(LIGHT_A_COLOR, LIGHT_EXPAND_INNER, LIGHT_EXPAND_OUTER, LIGHT_C_DUR)
 
 
-## D 步：环境微压暗（只渲染氛围，亮区四周轻微暗角）。
-func _enter_light_d() -> void:
-	if _light_step != LIGHT_C:
-		return
-	_light_step = LIGHT_D
-	_light_d_t = 0.0
-	if _mask != null and _mask.enabled:
-		_tween_mask_to(LIGHT_DIM_COLOR, LIGHT_DIM_INNER, LIGHT_DIM_OUTER, LIGHT_D_DUR)
-
-
-## E 步：解锁长按屏息 + 进入走廊阶段（启动无限走廊）。
-func _finish_light_e() -> void:
-	if _light_step != LIGHT_D and _light_step != LIGHT_E:
-		return
-	if _light_step == LIGHT_E:
-		return
-	_light_step = LIGHT_E
+## 震撼演出结束（5s）：解锁输入 + 解锁屏息 + 进入走廊阶段。
+func _finish_light_show() -> void:
 	GameState.set_process_flag(FLAG_HOLD_BREATH_UNLOCKED, true)
 	GameState.set_process_flag(FLAG_LIGHT_PHASE_DONE, true)
 	StoryMonitor.unlock_input()
 	if current_stage < STAGE_CORRIDOR:
 		set_stage(STAGE_CORRIDOR)
-
-
-func _mark_light_b_reset_done() -> void:
-	_light_b_reset_done = true
-
-
-## 配置遮罩到指定亮区参数（即时态；供各 LIGHT 步设置及自检强制态）。
-## follow=false 时以 center 为固定亮区中心（t34 gap ③：A 固定书房亮区，B 保持固定）。
-func _mask_config(inner: float, outer: float, col: Color, follow: bool = true, center: Vector2 = Vector2.ZERO) -> void:
-	if _mask == null:
-		return
-	_mask.enabled = true
-	_mask.follow_player = follow
-	_mask.darkness_color = col
-	_mask.radius_inner = inner
-	_mask.radius_outer = outer
-	if not follow:
-		_mask.center_global = center
 
 
 func _reset_player_to_study() -> void:
@@ -416,35 +307,37 @@ func on_breath_disable() -> void:
 		(_breath as Node).set_enabled(false)
 
 
-## BedroomEndItem white_screen_end_requested → 全屏白渐变结束。
+## BedroomEndItem white_screen_end_requested → 全屏白屏（ColorRect 节点，无遮罩）。
 func on_white_screen_end() -> void:
-	if _mask != null:
-		_mask.enabled = true
-		_tween_mask_to(Color(1, 1, 1, 1), 4000.0, 4500.0, 0.8)
+	_show_screen_overlay("white")
 	GameState.set_process_flag(FLAG_END_WHITE, true)
 
 
-## 黑屏渐变 + 进入卧室 begin()。
+## 黑屏 + 进入卧室 begin()（全屏黑 ColorRect，无遮罩）。
 func _fade_black_and_begin_bedroom() -> void:
-	if _mask != null:
-		_mask.enabled = true
-		_tween_mask_to(Color(0, 0, 0, 1), 4000.0, 4500.0, 0.8)
+	_show_screen_overlay("black")
 	if _bedroom != null and _bedroom.has_method("begin"):
 		(_bedroom as Node).begin()
 	set_stage(STAGE_BEDROOM)
+	# 黑屏短暂停留后隐藏（进卧室重显）
+	await get_tree().create_timer(0.8).timeout
+	_hide_screen_overlay()
 
 
-## 用 Tween 渐变遮罩颜色/半径（f7；DarknessMask._process 读导出属性，故 tween 属性可生效）。
-func _tween_mask_to(col: Color, ri: float, ro: float, dur: float) -> void:
-	if _mask == null:
-		return
-	var m := _mask
-	var tw := create_tween()
-	# 颜色/两个半径同步渐变（t32：LIGHT 展开需在 LIGHT_C_DUR 内整体过渡，避免顺序 tween 与计时错位）
-	tw.set_parallel(true)
-	tw.tween_property(m, "darkness_color", col, dur)
-	tw.tween_property(m, "radius_inner", ri, dur)
-	tw.tween_property(m, "radius_outer", ro, dur)
+## 全屏黑/白 ColorRect 覆盖层控制（无圆形遮罩；黑屏/白屏为流程转场）。
+func _show_screen_overlay(kind: String) -> void:
+	var n := get_node_or_null(black_screen_path)
+	if kind == "white":
+		n = get_node_or_null(white_screen_path)
+	if n is CanvasItem:
+		(n as CanvasItem).visible = true
+
+
+func _hide_screen_overlay() -> void:
+	for p in [black_screen_path, white_screen_path]:
+		var n := get_node_or_null(p)
+		if n is CanvasItem:
+			(n as CanvasItem).visible = false
 
 
 # ─── 自检（场景级协调：单一 quit 出口，汇总各子系统）───
@@ -477,22 +370,10 @@ func _call_bool_selftest(n: Node) -> bool:
 	return res is bool and (res as bool)
 
 
-## 同步强制推进 LIGHT A→E（仅自检/校验用，跳过动画 Tween）：设终态 + 校验用状态。
-func _force_light_to_e() -> void:
-	_light_step = LIGHT_A
-	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR, false, LIGHT_STUDY_CENTER)
-	_light_step = LIGHT_B
-	_light_b_reset_done = true
-	_reset_player_to_study()
-	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR, false, LIGHT_STUDY_CENTER)
-	_light_step = LIGHT_C
-	_hide_room_structures()
-	_run_light_shake()
-	_run_light_particles()
-	_mask_config(LIGHT_EXPAND_INNER, LIGHT_EXPAND_OUTER, LIGHT_A_COLOR, true)
-	_light_step = LIGHT_D
-	_mask_config(LIGHT_DIM_INNER, LIGHT_DIM_OUTER, LIGHT_DIM_COLOR)
-	_finish_light_e()
+## 同步强制完成光影演出（仅自检/校验用，跳过计时）：触发 + 立即结束。
+func _force_light_show() -> void:
+	_trigger_light_show()
+	_finish_light_show()
 
 
 ## 全部房间间隔结构（wall_hide_paths）是否隐藏。
@@ -517,9 +398,9 @@ func _run_flow_checks(checks: Array[String]) -> void:
 	on_paper_collected("study_b", 99)
 	checks.append("s5_study_b" if not GameState.get_process_flag(FLAG_LIGHT_PHASE_DONE) else "s5_study_b_FAIL")
 	on_paper_collected("study_a", 100)
-	checks.append("s6_light" if (GameState.get_process_flag(FLAG_LIGHT_PHASE_DONE) and current_stage == STAGE_LIGHT and _light_step == LIGHT_A) else "s6_light_FAIL")
-	# t32：驱动 LIGHT A→E，校验 hold_breath_unlocked + 房间结构消散 + 震动 5s
-	_force_light_to_e()
+	checks.append("s6_light" if (GameState.get_process_flag(FLAG_LIGHT_PHASE_DONE) and current_stage == STAGE_LIGHT) else "s6_light_FAIL")
+	# 无遮罩演出：强制触发+结束，校验 hold_breath_unlocked + 房间结构消散 + 震动 5s
+	_force_light_show()
 	checks.append("s6_breath" if GameState.get_process_flag(FLAG_HOLD_BREATH_UNLOCKED) else "s6_breath_FAIL")
 	checks.append("s6_hide" if _light_structures_hidden() else "s6_hide_FAIL")
 	var sd: float = float(_screen_shake.get("duration")) if _screen_shake != null else 0.0
@@ -554,8 +435,8 @@ func _physical_assertions() -> bool:
 		if _player != null:
 			var bx: float = _player.global_position.x
 			checks.append("bedroom_x" if (absf(bx - 4820.0) < 5.0) else "bedroom_x_FAIL(%.1f)" % bx)
-	# ④LIGHT A→E → 房间结构消散 + 震动 5s + hold_breath_unlocked + 玩家齐位
-	_force_light_to_e()
+	# ④光影演出 → 房间结构消散 + 震动 5s + hold_breath_unlocked
+	_force_light_show()
 	await get_tree().process_frame
 	checks.append("light_hide" if _light_structures_hidden() else "light_hide_FAIL")
 	if _screen_shake != null:
@@ -768,7 +649,7 @@ func _resolve_scene_refs() -> void:
 	if breath_path != NodePath():
 		_breath = get_node_or_null(breath_path)
 	if darkness_mask_path != NodePath():
-		_mask = get_node_or_null(darkness_mask_path)
+		_mask = get_node_or_null(darkness_mask_path)  # 保留解析（呼吸缺氧遮罩独立使用场景 DarknessMask；本类演出不再使用）
 	if screen_shake_path != NodePath():
 		_screen_shake = get_node_or_null(screen_shake_path)
 	if particle_burst_path != NodePath():
@@ -796,7 +677,7 @@ func _process(delta: float) -> void:
 		if _player.global_position.x >= study_lock_x:
 			on_player_left_study()
 	elif current_stage == STAGE_LIGHT:
-		_process_light(delta)
+		_process_light_show(delta)
 
 
 ## t14 兜底轮询：窗口环境 body_entered 信号偶发丢失时，STAGE_STUDY 玩家接近书房-客厅左门
@@ -813,25 +694,13 @@ func _poll_study_door_fallback() -> void:
 			_door_study_living.open()
 
 
-## LIGHT 分步驱动（过场化：全计时自动播放，无玩家交互触发）。
-func _process_light(delta: float) -> void:
-	match _light_step:
-		LIGHT_A:
-			_light_a_t += delta
-			if _light_a_t >= LIGHT_A_WAIT:
-				_enter_light_b()
-		LIGHT_B:
-			if _light_b_reset_done:
-				_light_b_t += delta
-				if _light_b_t >= LIGHT_B_WAIT:
-					_enter_light_c()
-		LIGHT_C:
-			_light_c_t += delta
-			if _light_c_t >= LIGHT_C_DUR:
-				_enter_light_d()
-		LIGHT_D:
-			_light_d_t += delta
-			if _light_d_t >= LIGHT_D_DUR:
-				_finish_light_e()
-		_:
-			pass
+## 光影演出驱动（无遮罩版）：未触发时检测角色走到右侧靠近房门（LIGHT_TRIGGER_X）→ 触发震撼；
+## 已触发则计时 LIGHT_SHAKE_DUR（5s）后结束演出：解锁输入+屏息，进入走廊阶段。
+func _process_light_show(delta: float) -> void:
+	if not _light_triggered:
+		if _player != null and _player.global_position.x >= LIGHT_TRIGGER_X:
+			_trigger_light_show()
+		return
+	_light_show_t += delta
+	if _light_show_t >= LIGHT_SHAKE_DUR:
+		_finish_light_show()

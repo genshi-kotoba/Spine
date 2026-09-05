@@ -1,0 +1,49 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/scenes/FxDemo.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/components/ParticleBurst.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/components/ScreenShake.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/components/ItemShake.gd" id="5"]
+
+[sub_resource type="RectangleShape2D" id="floor_col"]
+size = Vector2(4000, 40)
+
+[node name="FxDemo" type="Node2D"]
+script = ExtResource("2")
+
+[node name="Player" parent="." instance=ExtResource("1")]
+position = Vector2(960, 948)
+
+[node name="ScreenShake" type="Node2D" parent="Player/Camera2D"]
+script = ExtResource("4")
+amplitude = 15.0
+duration = 0.35
+
+[node name="Floor" type="StaticBody2D" parent="."]
+position = Vector2(960, 1008)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor"]
+shape = SubResource("floor_col")
+
+[node name="Visual" type="Polygon2D" parent="Floor"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(-2000, -20, 2000, -20, 2000, 20, -2000, 20)
+
+[node name="ParticleBurst" type="Node2D" parent="."]
+script = ExtResource("3")
+position = Vector2(960, 700)
+amount = 60
+color = Color(0.9, 0.6, 0.3, 1)
+
+[node name="ShakeTarget" type="Node2D" parent="."]
+position = Vector2(1300, 850)
+
+[node name="Visual" type="Polygon2D" parent="ShakeTarget"]
+color = Color(0.6, 0.3, 0.7, 1)
+polygon = PackedVector2Array(-40, -40, 40, -40, 40, 40, -40, 40)
+
+[node name="ItemShake" type="Node2D" parent="ShakeTarget"]
+script = ExtResource("5")
+amplitude = 8.0
+duration = 0.25

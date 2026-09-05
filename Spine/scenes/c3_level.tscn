@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=22 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/room_bedroom_whitemodel.tscn" id="2"]
@@ -23,6 +23,7 @@
 [ext_resource type="Script" path="res://scripts/components/RoomTable.gd" id="22"]
 [ext_resource type="PackedScene" path="res://scenes/c3_floor.tscn" id="23"]
 [ext_resource type="Script" path="res://scripts/components/OkPopup.gd" id="24"]
+[ext_resource type="Script" path="res://scripts/c3/flow/CorridorAssembly.gd" id="25"]
 
 [sub_resource type="RectangleShape2D" id="floor_col"]
 size = Vector2(3840, 40)
@@ -43,7 +44,7 @@ size = Vector2(120, 200)
 size = Vector2(40, 460)
 
 [sub_resource type="RectangleShape2D" id="corridor_floor_col"]
-size = Vector2(3000, 40)
+size = Vector2(7680, 40)
 
 [sub_resource type="CanvasItemMaterial" id="wall_mat"]
 texture_repeat = 1
@@ -66,6 +67,8 @@ bedroom_left_wall_path = NodePath("Rooms/Bedroom/Environment/WallLeft")
 parallax_path = NodePath("WhiteModel/DepthParallax")
 ok_popup_path = NodePath("OkPopup")
 camera_path = NodePath("Player/Camera2D")
+black_screen_path = NodePath("OverlayLayer/BlackScreen")
+white_screen_path = NodePath("OverlayLayer/WhiteScreen")
 door_study_living_path = NodePath("WhiteModel/Doors/AutoDoorStudyLiving")
 door_living_dining_path = NodePath("WhiteModel/Doors/AutoDoorLivingDining")
 wall_hide_paths = [NodePath("WhiteModel/Environment/WallRight"), NodePath("WhiteModel/Environment/WallStudyLiving"), NodePath("WhiteModel/Environment/WallLivingDining"), NodePath("WhiteModel/Doors/AutoDoorStudyLiving"), NodePath("WhiteModel/Doors/AutoDoorLivingDining"), NodePath("WhiteModel/Doors/LockedBedroomDoor")]
@@ -157,6 +160,13 @@ bedroom_spawn = Vector2(320, 948)
 living_room_door_pos = Vector2(1850, 948)
 
 [node name="WhiteModel" parent="." instance=ExtResource("23")]
+map_max_x = 11520.0
+
+[node name="AutoDoorStudyLiving" parent="WhiteModel/Doors" index="0"]
+trigger_margin = 80.0
+
+[node name="AutoDoorLivingDining" parent="WhiteModel/Doors" index="1"]
+trigger_margin = 80.0
 
 [node name="Player" parent="WhiteModel" index="0"]
 process_mode = 3
@@ -317,7 +327,7 @@ offset = Vector2(0, -80)
 
 [node name="CorridorEndItem" type="Area2D" parent="Items"]
 script = ExtResource("8")
-position = Vector2(4700, 900)
+position = Vector2(11400, 900)
 size = Vector2(120, 200)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/CorridorEndItem"]
@@ -345,25 +355,32 @@ offset = Vector2(0, -80)
 script = ExtResource("7")
 position = Vector2(3840, 0)
 player = NodePath("../Player")
-stop_center_x = 4460.0
-end_wall_x = 4700.0
-wall_material_path = NodePath("CorridorWall")
+corridor_start_x = 3840.0
+end_wall_x = 11400.0
+special_x = [5280.0, 5760.0, 6240.0]
+first_special_x = 5280.0
+special_span = 480.0
 
 [node name="CorridorWall" type="Polygon2D" parent="Corridor"]
 material = SubResource("wall_mat")
 color = Color(0.62, 0.60, 0.58, 1)
 texture = ExtResource("20")
-polygon = PackedVector2Array(0, 200, 2000, 200, 2000, 980, 0, 980)
-uv = PackedVector2Array(0, 0, 31, 0, 31, 12, 0, 12)
+polygon = PackedVector2Array(0, 200, 7680, 200, 7680, 980, 0, 980)
+uv = PackedVector2Array(0, 0, 120, 0, 120, 12, 0, 12)
 
 [node name="CorridorFloorVisual" type="Polygon2D" parent="Corridor"]
-position = Vector2(1500, 1008)
+position = Vector2(3840, 1008)
 z_index = 1
 material = SubResource("wall_mat")
 color = Color(0.5, 0.55, 0.5, 1)
 texture = ExtResource("20")
-polygon = PackedVector2Array(-1500, -20, 1500, -20, 1500, 20, -1500, 20)
-uv = PackedVector2Array(0, 0, 32, 0, 32, 1, 0, 1)
+polygon = PackedVector2Array(-3840, -20, 3840, -20, 3840, 20, -3840, 20)
+uv = PackedVector2Array(0, 0, 120, 0, 120, 1, 0, 1)
+
+[node name="CorridorAssembly" type="Node2D" parent="."]
+script = ExtResource("25")
+position = Vector2(3840, 0)
+corridor_path = NodePath("../Corridor")
 
 [node name="Breath" type="Node" parent="."]
 script = ExtResource("5")
@@ -392,17 +409,17 @@ player_path = NodePath("Player")
 enabled = false
 
 [node name="CorridorFloor" type="StaticBody2D" parent="."]
-position = Vector2(5000, 1008)
+position = Vector2(7680, 1008)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CorridorFloor"]
 shape = SubResource("corridor_floor_col")
 
 [node name="Visual" type="Polygon2D" parent="CorridorFloor"]
 color = Color(0.5, 0.5, 0.5, 1)
-polygon = PackedVector2Array(-1500, -20, 1500, -20, 1500, 20, -1500, 20)
+polygon = PackedVector2Array(-3840, -20, 3840, -20, 3840, 20, -3840, 20)
 
 [node name="CorridorEndWall" type="StaticBody2D" parent="."]
-position = Vector2(4780, 619.5)
+position = Vector2(11520, 619.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CorridorEndWall"]
 shape = SubResource("wall_side_col")
@@ -413,3 +430,24 @@ polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
 
 [node name="OkPopup" type="CanvasLayer" parent="."]
 script = ExtResource("24")
+
+[node name="OverlayLayer" type="CanvasLayer" parent="."]
+layer = 100
+
+[node name="BlackScreen" type="ColorRect" parent="OverlayLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+visible = false
+
+[node name="WhiteScreen" type="ColorRect" parent="OverlayLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 1)
+visible = false

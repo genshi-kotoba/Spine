@@ -22,7 +22,7 @@ extends Node2D
 @export var radius_outer: float = 420.0
 
 ## 遮罩颜色（深色 + alpha）。
-@export var darkness_color: Color = Color(0, 0, 0, 0.85)
+@export var darkness_color: Color = Color(0.02, 0.03, 0.09, 0.55)  ## 昏暗透光（用户定案：非全黑）
 
 ## 边缘软度（0=硬边；放大 inner/outer 之间的过渡）。
 @export var softness: float = 0.5

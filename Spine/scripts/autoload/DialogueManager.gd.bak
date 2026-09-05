@@ -10,14 +10,11 @@ signal dialogue_finished
 enum {
 	MODE_INTERACTIVE = 0,  ## 按键切换（锁定输入）
 	MODE_AUTO = 1,         ## 自动切换（不锁定输入）
-	MODE_GLITCH = 2,       ## 故障散落字幕（生命周期同 MODE_AUTO，仅显示方式不同）
 }
 
 const BOX_SCENE := preload("res://ui/dialogue_box.tscn")
-const GLITCH_BOX_SCENE := preload("res://ui/glitch_dialogue_box.tscn")
 
 var _box: DialogueBox = null
-var _glitch_box = null  ## GlitchDialogueBox（路径实例化，避免依赖全局类缓存）
 var _active: bool = false
 var _queue: Array[Dictionary] = []
 
@@ -26,10 +23,6 @@ func _ready() -> void:
 	_box = BOX_SCENE.instantiate()
 	_box.dialogue_finished.connect(_on_box_finished)
 	add_child(_box)
-	_glitch_box = GLITCH_BOX_SCENE.instantiate()
-	_glitch_box.dialogue_finished.connect(_on_box_finished)
-	add_child(_glitch_box)
-	print("[dialogue_manager] glitch box ready")
 
 
 func is_dialogue_active() -> bool:
@@ -48,11 +41,7 @@ func _begin(file_path: String, mode: int) -> void:
 	var lines := _load_lines(file_path)
 	_active = true
 	dialogue_started.emit()
-	print("[dialogue_manager] begin mode=%d file=%s" % [mode, file_path])
-	if mode == MODE_GLITCH:
-		_glitch_box.show_dialogue(lines)
-	else:
-		_box.show_dialogue(lines, mode)
+	_box.show_dialogue(lines, mode)
 
 
 ## 按行读取文本文件：换行分句，忽略空行

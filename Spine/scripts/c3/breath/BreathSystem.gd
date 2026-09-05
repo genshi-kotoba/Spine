@@ -76,6 +76,9 @@ func _ready() -> void:
 	_resolve_refs()
 	_ensure_input()
 	_countdown = breathe_timeout
+	# 出生时气泡可见漂浮（角色身旁；修复 t24：气泡未显示）
+	if _bubble != null and is_instance_valid(_bubble):
+		_bubble.restore()
 
 
 func _process(delta: float) -> void:

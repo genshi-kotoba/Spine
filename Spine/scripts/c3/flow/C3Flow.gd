@@ -45,6 +45,7 @@ signal stage_changed(new_stage: int)
 @export var particle_burst_path: NodePath
 @export var corridor_end_item_path: NodePath
 @export var gate_blocker_path: NodePath
+@export var room_table_path: NodePath
 @export var study_spawn: Vector2 = Vector2(320, 948)
 @export var study_right_x: float = 1280.0
 ## LIGHT-C 需隐藏的门/墙（NodePath；如 书房-客厅墙、auto_door、最右侧墙）。
@@ -363,8 +364,22 @@ func _physical_assertions() -> bool:
 
 func _ready_extra() -> void:
 	_resolve_scene_refs()
+	_setup_room_table()
 	_connect_scene_signals()
 	_apply_phase_arg()
+
+
+## 配置 RoomTable 房间区间（§3.4：书房[0,1280]/客厅[1280,2560]/厨房[餐厅位,2560,3840]）。
+func _setup_room_table() -> void:
+	if room_table_path == NodePath():
+		return
+	var rt := get_node_or_null(room_table_path)
+	if rt != null and rt.has_method("set_rooms"):
+		rt.set_rooms({
+			"room1": {"x_min": 0.0, "x_max": 1280.0},
+			"room2": {"x_min": 1280.0, "x_max": 2560.0},
+			"room3": {"x_min": 2560.0, "x_max": 3840.0}
+		})
 
 
 ## 连接子系统信号（f5：门 E→进卧室 / end_confirmed→黑屏→begin / breath_disable→set_enabled(false) / white_screen→全屏白）。

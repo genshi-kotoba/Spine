@@ -19,6 +19,8 @@
 [ext_resource type="Script" path="res://scripts/components/ScreenShake.gd" id="16"]
 [ext_resource type="Texture2D" path="res://assets/ui/e_key.png" id="18"]
 [ext_resource type="Texture2D" path="res://assets/ui/corridor_wall.png" id="20"]
+[ext_resource type="Script" path="res://scripts/components/ItemMarker.gd" id="21"]
+[ext_resource type="Script" path="res://scripts/components/RoomTable.gd" id="22"]
 
 [sub_resource type="RectangleShape2D" id="floor_col"]
 size = Vector2(3840, 40)
@@ -31,6 +33,9 @@ size = Vector2(20, 817)
 
 [sub_resource type="RectangleShape2D" id="wall_lintel_col"]
 size = Vector2(20, 497)
+
+[sub_resource type="RectangleShape2D" id="item_col"]
+size = Vector2(120, 200)
 
 [sub_resource type="RectangleShape2D" id="blocker_col"]
 size = Vector2(40, 460)
@@ -49,11 +54,15 @@ screen_shake_path = NodePath("Effects/ScreenShake")
 particle_burst_path = NodePath("Effects/ParticleBurst")
 corridor_end_item_path = NodePath("Items/CorridorEndItem")
 gate_blocker_path = NodePath("Environment/StudyGateBlocker")
+room_table_path = NodePath("RoomTable")
 wall_hide_paths = [NodePath("Environment/WallRight"), NodePath("Environment/WallStudyLiving")]
 
 [node name="Player" parent="." instance=ExtResource("1")]
 groups=["player"]
 position = Vector2(320, 948)
+
+[node name="RoomTable" type="Node" parent="."]
+script = ExtResource("22")
 
 [node name="Rooms" type="Node2D" parent="."]
 
@@ -70,6 +79,7 @@ position = Vector2(560, 700)
 size = Vector2(120, 200)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/WallItem"]
+shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/WallItem"]
 color = Color(0.45, 0.40, 0.35, 1)
@@ -90,6 +100,7 @@ size = Vector2(120, 300)
 gate_flag = "bedroom_unlocked"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/DoorItem"]
+shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/DoorItem"]
 color = Color(0.3, 0.32, 0.35, 1)
@@ -109,6 +120,7 @@ position = Vector2(1900, 900)
 size = Vector2(120, 300)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/EndItem"]
+shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/EndItem"]
 color = Color(0.35, 0.33, 0.30, 1)
@@ -220,6 +232,7 @@ paper_id = "paper_living"
 score = 100
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/PaperLiving"]
+shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/PaperLiving"]
 color = Color(0.95, 0.95, 0.9, 1)
@@ -233,6 +246,12 @@ head_offset = Vector2(0, -40)
 [node name="Visual" type="Sprite2D" parent="Items/PaperLiving/InteractHint"]
 texture = ExtResource("18")
 
+[node name="ItemMarker" type="Node2D" parent="Items/PaperLiving"]
+script = ExtResource("21")
+room_table_path = NodePath("../../RoomTable")
+player_path = NodePath("../../Player")
+offset = Vector2(0, -80)
+
 [node name="PaperKitchen" type="Area2D" parent="Items"]
 script = ExtResource("4")
 position = Vector2(2600, 900)
@@ -241,6 +260,7 @@ paper_id = "paper_kitchen"
 score = 100
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/PaperKitchen"]
+shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/PaperKitchen"]
 color = Color(0.95, 0.95, 0.9, 1)
@@ -254,6 +274,12 @@ head_offset = Vector2(0, -40)
 [node name="Visual" type="Sprite2D" parent="Items/PaperKitchen/InteractHint"]
 texture = ExtResource("18")
 
+[node name="ItemMarker" type="Node2D" parent="Items/PaperKitchen"]
+script = ExtResource("21")
+room_table_path = NodePath("../../RoomTable")
+player_path = NodePath("../../Player")
+offset = Vector2(0, -80)
+
 [node name="StudyPaperA" type="Area2D" parent="Items"]
 script = ExtResource("4")
 position = Vector2(340, 900)
@@ -263,6 +289,7 @@ score = 100
 gate_flag = "study_items_unlocked"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/StudyPaperA"]
+shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/StudyPaperA"]
 color = Color(0.95, 0.95, 0.9, 1)
@@ -276,6 +303,12 @@ head_offset = Vector2(0, -40)
 [node name="Visual" type="Sprite2D" parent="Items/StudyPaperA/InteractHint"]
 texture = ExtResource("18")
 
+[node name="ItemMarker" type="Node2D" parent="Items/StudyPaperA"]
+script = ExtResource("21")
+room_table_path = NodePath("../../RoomTable")
+player_path = NodePath("../../Player")
+offset = Vector2(0, -80)
+
 [node name="StudyPaperB" type="Area2D" parent="Items"]
 script = ExtResource("4")
 position = Vector2(600, 900)
@@ -285,6 +318,7 @@ score = 99
 gate_flag = "study_items_unlocked"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/StudyPaperB"]
+shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/StudyPaperB"]
 color = Color(0.95, 0.95, 0.9, 1)
@@ -298,6 +332,12 @@ head_offset = Vector2(0, -40)
 [node name="Visual" type="Sprite2D" parent="Items/StudyPaperB/InteractHint"]
 texture = ExtResource("18")
 
+[node name="ItemMarker" type="Node2D" parent="Items/StudyPaperB"]
+script = ExtResource("21")
+room_table_path = NodePath("../../RoomTable")
+player_path = NodePath("../../Player")
+offset = Vector2(0, -80)
+
 [node name="BedroomHallDoor" type="Area2D" parent="Items"]
 script = ExtResource("19")
 position = Vector2(1920, 828)
@@ -305,6 +345,7 @@ size = Vector2(120, 300)
 gate_flag = "bedroom_door_active"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/BedroomHallDoor"]
+shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/BedroomHallDoor"]
 color = Color(0.3, 0.32, 0.35, 1)
@@ -318,12 +359,19 @@ head_offset = Vector2(0, -60)
 [node name="Visual" type="Sprite2D" parent="Items/BedroomHallDoor/InteractHint"]
 texture = ExtResource("18")
 
+[node name="ItemMarker" type="Node2D" parent="Items/BedroomHallDoor"]
+script = ExtResource("21")
+room_table_path = NodePath("../../RoomTable")
+player_path = NodePath("../../Player")
+offset = Vector2(0, -80)
+
 [node name="CorridorEndItem" type="Area2D" parent="Items"]
 script = ExtResource("8")
 position = Vector2(4700, 900)
 size = Vector2(120, 200)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/CorridorEndItem"]
+shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/CorridorEndItem"]
 color = Color(0.7, 0.6, 0.4, 1)
@@ -336,6 +384,12 @@ head_offset = Vector2(0, -40)
 
 [node name="Visual" type="Sprite2D" parent="Items/CorridorEndItem/InteractHint"]
 texture = ExtResource("18")
+
+[node name="ItemMarker" type="Node2D" parent="Items/CorridorEndItem"]
+script = ExtResource("21")
+room_table_path = NodePath("../../RoomTable")
+player_path = NodePath("../../Player")
+offset = Vector2(0, -80)
 
 [node name="Corridor" type="Node2D" parent="."]
 script = ExtResource("7")
@@ -376,3 +430,4 @@ camera_path = NodePath("../../Player/Camera2D")
 script = ExtResource("14")
 follow_player = true
 player_path = NodePath("Player")
+enabled = false

@@ -25,7 +25,7 @@ size = Vector2(20, 817)
 size = Vector2(178, 475)
 
 [sub_resource type="RectangleShape2D" id="waste_col"]
-size = Vector2(48, 48)
+size = Vector2(136, 629.25)
 
 [node name="C4Floor" unique_id=1644574310 instance=ExtResource("1")]
 script = ExtResource("7")
@@ -89,7 +89,7 @@ size = Vector2(160, 320)
 highlight_enabled = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Doors/BedroomDoor" index="0" unique_id=1869043597]
-position = Vector2(-32, -225.5)
+position = Vector2(-29, -203)
 shape = SubResource("door_col")
 
 [node name="Items" type="Node2D" parent="." index="4" unique_id=80992964]
@@ -104,8 +104,8 @@ state_id = "c4_waste1"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste1" index="0" unique_id=2132886799]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste1"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste1" index="1" unique_id=1480052273]
+position = Vector2(129, -34)
 scale = Vector2(2, 2)
 texture = ExtResource("9")
 
@@ -119,8 +119,9 @@ state_id = "c4_waste2"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste2" index="0" unique_id=1549843275]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste2"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste2" index="1" unique_id=886503241]
+position = Vector2(-80, -44)
+rotation = 0.9302605
 scale = Vector2(2, 2)
 texture = ExtResource("9")
 
@@ -134,8 +135,9 @@ state_id = "c4_waste3"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste3" index="0" unique_id=646670680]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste3"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste3" index="1" unique_id=40165934]
+position = Vector2(1772, -41)
+rotation = -1.7837265
 scale = Vector2(2, 2)
 texture = ExtResource("9")
 
@@ -149,8 +151,8 @@ state_id = "c4_waste4"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste4" index="0" unique_id=1841676935]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste4"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste4" index="1" unique_id=1570234738]
+position = Vector2(-475, -30)
 scale = Vector2(2, 2)
 texture = ExtResource("10")
 
@@ -164,8 +166,8 @@ state_id = "c4_waste5"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste5" index="0" unique_id=709825017]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste5"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste5" index="1" unique_id=1024459404]
+position = Vector2(2119, -18)
 scale = Vector2(2, 2)
 texture = ExtResource("10")
 
@@ -179,7 +181,7 @@ state_id = "c4_waste6"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste6" index="0" unique_id=1870005578]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste6"]
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste6" index="1" unique_id=1587168862]
 position = Vector2(0, -53)
 scale = Vector2(2, 2)
 texture = ExtResource("10")
@@ -194,8 +196,8 @@ state_id = "c4_waste7"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste7" index="0" unique_id=302846402]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste7"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste7" index="1" unique_id=1403248299]
+position = Vector2(-1117, -9)
 scale = Vector2(2, 2)
 texture = ExtResource("11")
 
@@ -209,8 +211,8 @@ state_id = "c4_waste8"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste8" index="0" unique_id=1113183116]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste8"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste8" index="1" unique_id=768145877]
+position = Vector2(-243, -201)
 scale = Vector2(2, 2)
 texture = ExtResource("11")
 
@@ -224,8 +226,8 @@ state_id = "c4_waste9"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste9" index="0" unique_id=210119759]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste9"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste9" index="1" unique_id=2016800548]
+position = Vector2(275, -201)
 scale = Vector2(2, 2)
 texture = ExtResource("12")
 
@@ -239,8 +241,9 @@ state_id = "c4_waste10"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste10" index="0" unique_id=1558475324]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste10"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste10" index="1" unique_id=130816959]
+position = Vector2(-2020, -30)
+rotation = 0.85346603
 scale = Vector2(2, 2)
 texture = ExtResource("12")
 
@@ -254,8 +257,8 @@ state_id = "c4_waste11"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste11" index="0" unique_id=287358290]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste11"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste11" index="1" unique_id=1589370823]
+position = Vector2(91, -206)
 scale = Vector2(2, 2)
 texture = ExtResource("13")
 
@@ -269,8 +272,9 @@ state_id = "c4_waste12"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste12" index="0" unique_id=1682202386]
 shape = SubResource("waste_col")
 
-[node name="Sprite2D" type="Sprite2D" parent="Items/Waste12"]
-position = Vector2(0, -53)
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste12" index="1" unique_id=421558521]
+position = Vector2(-2089, -316)
+rotation = -4.3441243
 scale = Vector2(2, 2)
 texture = ExtResource("13")
 

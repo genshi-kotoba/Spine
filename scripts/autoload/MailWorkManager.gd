@@ -1,0 +1,116 @@
+extends Node
+## MailWorkManager — Autoload 单例（docs/desktop_screens_constraints.md §4.1）
+## 邮件与 work 文本的统一数据中枢。
+## 监听 GameState.state_changed，每次重查完整条件（不只信单条事件，读档补触发正确）：
+##   "c2_curten" == "1"        → 追加 mail2，work 版本至少 2
+##   c4_waste1~12 全 "1"       → 追加 mail4，work 版本至少 4
+## 持久化写 GameState（只升不降、幂等）；弹层经 mails_changed / work_version_changed 即时刷新。
+
+## 已解锁邮件编号列表（"1,2,4" 式字符串）
+const KEY_MAILS: String = "desktop_mails_unlocked"
+## 当前 work 版本号（"1"~"4"）
+const KEY_WORK: String = "desktop_work_version"
+## c4 waste 状态键（全部 "1" 才触发 mail4/work4）
+const C4_WASTE_IDS: Array[String] = [
+	"c4_waste1", "c4_waste2", "c4_waste3", "c4_waste4",
+	"c4_waste5", "c4_waste6", "c4_waste7", "c4_waste8",
+	"c4_waste9", "c4_waste10", "c4_waste11", "c4_waste12",
+]
+## 文本目录
+const TEXT_DIR: String = "res://texts/"
+
+## 邮件列表变化（解锁追加）
+signal mails_changed
+## work 版本变化（只升不降）
+signal work_version_changed
+
+
+func _ready() -> void:
+	GameState.state_changed.connect(_on_state_changed)
+	_recheck()
+
+
+func _on_state_changed(_object_id: String, _new_state: String) -> void:
+	_recheck()
+
+
+## 重查完整解锁条件（幂等、只升不降；写 GameState 引起的重入由「无变化不写」收敛）
+func _recheck() -> void:
+	var mails: Array[int] = get_unlocked_mails()
+	var target_work: int = get_work_version()
+	# 条件一：c2 窗帘消失 → mail2 + work2
+	if GameState.get_object_state("c2_curten") == "1":
+		if not mails.has(2):
+			mails.append(2)
+		target_work = max(target_work, 2)
+	# 条件二：c4 12 个 waste 全部消失 → mail4 + work4
+	var all_waste: bool = true
+	for id: String in C4_WASTE_IDS:
+		if GameState.get_object_state(id) != "1":
+			all_waste = false
+			break
+	if all_waste:
+		if not mails.has(4):
+			mails.append(4)
+		target_work = max(target_work, 4)
+	# 有新增才写回（避免重入死循环）
+	var saved: Array[int] = get_unlocked_mails()
+	if mails != saved:
+		mails.sort()
+		var parts: PackedStringArray = []
+		for m: int in mails:
+			parts.append(str(m))
+		GameState.set_object_state(KEY_MAILS, ",".join(parts))
+		mails_changed.emit()
+		print("[mail_work] mails unlocked: %s" % str(mails))
+	if target_work != get_work_version():
+		GameState.set_object_state(KEY_WORK, str(target_work))
+		work_version_changed.emit()
+		print("[mail_work] work version -> %d" % target_work)
+
+
+## 已解锁邮件编号（升序；空存档 = [1]；始终含 1）
+func get_unlocked_mails() -> Array[int]:
+	var result: Array[int] = [1]
+	var saved: String = GameState.get_object_state(KEY_MAILS)
+	if saved != "":
+		result.clear()
+		for part: String in saved.split(","):
+			var id: int = int(part)
+			if not result.has(id):
+				result.append(id)
+		if not result.has(1):
+			result.append(1)
+		result.sort()
+	return result
+
+
+## 邮件正文全文；缺失 push_error + 占位，不崩溃
+func get_mail_text(mail_id: int) -> String:
+	return _read_text("mail%d.txt" % mail_id)
+
+
+## 当前 work 版本（空存档 = 1）
+func get_work_version() -> int:
+	var saved: String = GameState.get_object_state(KEY_WORK)
+	if saved == "":
+		return 1
+	return int(saved)
+
+
+## 当前版本 work 文本全文；缺失同上占位
+func get_work_text() -> String:
+	return _read_text("work%d.txt" % get_work_version())
+
+
+## 读取 texts/ 文件全文（保留换行）；缺失返回占位文本
+func _read_text(file_name: String) -> String:
+	var path: String = TEXT_DIR + file_name
+	if not FileAccess.file_exists(path):
+		push_error("MailWorkManager: 文本缺失 %s" % path)
+		return "[文本缺失: %s]" % file_name
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_error("MailWorkManager: 无法读取 %s" % path)
+		return "[文本缺失: %s]" % file_name
+	return file.get_as_text().strip_edges()

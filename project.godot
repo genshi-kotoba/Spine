@@ -19,6 +19,7 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 GameState="*res://scripts/autoload/GameState.gd"
 StoryMonitor="*res://scripts/autoload/StoryMonitor.gd"
 DialogueManager="*res://scripts/autoload/DialogueManager.gd"
+MailWorkManager="*res://scripts/autoload/MailWorkManager.gd"
 
 [display]
 

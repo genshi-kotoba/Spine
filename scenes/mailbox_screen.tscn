@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/scenes/MailboxScreen.gd" id="1"]
-[ext_resource type="Texture2D" path="res://assets/sprites/mailbox_screen.jpeg" id="2"]
+[ext_resource type="Texture2D" uid="uid://db7jj85rx5xwq" path="res://assets/sprites/mailbox.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://dxe4ng72mig67" path="res://assets/sprites/close_button.png" id="3"]
 
 [node name="MailboxScreen" type="CanvasLayer"]
 layer = 10
@@ -14,33 +15,85 @@ anchor_bottom = 1.0
 color = Color(0, 0, 0, 0.5)
 
 [node name="Panel" type="Panel" parent="."]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -568.0
-offset_top = -249.0
-offset_right = 568.0
-offset_bottom = 249.0
+offset_left = 714.0
+offset_top = 378.0
+offset_right = 1205.0
+offset_bottom = 861.0
 
-[node name="TextureRect" type="TextureRect" parent="Panel"]
+[node name="Background" type="TextureRect" parent="Panel"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 texture = ExtResource("2")
-expand_mode = 1
-stretch_mode = 5
 
-[node name="MailList" type="ItemList" parent="Panel"]
-offset_left = 16.0
-offset_top = 16.0
-offset_right = 376.0
-offset_bottom = 482.0
-
-[node name="CloseButton" type="Button" parent="Panel"]
-offset_left = 1080.0
-offset_top = 8.0
-offset_right = 1128.0
+[node name="DragBar" type="Control" parent="Panel"]
+offset_right = 451.0
 offset_bottom = 40.0
-text = "X"
+
+[node name="CloseButton" type="TextureButton" parent="Panel"]
+offset_left = 458.0
+offset_top = 8.0
+offset_right = 483.0
+offset_bottom = 32.0
+texture_normal = ExtResource("3")
+
+[node name="PreButton" type="Button" parent="Panel"]
+offset_left = 24.0
+offset_top = 48.0
+offset_right = 72.0
+offset_bottom = 80.0
+text = "◀"
+
+[node name="NextButton" type="Button" parent="Panel"]
+offset_left = 419.0
+offset_top = 48.0
+offset_right = 467.0
+offset_bottom = 80.0
+text = "▶"
+
+[node name="TextBg" type="ColorRect" parent="Panel"]
+offset_left = 24.0
+offset_top = 88.0
+offset_right = 467.0
+offset_bottom = 467.0
+color = Color(0.12, 0.12, 0.14, 1)
+
+[node name="TextScroll" type="ScrollContainer" parent="Panel"]
+offset_left = 24.0
+offset_top = 88.0
+offset_right = 467.0
+offset_bottom = 467.0
+vertical_scroll_mode = 2
+
+[node name="MailText" type="RichTextLabel" parent="Panel/TextScroll"]
+custom_minimum_size = Vector2(431, 0)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Cover1" type="ColorRect" parent="Panel"]
+offset_left = 24.0
+offset_top = 88.0
+offset_right = 467.0
+offset_bottom = 277.5
+color = Color(0.12, 0.12, 0.14, 1)
+
+[node name="Cover2" type="ColorRect" parent="Panel"]
+offset_left = 24.0
+offset_top = 277.5
+offset_right = 467.0
+offset_bottom = 340.7
+color = Color(0.12, 0.12, 0.14, 1)
+
+[node name="Cover3" type="ColorRect" parent="Panel"]
+offset_left = 24.0
+offset_top = 340.7
+offset_right = 467.0
+offset_bottom = 403.9
+color = Color(0.12, 0.12, 0.14, 1)
+
+[node name="Cover4" type="ColorRect" parent="Panel"]
+offset_left = 24.0
+offset_top = 403.9
+offset_right = 467.0
+offset_bottom = 467.0
+color = Color(0.12, 0.12, 0.14, 1)

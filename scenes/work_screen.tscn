@@ -1,0 +1,100 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/scenes/WorkScreen.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://dxe4ng72mig67" path="res://assets/sprites/close_button.png" id="3"]
+
+[node name="WorkScreen" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1")
+
+[node name="Dim" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.5)
+
+[node name="Panel" type="Panel" parent="."]
+offset_left = 714.0
+offset_top = 378.0
+offset_right = 1205.0
+offset_bottom = 861.0
+
+[node name="BgPlaceholder" type="ColorRect" parent="Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.2, 0.2, 0.25, 1)
+
+[node name="Background" type="TextureRect" parent="Panel"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="DragBar" type="Control" parent="Panel"]
+offset_right = 451.0
+offset_bottom = 40.0
+
+[node name="CloseButton" type="TextureButton" parent="Panel"]
+offset_left = 458.0
+offset_top = 8.0
+offset_right = 483.0
+offset_bottom = 32.0
+texture_normal = ExtResource("3")
+
+[node name="TextBg" type="ColorRect" parent="Panel"]
+offset_left = 24.0
+offset_top = 48.0
+offset_right = 467.0
+offset_bottom = 415.0
+color = Color(0.12, 0.12, 0.14, 1)
+
+[node name="TextScroll" type="ScrollContainer" parent="Panel"]
+offset_left = 24.0
+offset_top = 48.0
+offset_right = 467.0
+offset_bottom = 415.0
+vertical_scroll_mode = 2
+
+[node name="WorkText" type="RichTextLabel" parent="Panel/TextScroll"]
+custom_minimum_size = Vector2(431, 0)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="WorkButton" type="Button" parent="Panel"]
+offset_left = 205.0
+offset_top = 427.0
+offset_right = 285.0
+offset_bottom = 467.0
+text = "工作"
+
+[node name="LinkLayer" type="CanvasLayer" parent="."]
+layer = 40
+
+[node name="FadeRect" type="ColorRect" parent="LinkLayer"]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="LinkTitle" type="RichTextLabel" parent="LinkLayer"]
+visible = false
+offset_left = 560.0
+offset_top = 560.0
+offset_right = 1360.0
+offset_bottom = 620.0
+mouse_filter = 2
+bbcode_enabled = true
+horizontal_alignment = 1
+
+[node name="LinkBody" type="RichTextLabel" parent="LinkLayer"]
+modulate = Color(1, 1, 1, 0)
+offset_left = 560.0
+offset_top = 640.0
+offset_right = 1360.0
+offset_bottom = 700.0
+mouse_filter = 2
+bbcode_enabled = true
+horizontal_alignment = 1

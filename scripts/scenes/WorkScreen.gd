@@ -1,0 +1,166 @@
+class_name WorkScreen
+extends CanvasLayer
+## WorkScreen — 工作弹层（docs/desktop_screens_constraints.md §4.3）
+## 与 mailbox 同骨架：Dim + Panel + 背景 + DragBar 拖拽 + 右上角关闭 + 滚轮文本框。
+## 打开时载入当前版本 work 文本；work_version_changed 期间即时替换；无 pre/next。
+## 「工作」按钮：链接序列 —— 0.4s 渐黑 → 1s → link{v} 第一行(加粗斜体) → 2s →
+##   第二行 0.4s 淡入 → 3s → 切场景（v1→c2_floor / v2→c3_level / v3→c4_floor / v4 禁用）。
+## work_screen.png 缺失：占位方案（纯色背景 + @export 路径，补图后自动按图尺寸生效）。
+
+## 弹层已关闭
+signal closed
+
+## 版本 → 目标场景（v4 未定义：按钮禁用，待补充）
+const LINK_TARGETS: Dictionary = {
+	1: "res://scenes/c2_floor.tscn",
+	2: "res://scenes/c3_level.tscn",
+	3: "res://scenes/c4_floor.tscn",
+}
+
+## 链接文件路径模板（%d = 版本号）
+const LINK_FILE_PATTERN: String = "res://texts/link%d.txt"
+
+## 背景图路径（当前缺失 → 占位；补图后 _ready 自动按图尺寸铺 Panel）
+@export var work_bg_path: String = "res://assets/sprites/work_screen.png"
+
+@onready var _dim: ColorRect = $Dim
+@onready var _panel: Panel = $Panel
+@onready var _bg: TextureRect = $Panel/Background
+@onready var _bg_placeholder: ColorRect = $Panel/BgPlaceholder
+@onready var _drag_bar: Control = $Panel/DragBar
+@onready var _close_button: TextureButton = $Panel/CloseButton
+@onready var _work_text: RichTextLabel = $Panel/TextScroll/WorkText
+@onready var _work_button: Button = $Panel/WorkButton
+@onready var _fade_rect: ColorRect = $LinkLayer/FadeRect
+@onready var _link_title: RichTextLabel = $LinkLayer/LinkTitle
+@onready var _link_body: RichTextLabel = $LinkLayer/LinkBody
+
+## 拖拽状态
+var _dragging: bool = false
+var _drag_offset: Vector2 = Vector2.ZERO
+## 链接序列防重入
+var _link_running: bool = false
+
+
+func _ready() -> void:
+	_close_button.pressed.connect(close)
+	_work_button.pressed.connect(_on_work_pressed)
+	_drag_bar.gui_input.connect(_on_drag_bar_gui_input)
+	_dim.gui_input.connect(_on_dim_gui_input)
+	MailWorkManager.work_version_changed.connect(_on_work_version_changed)
+	_setup_background()
+	_reload_work_text()
+	_update_work_button()
+
+
+## 背景：图存在则按原始尺寸铺 Panel 并重新居中；缺失用纯色占位（不中断流程）
+func _setup_background() -> void:
+	if ResourceLoader.exists(work_bg_path):
+		_bg.texture = load(work_bg_path)
+		_bg.show()
+		_bg_placeholder.hide()
+		var bg_size: Vector2 = _bg.texture.get_size()
+		_panel.size = bg_size
+		var view_size: Vector2 = get_viewport().get_visible_rect().size
+		_panel.position = (view_size - bg_size) * 0.5
+	else:
+		push_warning("[work_screen] work_screen.png missing, using placeholder: %s" % work_bg_path)
+		_bg.hide()
+		_bg_placeholder.show()
+
+
+## 载入当前版本 work 文本
+func _reload_work_text() -> void:
+	_work_text.text = MailWorkManager.get_work_text()
+
+
+## 弹层打开期间版本升级：即时替换文本并同步按钮禁用态
+func _on_work_version_changed() -> void:
+	_reload_work_text()
+	_update_work_button()
+
+
+## v4（未定义目标）禁用「工作」按钮
+func _update_work_button() -> void:
+	_work_button.disabled = MailWorkManager.get_work_version() >= 4
+
+
+## 「工作」链接序列（防重入；切场景前无需解锁输入——场景销毁自然释放）
+func _on_work_pressed() -> void:
+	if _link_running:
+		return
+	var v: int = MailWorkManager.get_work_version()
+	if not LINK_TARGETS.has(v):
+		return
+	_link_running = true
+	StoryMonitor.lock_input()
+	# 0.4 秒渐黑
+	var tween_fade: Tween = create_tween()
+	tween_fade.tween_property(_fade_rect, "modulate:a", 1.0, 0.4)
+	await tween_fade.finished
+	# 等待 1 秒
+	await get_tree().create_timer(1.0).timeout
+	# 第一行（加粗斜体）正中显示
+	var lines: Array[String] = _read_link_lines(v)
+	_link_title.text = "[center][b][i]%s[/i][/b][/center]" % lines[0]
+	_link_title.show()
+	# 等 2 秒后第二行 0.4 秒淡入
+	await get_tree().create_timer(2.0).timeout
+	_link_body.text = "[center]%s[/center]" % lines[1]
+	var tween_body: Tween = create_tween()
+	tween_body.tween_property(_link_body, "modulate:a", 1.0, 0.4)
+	await tween_body.finished
+	# 等 3 秒后切场景
+	await get_tree().create_timer(3.0).timeout
+	get_tree().change_scene_to_file(LINK_TARGETS[v])
+
+
+## 读 link{v}.txt 前两行（空行忽略）；缺失 push_error + 占位，不崩溃
+func _read_link_lines(v: int) -> Array[String]:
+	var path: String = LINK_FILE_PATTERN % v
+	var fallback: Array[String] = ["[文本缺失: link%d.txt]" % v, ""]
+	if not FileAccess.file_exists(path):
+		push_error("WorkScreen: 文本缺失 %s" % path)
+		return fallback
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_error("WorkScreen: 无法读取 %s" % path)
+		return fallback
+	var lines: Array[String] = []
+	while not file.eof_reached() and lines.size() < 2:
+		var line: String = file.get_line().strip_edges()
+		if line != "":
+			lines.append(line)
+	while lines.size() < 2:
+		lines.append("")
+	return lines
+
+
+## 拖拽整窗（与 mailbox 同款，clamp 不出可视区域）
+func _on_drag_bar_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_dragging = true
+			_drag_offset = _panel.position - get_viewport().get_mouse_position()
+		else:
+			_dragging = false
+	elif event is InputEventMouseMotion and _dragging:
+		var target: Vector2 = get_viewport().get_mouse_position() + _drag_offset
+		var view: Rect2 = get_viewport().get_visible_rect()
+		var max_x: float = view.size.x - _panel.size.x
+		var max_y: float = view.size.y - _panel.size.y
+		var clamped_x: float = clamp(target.x, 0.0, max_x)
+		var clamped_y: float = clamp(target.y, 0.0, max_y)
+		_panel.position = Vector2(clamped_x, clamped_y)
+
+
+## 关闭弹层
+func close() -> void:
+	closed.emit()
+	queue_free()
+
+
+## 点击遮罩（Panel 外区域）关闭
+func _on_dim_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		close()

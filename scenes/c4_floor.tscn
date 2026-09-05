@@ -21,7 +21,7 @@ size = Vector2(15, 588.5)
 size = Vector2(160, 320)
 
 [node name="C4Floor" unique_id=1644574310 instance=ExtResource("1")]
-player_spawn_position = Vector2(320, 948)
+player_spawn_position = Vector2(320, 956)
 camera_position_offset = Vector2(0, -336.5)
 map_max_x = 3840.0
 camera_smoothing = 0.0
@@ -40,11 +40,8 @@ uv = PackedVector2Array(0, 0, 2172, 0, 2172, 724, 0, 724)
 position = Vector2(1920, 1008)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Floor" index="0" unique_id=125620988]
+position = Vector2(-13, -130)
 shape = SubResource("floor_col")
-
-[node name="Visual" type="Polygon2D" parent="Environment/Floor" index="1" unique_id=984844629]
-color = Color(0.5, 0.5, 0.5, 1)
-polygon = PackedVector2Array(-1920, -20, 1920, -20, 1920, 20, -1920, 20)
 
 [node name="Ceiling" type="StaticBody2D" parent="Environment" index="1" unique_id=1528691897]
 position = Vector2(1920, 231)
@@ -52,29 +49,18 @@ position = Vector2(1920, 231)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Ceiling" index="0" unique_id=910811995]
 shape = SubResource("ceiling_col")
 
-[node name="Visual" type="Polygon2D" parent="Environment/Ceiling" index="1" unique_id=344464168]
-color = Color(0.5, 0.5, 0.5, 1)
-polygon = PackedVector2Array(-1920, -20, 1920, -20, 1920, 20, -1920, 20)
-
 [node name="WallLeft" type="StaticBody2D" parent="Environment" index="2" unique_id=1793039009]
 position = Vector2(0, 619.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLeft" index="0" unique_id=303657758]
 shape = SubResource("wall_side_col")
 
-[node name="Visual" type="Polygon2D" parent="Environment/WallLeft" index="1" unique_id=1649477830]
-color = Color(0.35, 0.33, 0.3, 1)
-polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
-
 [node name="WallRight" type="StaticBody2D" parent="Environment" index="3" unique_id=1024905560]
 position = Vector2(3840, 619.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallRight" index="0" unique_id=319632341]
+position = Vector2(-6, -19.5)
 shape = SubResource("wall_side_col")
-
-[node name="Visual" type="Polygon2D" parent="Environment/WallRight" index="1" unique_id=1899491938]
-color = Color(0.35, 0.33, 0.3, 1)
-polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
 
 [node name="WallStudyLiving" type="StaticBody2D" parent="Environment" index="4" unique_id=738347366]
 position = Vector2(1280, 459.5)

@@ -150,6 +150,33 @@ func is_interaction_available() -> bool:
 	return _interaction_enabled and gate_ok
 
 
+## 统一的玩家范围判定。
+##
+## Item 的根节点通常只是场景锚点；白模编辑时 CollisionShape2D 会被单独移动到
+## 实际可交互位置。因此所有交互消费者都必须使用碰撞形状的 global_position，不能
+## 退回到 Item 根节点。矩形边界与 Godot Area2D/CharacterBody2D 的重叠语义一致，
+## 同时保留 Y 轴范围约束，避免玩家只在 X 方向接近时误触发。
+func is_player_in_interaction_range(player: Node2D) -> bool:
+	if player == null or not is_instance_valid(player):
+		return false
+	if not _interaction_enabled or (gate_flag != "" and not GameState.get_process_flag(gate_flag)):
+		return false
+	if _collision_shape == null or _collision_shape.disabled:
+		return false
+	if _collision_shape.shape is RectangleShape2D:
+		var item_shape := _collision_shape.shape as RectangleShape2D
+		var item_half := item_shape.size * _collision_shape.global_scale.abs() * 0.5
+		var player_shape := player.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		var player_half := Vector2.ZERO
+		if player_shape != null and not player_shape.disabled and player_shape.shape is RectangleShape2D:
+			player_half = (player_shape.shape as RectangleShape2D).size * player_shape.global_scale.abs() * 0.5
+		var delta := (player.global_position - _collision_shape.global_position).abs()
+		return delta.x <= item_half.x + player_half.x and delta.y <= item_half.y + player_half.y
+	if self is Area2D:
+		return (self as Area2D).get_overlapping_bodies().has(player)
+	return global_position.distance_to(player.global_position) <= 180.0
+
+
 ## 外部门控：流程可调用。enabled=false 时 touched() 不触发（优先于 gate_flag）。
 func set_interaction_enabled(enabled: bool) -> void:
 	_interaction_enabled = enabled

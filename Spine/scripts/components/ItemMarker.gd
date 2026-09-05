@@ -191,7 +191,7 @@ func _same_room() -> bool:
 		return true
 	var item_room: String = room_id
 	if item_room == "":
-		item_room = _room_table.get_room_of(_item.global_position.x)
+		item_room = _room_table.get_room_of(_get_interaction_anchor_global().x)
 	var player_room: String = _room_table.get_room_of(player.global_position.x)
 	return item_room != "" and item_room == player_room
 
@@ -200,17 +200,25 @@ func _same_room() -> bool:
 func _is_in_interaction_range() -> bool:
 	if _player == null or not is_instance_valid(_player) or _item == null:
 		return false
-	# Item and Player use rectangle collision shapes. Comparing their bounds keeps the
-	# visual state responsive after a scripted teleport while matching body overlap.
+	if _item.has_method("is_player_in_interaction_range"):
+		return bool(_item.call("is_player_in_interaction_range", _player))
+	# Legacy hosts without Item's shared API still use the collision anchor when present.
 	var item_size := _get_item_size()
 	var player_half_size := _get_player_half_size()
 	if item_size.x > 0.0 and item_size.y > 0.0:
 		var item_half_size := item_size * 0.5
-		var delta := (_player.global_position - _item.global_position).abs()
+		var delta := (_player.global_position - _get_interaction_anchor_global()).abs()
 		return delta.x <= item_half_size.x + player_half_size.x and delta.y <= item_half_size.y + player_half_size.y
 	if _item is Area2D:
 		return (_item as Area2D).get_overlapping_bodies().has(_player)
 	return _item.global_position.distance_to(_player.global_position) <= interaction_distance
+
+
+func _get_interaction_anchor_global() -> Vector2:
+	if _item == null:
+		return Vector2.ZERO
+	var shape_node := _item.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	return shape_node.global_position if shape_node != null else _item.global_position
 
 
 func _get_player_half_size() -> Vector2:

@@ -966,7 +966,12 @@ func _on_interact_pressed() -> void:
 	for it in items:
 		if it is Area2D:
 			var area := it as Area2D
-			if area.has_method("touched") and area.get_overlapping_bodies().has(_player):
+			var in_range := false
+			if area.has_method("is_player_in_interaction_range"):
+				in_range = bool(area.call("is_player_in_interaction_range", _player))
+			else:
+				in_range = area.get_overlapping_bodies().has(_player)
+			if area.has_method("touched") and in_range:
 				area.touched()
 
 

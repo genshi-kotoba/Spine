@@ -4,6 +4,8 @@
 [ext_resource type="PackedScene" path="res://scenes/locked_bedroom_door.tscn" id="3"]
 [ext_resource type="Script" uid="uid://rwxnoyra4iqp" path="res://scripts/objects/lockedbedroom.gd" id="5"]
 [ext_resource type="Texture2D" uid="uid://i43t0tvqleqw" path="res://assets/sprites/c4_floor.png" id="6"]
+[ext_resource type="Script" path="res://scripts/scenes/C4Floor.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/objects/waste_item.gd" id="8"]
 
 [sub_resource type="RectangleShape2D" id="floor_col"]
 size = Vector2(3840, 40)
@@ -14,17 +16,18 @@ size = Vector2(3840, 40)
 [sub_resource type="RectangleShape2D" id="wall_side_col"]
 size = Vector2(20, 817)
 
-[sub_resource type="RectangleShape2D" id="wall_lintel_col"]
-size = Vector2(20, 497)
-
 [sub_resource type="RectangleShape2D" id="door_col"]
-size = Vector2(160, 320)
+size = Vector2(215, 2275)
+
+[sub_resource type="RectangleShape2D" id="waste_col"]
+size = Vector2(48, 48)
 
 [node name="C4Floor" unique_id=1644574310 instance=ExtResource("1")]
 player_spawn_position = Vector2(320, 956)
 camera_position_offset = Vector2(0, -336.5)
 map_max_x = 3840.0
 camera_smoothing = 0.0
+script = ExtResource("7")
 
 [node name="Background" type="Node2D" parent="." index="1" unique_id=449961562]
 
@@ -40,6 +43,7 @@ uv = PackedVector2Array(0, 0, 2172, 0, 2172, 724, 0, 724)
 position = Vector2(1920, 1008)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Floor" index="0" unique_id=125620988]
+position = Vector2(5, -133)
 shape = SubResource("floor_col")
 
 [node name="Ceiling" type="StaticBody2D" parent="Environment" index="1" unique_id=1528691897]
@@ -63,14 +67,8 @@ shape = SubResource("wall_side_col")
 [node name="WallStudyLiving" type="StaticBody2D" parent="Environment" index="4" unique_id=738347366]
 position = Vector2(1280, 459.5)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallStudyLiving" index="0" unique_id=1562850513]
-shape = SubResource("wall_lintel_col")
-
 [node name="WallLivingDining" type="StaticBody2D" parent="Environment" index="5" unique_id=1950024634]
 position = Vector2(2560, 459.5)
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLivingDining" index="0" unique_id=1807386638]
-shape = SubResource("wall_lintel_col")
 
 [node name="Doors" type="Node2D" parent="." index="3" unique_id=995009029]
 
@@ -86,6 +84,189 @@ size = Vector2(160, 320)
 highlight_enabled = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Doors/BedroomDoor" index="0" unique_id=1869043597]
+position = Vector2(-13.5, -313.5)
 shape = SubResource("door_col")
 
+[node name="Items" type="Node2D" parent="."]
+
+[node name="Waste1" type="Area2D" parent="Items"]
+position = Vector2(240, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste1"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste1"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste1"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste2" type="Area2D" parent="Items"]
+position = Vector2(520, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste2"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste2"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste2"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste3" type="Area2D" parent="Items"]
+position = Vector2(800, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste3"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste3"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste3"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste4" type="Area2D" parent="Items"]
+position = Vector2(1080, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste4"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste4"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste4"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste5" type="Area2D" parent="Items"]
+position = Vector2(1520, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste5"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste5"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste5"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste6" type="Area2D" parent="Items"]
+position = Vector2(1800, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste6"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste6"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste6"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste7" type="Area2D" parent="Items"]
+position = Vector2(2080, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste7"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste7"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste7"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste8" type="Area2D" parent="Items"]
+position = Vector2(2320, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste8"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste8"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste8"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste9" type="Area2D" parent="Items"]
+position = Vector2(2800, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste9"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste9"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste9"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste10" type="Area2D" parent="Items"]
+position = Vector2(3040, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste10"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste10"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste10"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste11" type="Area2D" parent="Items"]
+position = Vector2(3280, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste11"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste11"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste11"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Waste12" type="Area2D" parent="Items"]
+position = Vector2(3520, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+state_id = "c4_waste12"
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste12"]
+shape = SubResource("waste_col")
+
+[node name="Visual" type="Polygon2D" parent="Items/Waste12"]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
 [connection signal="interact_pressed" from="Player" to="Doors/BedroomDoor" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste1" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste2" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste3" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste4" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste5" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste6" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste7" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste8" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste9" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste10" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste11" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste12" method="touched"]

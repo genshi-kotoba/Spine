@@ -36,5 +36,8 @@ func _try_touch() -> bool:
 
 
 func _notify_flow() -> void:
+	# 惰性重解析流程引用（_ready 时 C3Flow 可能尚未入组/入树；通知时重查）
+	if _flow == null or not is_instance_valid(_flow):
+		_resolve_flow()
 	if _flow != null and _flow.has_method("on_paper_collected"):
 		_flow.on_paper_collected(paper_id, score)

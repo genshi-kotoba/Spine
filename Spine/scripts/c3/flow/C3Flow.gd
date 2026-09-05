@@ -46,6 +46,8 @@ signal stage_changed(new_stage: int)
 @export var corridor_end_item_path: NodePath
 @export var gate_blocker_path: NodePath
 @export var room_table_path: NodePath
+@export var items_root_path: NodePath
+@export var parallax_path: NodePath
 @export var study_spawn: Vector2 = Vector2(320, 948)
 @export var study_right_x: float = 1280.0
 ## LIGHT-C 需隐藏的门/墙（NodePath；如 书房-客厅墙、auto_door、最右侧墙）。
@@ -365,8 +367,18 @@ func _physical_assertions() -> bool:
 func _ready_extra() -> void:
 	_resolve_scene_refs()
 	_setup_room_table()
+	_setup_parallax()
 	_connect_scene_signals()
 	_apply_phase_arg()
+
+
+## 景深目标重定向：让 DepthParallax 跟随游戏主 Player（白模内置 Player 已禁用）。
+func _setup_parallax() -> void:
+	if parallax_path == NodePath() or _player == null:
+		return
+	var plx := get_node_or_null(parallax_path)
+	if plx != null and plx.has_method("set") and plx.get("target") != null:
+		plx.set("target", _player)
 
 
 ## 配置 RoomTable 房间区间（§3.4：书房[0,1280]/客厅[1280,2560]/厨房[餐厅位,2560,3840]）。
@@ -384,6 +396,9 @@ func _setup_room_table() -> void:
 
 ## 连接子系统信号（f5：门 E→进卧室 / end_confirmed→黑屏→begin / breath_disable→set_enabled(false) / white_screen→全屏白）。
 func _connect_scene_signals() -> void:
+	# E 键 → 范围内 item touched()（问题三：补 Player.interact_pressed 链路）
+	if _player != null and _player.has_signal("interact_pressed"):
+		_player.connect("interact_pressed", Callable(self, "_on_interact_pressed"))
 	if _bedroom != null:
 		if _bedroom.has_signal("breath_disable_requested"):
 			_bedroom.connect("breath_disable_requested", Callable(self, "on_breath_disable"))
@@ -400,6 +415,30 @@ func _connect_scene_signals() -> void:
 
 func _on_corridor_entered() -> void:
 	GameState.set_process_flag(FLAG_CORRIDOR_ENTERED, true)
+
+
+## E 键按下 → 对范围内（get_overlapping_bodies 含 Player）的 item 调 touched()。
+func _on_interact_pressed() -> void:
+	if _player == null:
+		return
+	var items := _find_items()
+	for it in items:
+		if it is Area2D:
+			var area := it as Area2D
+			if area.has_method("touched") and area.get_overlapping_bodies().has(_player):
+				area.touched()
+
+
+## 收集 items_root_path 下的 Item（Area2D）子节点。
+func _find_items() -> Array[Node]:
+	var res: Array[Node] = []
+	if items_root_path != NodePath():
+		var root := get_node_or_null(items_root_path)
+		if root != null:
+			for child in root.get_children():
+				if child is Area2D:
+					res.append(child)
+	return res
 
 
 ## 按 study_gate_open 开关书房-客厅门禁阻挡（物理阻挡，f6）。

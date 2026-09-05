@@ -93,15 +93,15 @@
 
 ```
 E 键(interact) → Player.interact_pressed ──→ TestItem.touched()
-                                              │ 范围判定成立
-                                              ▼
+											  │ 范围判定成立
+											  ▼
 外部程序化 ──→ call_item(new_state) ──┐    toggle 0↔1
-                                      ▼       ▼
-                           set_state(new_state)      ← 唯一状态变更入口
-                                      │ current_state = new_state
-                                      ▼
-                           apply_state(new_state)    ← 唯一状态效果出口
-                                      │ TestItem: Tween position 0.3s
+									  ▼       ▼
+						   set_state(new_state)      ← 唯一状态变更入口
+									  │ current_state = new_state
+									  ▼
+						   apply_state(new_state)    ← 唯一状态效果出口
+									  │ TestItem: Tween position 0.3s
 ```
 
 （任何绕过 set_state 的直接 current_state 赋值 = FAIL）

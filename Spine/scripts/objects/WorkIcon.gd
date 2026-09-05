@@ -1,7 +1,10 @@
 class_name WorkIcon
 extends InteractableObject
-## WorkIcon — 工作图标（空占位）
-## 仅展示贴图；点击响应留空，后续按剧情设计填充。
+## WorkIcon — 工作图标
+## 点击后切换场景到 c3_level（场景跳转非状态机变更，直接执行）。
+
+
+const NEXT_SCENE := "res://scenes/c3_level.tscn"
 
 
 func _ready() -> void:
@@ -14,6 +17,6 @@ func _ready() -> void:
 	super._ready()
 
 
+## 点击 → 切换到 c3_floor
 func interact() -> void:
-	# TODO: 定义点击行为（当前为空占位，点击无行为不报错）
-	pass
+	get_tree().change_scene_to_file(NEXT_SCENE)

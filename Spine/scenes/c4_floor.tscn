@@ -1,0 +1,304 @@
+[gd_scene format=3 uid="uid://f0k7ctpmbx86"]
+
+[ext_resource type="PackedScene" path="res://scenes/floor_template.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/locked_bedroom_door.tscn" id="3"]
+[ext_resource type="Script" uid="uid://rwxnoyra4iqp" path="res://scripts/objects/lockedbedroom.gd" id="5"]
+[ext_resource type="Texture2D" uid="uid://i43t0tvqleqw" path="res://assets/sprites/c4_floor.png" id="6"]
+[ext_resource type="Script" uid="uid://dx3x0ylghhoth" path="res://scripts/scenes/C4Floor.gd" id="7"]
+[ext_resource type="Script" uid="uid://dgxccgwjodt68" path="res://scripts/objects/waste_item.gd" id="8"]
+[ext_resource type="Texture2D" uid="uid://6gupu2p13ahi" path="res://assets/sprites/waste1.png" id="9"]
+[ext_resource type="Texture2D" uid="uid://dd86lej08vby8" path="res://assets/sprites/waste2.png" id="10"]
+[ext_resource type="Texture2D" uid="uid://d13ayt4aghsby" path="res://assets/sprites/waste3.png" id="11"]
+[ext_resource type="Texture2D" uid="uid://bny564gheexo7" path="res://assets/sprites/waste4.png" id="12"]
+[ext_resource type="Texture2D" uid="uid://mfcu0gyytnnw" path="res://assets/sprites/waste5.png" id="13"]
+
+[sub_resource type="RectangleShape2D" id="floor_col"]
+size = Vector2(3840, 40)
+
+[sub_resource type="RectangleShape2D" id="ceiling_col"]
+size = Vector2(3840, 40)
+
+[sub_resource type="RectangleShape2D" id="wall_side_col"]
+size = Vector2(20, 817)
+
+[sub_resource type="RectangleShape2D" id="door_col"]
+size = Vector2(178, 475)
+
+[sub_resource type="RectangleShape2D" id="waste_col"]
+size = Vector2(136, 629.25)
+
+[node name="C4Floor" unique_id=1644574310 instance=ExtResource("1")]
+script = ExtResource("7")
+player_spawn_position = Vector2(320, 956)
+camera_position_offset = Vector2(0, -336.5)
+map_max_x = 3840.0
+camera_smoothing = 0.0
+
+[node name="Background" type="Node2D" parent="." index="1" unique_id=449961562]
+
+[node name="Rect" type="Polygon2D" parent="Background" index="0" unique_id=761484558]
+position = Vector2(1920, 619.5)
+texture = ExtResource("6")
+polygon = PackedVector2Array(-1920, -640, 1920, -640, 1920, 640, -1920, 640)
+uv = PackedVector2Array(0, 0, 2172, 0, 2172, 724, 0, 724)
+
+[node name="Environment" type="Node2D" parent="." index="2" unique_id=1724928131]
+
+[node name="Floor" type="StaticBody2D" parent="Environment" index="0" unique_id=1277561169]
+position = Vector2(1920, 1008)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Floor" index="0" unique_id=125620988]
+position = Vector2(5, -133)
+shape = SubResource("floor_col")
+
+[node name="Ceiling" type="StaticBody2D" parent="Environment" index="1" unique_id=1528691897]
+position = Vector2(1920, 231)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Ceiling" index="0" unique_id=910811995]
+shape = SubResource("ceiling_col")
+
+[node name="WallLeft" type="StaticBody2D" parent="Environment" index="2" unique_id=1793039009]
+position = Vector2(0, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLeft" index="0" unique_id=303657758]
+shape = SubResource("wall_side_col")
+
+[node name="WallRight" type="StaticBody2D" parent="Environment" index="3" unique_id=1024905560]
+position = Vector2(3840, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallRight" index="0" unique_id=319632341]
+shape = SubResource("wall_side_col")
+
+[node name="WallStudyLiving" type="StaticBody2D" parent="Environment" index="4" unique_id=738347366]
+position = Vector2(1280, 459.5)
+
+[node name="WallLivingDining" type="StaticBody2D" parent="Environment" index="5" unique_id=1950024634]
+position = Vector2(2560, 459.5)
+
+[node name="Doors" type="Node2D" parent="." index="3" unique_id=995009029]
+
+[node name="LockedBedroomDoor" parent="Doors" index="0" unique_id=1358843211 instance=ExtResource("3")]
+visible = false
+position = Vector2(1920, 828)
+
+[node name="BedroomDoor" type="Area2D" parent="Doors" index="1" unique_id=2054823455]
+position = Vector2(1920, 828)
+script = ExtResource("5")
+target_scene = "res://scenes/c4_bedroom.tscn"
+size = Vector2(160, 320)
+highlight_enabled = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Doors/BedroomDoor" index="0" unique_id=1869043597]
+position = Vector2(-29, -203)
+shape = SubResource("door_col")
+
+[node name="Items" type="Node2D" parent="." index="4" unique_id=80992964]
+
+[node name="Waste1" type="Area2D" parent="Items" index="0" unique_id=1175063277]
+position = Vector2(240, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste1"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste1" index="0" unique_id=2132886799]
+position = Vector2(108, -39)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste1" index="1" unique_id=1480052273]
+position = Vector2(129, -34)
+scale = Vector2(2, 2)
+texture = ExtResource("9")
+
+[node name="Waste2" type="Area2D" parent="Items" index="1" unique_id=1782051187]
+position = Vector2(520, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste2"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste2" index="0" unique_id=1549843275]
+position = Vector2(-30, -16)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste2" index="1" unique_id=886503241]
+position = Vector2(-80, -44)
+rotation = 0.9302605
+scale = Vector2(2, 2)
+texture = ExtResource("9")
+
+[node name="Waste3" type="Area2D" parent="Items" index="2" unique_id=1133858405]
+position = Vector2(800, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste3"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste3" index="0" unique_id=646670680]
+position = Vector2(1773, -36)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste3" index="1" unique_id=40165934]
+position = Vector2(1772, -41)
+rotation = -1.7837265
+scale = Vector2(2, 2)
+texture = ExtResource("9")
+
+[node name="Waste4" type="Area2D" parent="Items" index="3" unique_id=1502052986]
+position = Vector2(1080, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste4"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste4" index="0" unique_id=1841676935]
+position = Vector2(-433, -40)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste4" index="1" unique_id=1570234738]
+position = Vector2(-475, -30)
+scale = Vector2(2, 2)
+texture = ExtResource("10")
+
+[node name="Waste5" type="Area2D" parent="Items" index="4" unique_id=1541335262]
+position = Vector2(1520, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste5"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste5" index="0" unique_id=709825017]
+position = Vector2(2139, -29)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste5" index="1" unique_id=1024459404]
+position = Vector2(2119, -18)
+scale = Vector2(2, 2)
+texture = ExtResource("10")
+
+[node name="Waste6" type="Area2D" parent="Items" index="5" unique_id=1543465472]
+position = Vector2(1800, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste6"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste6" index="0" unique_id=1870005578]
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste6" index="1" unique_id=1587168862]
+position = Vector2(0, -53)
+scale = Vector2(2, 2)
+texture = ExtResource("10")
+
+[node name="Waste7" type="Area2D" parent="Items" index="6" unique_id=1519675565]
+position = Vector2(2080, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste7"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste7" index="0" unique_id=302846402]
+position = Vector2(-1164, -12)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste7" index="1" unique_id=1403248299]
+position = Vector2(-1117, -9)
+scale = Vector2(2, 2)
+texture = ExtResource("11")
+
+[node name="Waste8" type="Area2D" parent="Items" index="7" unique_id=558999481]
+position = Vector2(2320, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste8"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste8" index="0" unique_id=1113183116]
+position = Vector2(-240, 6)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste8" index="1" unique_id=768145877]
+position = Vector2(-243, -201)
+scale = Vector2(2, 2)
+texture = ExtResource("11")
+
+[node name="Waste9" type="Area2D" parent="Items" index="8" unique_id=181711911]
+position = Vector2(2800, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste9"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste9" index="0" unique_id=210119759]
+position = Vector2(280, -9)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste9" index="1" unique_id=2016800548]
+position = Vector2(275, -201)
+scale = Vector2(2, 2)
+texture = ExtResource("12")
+
+[node name="Waste10" type="Area2D" parent="Items" index="9" unique_id=250548103]
+position = Vector2(3040, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste10"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste10" index="0" unique_id=1558475324]
+position = Vector2(-1980, -15)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste10" index="1" unique_id=130816959]
+position = Vector2(-2020, -30)
+rotation = 0.85346603
+scale = Vector2(2, 2)
+texture = ExtResource("12")
+
+[node name="Waste11" type="Area2D" parent="Items" index="10" unique_id=1939180963]
+position = Vector2(3280, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste11"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste11" index="0" unique_id=287358290]
+position = Vector2(88, -14)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste11" index="1" unique_id=1589370823]
+position = Vector2(91, -206)
+scale = Vector2(2, 2)
+texture = ExtResource("13")
+
+[node name="Waste12" type="Area2D" parent="Items" index="11" unique_id=72253428]
+position = Vector2(3520, 831)
+script = ExtResource("8")
+size = Vector2(48, 48)
+highlight_enabled = true
+state_id = "c4_waste12"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste12" index="0" unique_id=1682202386]
+position = Vector2(-2094, -16)
+shape = SubResource("waste_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Waste12" index="1" unique_id=421558521]
+position = Vector2(-2089, -316)
+rotation = -4.3441243
+scale = Vector2(2, 2)
+texture = ExtResource("13")
+
+[connection signal="interact_pressed" from="Player" to="Doors/BedroomDoor" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste1" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste2" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste3" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste4" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste5" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste6" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste7" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste8" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste9" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste10" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste11" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Waste12" method="touched"]

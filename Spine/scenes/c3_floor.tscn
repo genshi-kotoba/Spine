@@ -1,9 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/floor_template.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/auto_door.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/locked_bedroom_door.tscn" id="3"]
 [ext_resource type="Script" path="res://scripts/components/DepthParallax.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/objects/lockedbedroom.gd" id="5"]
 
 [sub_resource type="RectangleShape2D" id="floor_col"]
 size = Vector2(3840, 40)
@@ -17,10 +18,13 @@ size = Vector2(20, 817)
 [sub_resource type="RectangleShape2D" id="wall_lintel_col"]
 size = Vector2(20, 497)
 
+[sub_resource type="RectangleShape2D" id="locked_bedroom_col"]
+size = Vector2(160, 320)
+
 [node name="C3Floor" instance=ExtResource("1")]
-player_spawn_position = Vector2(320, 948)  # 2.35:1 layout: spawn keeps 8px gap above stand surface 988 (F5 lesson)
+player_spawn_position = Vector2(320, 948)
 camera_smoothing = 0.0
-camera_position_offset = Vector2(0, -336.5)  # fixed vertical framing center y=619.5: player stands at y=956
+camera_position_offset = Vector2(0, -336.5)
 map_min_x = 0.0
 map_max_x = 3840.0
 
@@ -124,3 +128,13 @@ position = Vector2(2560, 868)
 
 [node name="LockedBedroomDoor" parent="Doors" instance=ExtResource("3")]
 position = Vector2(1920, 828)
+
+[node name="LockedBedroom" type="Area2D" parent="Doors"]
+position = Vector2(1920, 828)
+script = ExtResource("5")
+size = Vector2(160, 320)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Doors/LockedBedroom"]
+shape = SubResource("locked_bedroom_col")
+
+[connection signal="interact_pressed" from="Player" to="Doors/LockedBedroom" method="touched"]

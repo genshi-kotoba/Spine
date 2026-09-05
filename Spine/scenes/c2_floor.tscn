@@ -1,0 +1,156 @@
+[gd_scene format=3 uid="uid://d04jbtufgim1d"]
+
+[ext_resource type="PackedScene" path="res://scenes/floor_template.tscn" id="1"]
+[ext_resource type="Script" uid="uid://bbcrdermiq0cy" path="res://scripts/scenes/C2Floor.gd" id="2"]
+[ext_resource type="Script" uid="uid://de8dghd3ib18w" path="res://scripts/objects/vanish_item.gd" id="6"]
+[ext_resource type="Texture2D" uid="uid://cm6xvvd3nhne7" path="res://assets/sprites/lego.png" id="7"]
+[ext_resource type="Texture2D" uid="uid://befxj225c4rfv" path="res://assets/sprites/C2_background.png" id="8"]
+[ext_resource type="Texture2D" uid="uid://yqxynmvqqgeu" path="res://assets/sprites/curten.png" id="9"]
+[ext_resource type="Script" uid="uid://cwtwftyufmmqj" path="res://scripts/objects/Ladder.gd" id="10"]
+[ext_resource type="AudioStream" uid="uid://douaxyrxgt48v" path="res://assets/audio/c2开窗.mp3" id="11"]
+
+[sub_resource type="RectangleShape2D" id="floor_col"]
+size = Vector2(3840, 40)
+
+[sub_resource type="RectangleShape2D" id="ceiling_col"]
+size = Vector2(3840, 40)
+
+[sub_resource type="RectangleShape2D" id="wall_side_col"]
+size = Vector2(20, 817)
+
+[sub_resource type="RectangleShape2D" id="item_col"]
+size = Vector2(120, 200)
+
+[sub_resource type="RectangleShape2D" id="curten_col"]
+size = Vector2(1024, 1300)
+
+[node name="C2Floor" unique_id=251335560 instance=ExtResource("1")]
+script = ExtResource("2")
+ladder_sfx_path = "res://assets/audio/ladder.mp3"
+player_spawn_position = Vector2(320, 948)
+camera_position_offset = Vector2(0, -336.5)
+map_max_x = 3840.0
+camera_smoothing = 0.0
+
+[node name="Background" type="Sprite2D" parent="." index="1" unique_id=1112540156]
+position = Vector2(1920, 619.5)
+scale = Vector2(3, 3)
+texture = ExtResource("8")
+
+[node name="Environment" type="Node2D" parent="." index="2" unique_id=154347838]
+
+[node name="Floor" type="StaticBody2D" parent="Environment" index="0" unique_id=1817085779]
+position = Vector2(1920, 1008)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Floor" index="0" unique_id=1327194903]
+position = Vector2(-3, -78)
+shape = SubResource("floor_col")
+
+[node name="Ceiling" type="StaticBody2D" parent="Environment" index="1" unique_id=1260556657]
+position = Vector2(1920, 231)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Ceiling" index="0" unique_id=2013341591]
+shape = SubResource("ceiling_col")
+
+[node name="WallLeft" type="StaticBody2D" parent="Environment" index="2" unique_id=220760841]
+position = Vector2(0, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLeft" index="0" unique_id=1466623463]
+shape = SubResource("wall_side_col")
+
+[node name="WallRight" type="StaticBody2D" parent="Environment" index="3" unique_id=772991987]
+position = Vector2(3840, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallRight" index="0" unique_id=1739011769]
+shape = SubResource("wall_side_col")
+
+[node name="Items" type="Node2D" parent="." index="3" unique_id=253674904]
+
+[node name="Ladder" type="Node2D" parent="Items" index="0" unique_id=1386953890]
+position = Vector2(2073, 800)
+scale = Vector2(0.25, 0.25)
+script = ExtResource("10")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Ladder" index="0" unique_id=520569771]
+position = Vector2(2, 7.000061)
+scale = Vector2(0.8, 0.8)
+
+[node name="Curten" type="Area2D" parent="Items" index="1" unique_id=1709427220]
+position = Vector2(1920, 320)
+script = ExtResource("6")
+size = Vector2(1024, 1300)
+highlight_enabled = true
+interactable = false
+state_id = "c2_curten"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Curten"]
+shape = SubResource("curten_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Curten" index="0" unique_id=845399617]
+position = Vector2(4.000001, 309)
+scale = Vector2(3, 3)
+texture = ExtResource("9")
+
+[node name="Lego3" type="Area2D" parent="Items" index="2" unique_id=1043009971]
+position = Vector2(900, 946)
+script = ExtResource("6")
+size = Vector2(120, 200)
+highlight_enabled = true
+state_id = "c2_lego3"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Lego3" index="0" unique_id=1769882137]
+shape = SubResource("item_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Lego3" index="1" unique_id=910637890]
+scale = Vector2(0.01, 0.01)
+texture = ExtResource("7")
+
+[node name="Lego2" type="Area2D" parent="Items" index="3" unique_id=1864298901]
+position = Vector2(2200, 946)
+script = ExtResource("6")
+size = Vector2(120, 200)
+highlight_enabled = true
+state_id = "c2_lego2"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Lego2" index="0" unique_id=2071386097]
+shape = SubResource("item_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Lego2" index="1" unique_id=2014091031]
+scale = Vector2(0.01, 0.01)
+texture = ExtResource("7")
+
+[node name="Lego1" type="Area2D" parent="Items" index="4" unique_id=1535945224]
+position = Vector2(3200, 946)
+script = ExtResource("6")
+size = Vector2(120, 200)
+highlight_enabled = true
+state_id = "c2_lego1"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Lego1" index="0" unique_id=2052352103]
+shape = SubResource("item_col")
+
+[node name="Sprite2D" type="Sprite2D" parent="Items/Lego1" index="1" unique_id=2005792885]
+scale = Vector2(0.01, 0.01)
+texture = ExtResource("7")
+
+[node name="LadderSfx" type="AudioStreamPlayer" parent="." index="4" unique_id=1938407431]
+
+[node name="WindowSfx" type="AudioStreamPlayer" parent="." index="5" unique_id=1167102680]
+stream = ExtResource("11")
+
+[node name="EndingLayer" type="CanvasLayer" parent="." index="6" unique_id=827981174]
+layer = 30
+
+[node name="FadeRect" type="ColorRect" parent="EndingLayer" index="0" unique_id=1608246261]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[connection signal="interact_pressed" from="Player" to="Items/Curten" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Lego3" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Lego2" method="touched"]
+[connection signal="interact_pressed" from="Player" to="Items/Lego1" method="touched"]

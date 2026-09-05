@@ -8,6 +8,9 @@ extends Node2D
 @export var map_min_x: float = 0.0
 @export var map_max_x: float = 1920.0
 
+## 相机位置平滑插值系数（规格⑩，新增）；0=即时（现状）；不得破坏 clamp 语义与 map_min_x/map_max_x
+@export var camera_smoothing: float = 6.0
+
 @onready var _player: Player = $Player
 @onready var _camera: Camera2D = $Player/Camera2D
 
@@ -22,15 +25,22 @@ func _ready() -> void:
 		object.body_exited.connect(_on_object_body_exited.bind(object))
 
 
-func _process(_delta: float) -> void:
-	_update_camera()
+func _process(delta: float) -> void:
+	_update_camera(delta)
 
 
 ## 摄像机水平跟随角色；继续跟随会导致视野超出地图边缘时停止移动。
-func _update_camera() -> void:
+## camera_smoothing>0 时对 clamp 后的目标位置做平滑插值（0=现立即跟随）。
+func _update_camera(delta: float) -> void:
 	var half_width := get_viewport_rect().size.x * 0.5 * _camera.zoom.x
 	var target_x := _player.position.x
-	_camera.global_position.x = clamp(target_x, map_min_x + half_width, map_max_x - half_width)
+	# clamp() 返回 Variant：用显式类型标注避免 "inferred from Variant" 警告被当作错误
+	var clamped_x: float = clamp(target_x, map_min_x + half_width, map_max_x - half_width)
+	if camera_smoothing > 0.0:
+		var alpha := 1.0 - exp(-camera_smoothing * delta)
+		_camera.global_position.x = lerpf(_camera.global_position.x, clamped_x, alpha)
+	else:
+		_camera.global_position.x = clamped_x
 
 
 func _unhandled_input(event: InputEvent) -> void:

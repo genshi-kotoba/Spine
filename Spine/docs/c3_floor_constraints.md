@@ -48,6 +48,7 @@
 
 - 不改 `main.tscn`、`main_scene.tscn`、`level_scene.tscn` 等既有场景；
 - **卧室解锁玩法**：任何解锁交互、钥匙道具、把状态从 `locked` 切走、允许进入 room4——一律禁止（规格⑦：解锁玩法待用户设计，本模块禁止实现）；
+  - **修订（2026-09-05，用户新 prompt 定案）**：E 键交互已解禁为「场景跳转 bedroom」（LockedBedroom 独立交互区，非解锁玩法，不改 locked 状态）；以《Spine-框架约束.md》第五阶段为准。
 - **新能力**：跳跃、冲刺、蹲、跑等任何新操作/角色能力（输入集保持 move_left / move_right / interact 三项）；
 - 真实美术、外部/网络下载资产；
 - 对话/剧情内容；

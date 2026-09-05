@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b7typo76jvqpy"
-path="res://.godot/imported/computer screen.jpeg-bc090a0cfc79957361a9b2806f481068.ctex"
+uid="uid://de3tenfjn6jqf"
+path="res://.godot/imported/cardboard_box.png-62305b7b1ad99aaccf0b51b79147dbbf.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/computer screen.jpeg"
-dest_files=["res://.godot/imported/computer screen.jpeg-bc090a0cfc79957361a9b2806f481068.ctex"]
+source_file="res://assets/sprites/cardboard_box.png"
+dest_files=["res://.godot/imported/cardboard_box.png-62305b7b1ad99aaccf0b51b79147dbbf.ctex"]
 
 [params]
 

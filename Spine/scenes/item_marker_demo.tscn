@@ -1,0 +1,53 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/scenes/ItemMarkerDemo.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/objects/item.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/components/ItemMarker.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/components/RoomTable.gd" id="5"]
+
+[sub_resource type="RectangleShape2D" id="floor_col"]
+size = Vector2(4000, 40)
+
+[sub_resource type="RectangleShape2D" id="item_col"]
+size = Vector2(160, 300)
+
+[node name="ItemMarkerDemo" type="Node2D"]
+script = ExtResource("2")
+
+[node name="RoomTable" type="Node" parent="."]
+script = ExtResource("5")
+
+[node name="Player" parent="." instance=ExtResource("1")]
+position = Vector2(200, 948)
+
+[node name="Floor" type="StaticBody2D" parent="."]
+position = Vector2(2000, 1008)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor"]
+shape = SubResource("floor_col")
+
+[node name="Visual" type="Polygon2D" parent="Floor"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(-2000, -20, 2000, -20, 2000, 20, -2000, 20)
+
+[node name="Item" type="Area2D" parent="."]
+script = ExtResource("3")
+position = Vector2(1500, 900)
+size = Vector2(160, 300)
+gate_flag = "c3_gate_marker"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Item"]
+shape = SubResource("item_col")
+
+[node name="Visual" type="Polygon2D" parent="Item"]
+color = Color(0.3, 0.5, 0.7, 1)
+polygon = PackedVector2Array(-60, -120, 60, -120, 60, 120, -60, 120)
+
+[node name="ItemMarker" type="Node2D" parent="Item"]
+script = ExtResource("4")
+star_color = Color(1, 0.84, 0.18, 1)
+star_size = 14.0
+offset = Vector2(0, -150)
+room_table_path = NodePath("../../RoomTable")
+player_path = NodePath("../../Player")

@@ -42,10 +42,14 @@ const LIGHT_D := 4
 const LIGHT_E := 5
 
 ## LIGHT 时序常量（s）。
-const LIGHT_C_DUR := 3.0
+const LIGHT_C_DUR := 1.8
 const LIGHT_D_DUR := 1.5
+const LIGHT_PARTICLE_DUR := 2.5
 const LIGHT_SHAKE_DUR := 5.0
 const LIGHT_B_REVEAL := 1.2
+## 主相机竖向取景偏移（参照 c3_floor camera_position_offset=(0,-336.5) 口径；视口 1920x1240）：
+## 让角色视觉站画幅地面位置而非竖正中（t34 gap ①，不改 player.tscn）。
+const CAMERA_FRAME_OFFSET := Vector2(0, -336.5)
 
 ## LIGHT 遮罩参数（白模：亮区=书房/跟随玩家，四周全黑；C 后亮区扩大；D 微压暗氛围）。
 const LIGHT_A_INNER := 500.0
@@ -57,6 +61,8 @@ const LIGHT_EXPAND_OUTER := 1350.0
 const LIGHT_DIM_COLOR := Color(0.05, 0.05, 0.07, 0.30)
 const LIGHT_DIM_INNER := 150.0
 const LIGHT_DIM_OUTER := 360.0
+## LIGHT-A 亮区固定中心（书房中心 x=640；t34 gap ③：A 以书房为亮区，play follow_player=false）。
+const LIGHT_STUDY_CENTER := Vector2(640, 594)
 
 ## LIGHT 分步运行状态（t32）。
 var _light_step: int = LIGHT_NONE
@@ -238,7 +244,7 @@ func _start_light_a() -> void:
 	_light_b_reset_done = false
 	_light_c_t = 0.0
 	_light_d_t = 0.0
-	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR)
+	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR, false, LIGHT_STUDY_CENTER)
 
 
 ## B 步：玩家出门 → 黑屏渐变 → 重置书房初始位 → 重显（亮区回 A 态），随后等待二次靠门。
@@ -252,7 +258,9 @@ func _enter_light_b() -> void:
 		_reset_player_to_study()
 		return
 	_mask.enabled = true
-	_mask.follow_player = true
+	# t34 gap ③：B 保持固定书房亮区（follow_player=false），重显回 A 态（书房为亮区）
+	_mask.follow_player = false
+	_mask.center_global = LIGHT_STUDY_CENTER
 	var tw := create_tween()
 	# 黑屏渐变（A 态 → 全黑）
 	tw.tween_property(_mask, "darkness_color", LIGHT_BLACK, 0.5)
@@ -276,6 +284,8 @@ func _enter_light_c() -> void:
 	_run_light_shake()
 	_run_light_particles()
 	if _mask != null and _mask.enabled:
+		# t34 gap ④：亮区随角色向走廊走、缓缓展开（follow_player=true + 1.5-2s Tween 扩向走廊）
+		_mask.follow_player = true
 		_tween_mask_to(LIGHT_A_COLOR, LIGHT_EXPAND_INNER, LIGHT_EXPAND_OUTER, LIGHT_C_DUR)
 
 
@@ -307,14 +317,17 @@ func _mark_light_b_reset_done() -> void:
 
 
 ## 配置遮罩到指定亮区参数（即时态；供各 LIGHT 步设置及自检强制态）。
-func _mask_config(inner: float, outer: float, col: Color) -> void:
+## follow=false 时以 center 为固定亮区中心（t34 gap ③：A 固定书房亮区，B 保持固定）。
+func _mask_config(inner: float, outer: float, col: Color, follow: bool = true, center: Vector2 = Vector2.ZERO) -> void:
 	if _mask == null:
 		return
 	_mask.enabled = true
-	_mask.follow_player = true
+	_mask.follow_player = follow
 	_mask.darkness_color = col
 	_mask.radius_inner = inner
 	_mask.radius_outer = outer
+	if not follow:
+		_mask.center_global = center
 
 
 func _reset_player_to_study() -> void:
@@ -347,9 +360,11 @@ func _run_light_shake() -> void:
 		(_screen_shake as Node).shake(14.0, LIGHT_SHAKE_DUR)
 
 
-## LIGHT-C 粒子震撼（沿边缘/边界衔接新场景）。
+## LIGHT-C 粒子震撼（沿边缘/边界衔接新场景）；t34 gap ④：持续发射震撼粒子。
 func _run_light_particles() -> void:
-	if _particle_burst != null and _particle_burst.has_method("burst"):
+	if _particle_burst != null and _particle_burst.has_method("start_continuous"):
+		(_particle_burst as Node).start_continuous(LIGHT_PARTICLE_DUR)
+	elif _particle_burst != null and _particle_burst.has_method("burst"):
 		(_particle_burst as Node).burst()
 
 
@@ -430,16 +445,16 @@ func _call_bool_selftest(n: Node) -> bool:
 ## 同步强制推进 LIGHT A→E（仅自检/校验用，跳过动画 Tween）：设终态 + 校验用状态。
 func _force_light_to_e() -> void:
 	_light_step = LIGHT_A
-	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR)
+	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR, false, LIGHT_STUDY_CENTER)
 	_light_step = LIGHT_B
 	_light_b_reset_done = true
 	_reset_player_to_study()
-	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR)
+	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR, false, LIGHT_STUDY_CENTER)
 	_light_step = LIGHT_C
 	_hide_room_structures()
 	_run_light_shake()
 	_run_light_particles()
-	_mask_config(LIGHT_EXPAND_INNER, LIGHT_EXPAND_OUTER, LIGHT_A_COLOR)
+	_mask_config(LIGHT_EXPAND_INNER, LIGHT_EXPAND_OUTER, LIGHT_A_COLOR, true)
 	_light_step = LIGHT_D
 	_mask_config(LIGHT_DIM_INNER, LIGHT_DIM_OUTER, LIGHT_DIM_COLOR)
 	_finish_light_e()
@@ -594,6 +609,8 @@ func _activate_camera() -> void:
 				break
 	if cam != null:
 		cam.make_current()
+		# t34 gap ①：帧取景偏移——角色站画幅地面（视口中心上移，玩家位于下三分一带）
+		cam.offset = CAMERA_FRAME_OFFSET
 
 
 ## 景深目标重定向：让 DepthParallax 跟随游戏主 Player（白模内置 Player 已禁用）。

@@ -26,6 +26,8 @@ extends Node2D
 var _particles: GPUParticles2D = null
 var _mat: ParticleProcessMaterial = null
 var _burst_cooling: float = 0.0
+## t34 gap ④：持续震撼发射剩余计时（start_continuous 期间不断喷发）。
+var _continuous_left: float = 0.0
 
 
 func _ready() -> void:
@@ -58,6 +60,10 @@ func _build_particles() -> void:
 func _process(delta: float) -> void:
 	if _burst_cooling > 0.0:
 		_burst_cooling -= delta
+	if _continuous_left > 0.0:
+		_continuous_left -= delta
+		if _continuous_left <= 0.0:
+			_stop_continuous()
 
 
 ## 一次性发射后复位（便于重复触发）。
@@ -69,6 +75,28 @@ func burst() -> void:
 	_particles.restart()
 	_particles.emitting = true
 	_burst_cooling = lifetime
+
+
+## 持续发射震撼粒子（t34 gap ④：沿拆除边沿一段时间内不断喷发；emitting 主开关仍有效）。
+func start_continuous(dur: float) -> void:
+	if not emitting:
+		return
+	_apply_material_params()
+	_particles.one_shot = false
+	_particles.emitting = true
+	_continuous_left = dur
+
+
+## 停止持续发射并复位为一次性爆裂。
+func stop_continuous() -> void:
+	_stop_continuous()
+
+
+func _stop_continuous() -> void:
+	_particles.emitting = false
+	if not _particles.one_shot:
+		_particles.one_shot = true
+	_continuous_left = 0.0
 
 
 ## 运行时改底色粒子颜色。

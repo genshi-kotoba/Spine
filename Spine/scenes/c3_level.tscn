@@ -43,7 +43,7 @@ size = Vector2(120, 200)
 size = Vector2(40, 460)
 
 [sub_resource type="RectangleShape2D" id="corridor_floor_col"]
-size = Vector2(1400, 40)
+size = Vector2(3000, 40)
 
 [sub_resource type="CanvasItemMaterial" id="wall_mat"]
 texture_repeat = 1
@@ -381,18 +381,18 @@ follow_player = true
 player_path = NodePath("Player")
 enabled = false
 
-[node name="CorridorFloor" type="StaticBody2D" parent="."]
-position = Vector2(4500, 1008)
+[node name="CorridorFloor" type="StaticBody2D" parent="Corridor"]
+position = Vector2(1500, 1008)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CorridorFloor"]
 shape = SubResource("corridor_floor_col")
 
 [node name="Visual" type="Polygon2D" parent="CorridorFloor"]
 color = Color(0.5, 0.5, 0.5, 1)
-polygon = PackedVector2Array(-700, -20, 700, -20, 700, 20, -700, 20)
+polygon = PackedVector2Array(-1500, -20, 1500, -20, 1500, 20, -1500, 20)
 
 [node name="CorridorEndWall" type="StaticBody2D" parent="."]
-position = Vector2(5200, 619.5)
+position = Vector2(4780, 619.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CorridorEndWall"]
 shape = SubResource("wall_side_col")

@@ -102,6 +102,7 @@ highlight_enabled = true
 state_id = "c4_waste1"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste1" index="0" unique_id=2132886799]
+position = Vector2(108, -39)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste1" index="1" unique_id=1480052273]
@@ -117,6 +118,7 @@ highlight_enabled = true
 state_id = "c4_waste2"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste2" index="0" unique_id=1549843275]
+position = Vector2(-30, -16)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste2" index="1" unique_id=886503241]
@@ -133,6 +135,7 @@ highlight_enabled = true
 state_id = "c4_waste3"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste3" index="0" unique_id=646670680]
+position = Vector2(1773, -36)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste3" index="1" unique_id=40165934]
@@ -149,6 +152,7 @@ highlight_enabled = true
 state_id = "c4_waste4"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste4" index="0" unique_id=1841676935]
+position = Vector2(-433, -40)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste4" index="1" unique_id=1570234738]
@@ -164,6 +168,7 @@ highlight_enabled = true
 state_id = "c4_waste5"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste5" index="0" unique_id=709825017]
+position = Vector2(2139, -29)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste5" index="1" unique_id=1024459404]
@@ -194,6 +199,7 @@ highlight_enabled = true
 state_id = "c4_waste7"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste7" index="0" unique_id=302846402]
+position = Vector2(-1164, -12)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste7" index="1" unique_id=1403248299]
@@ -209,6 +215,7 @@ highlight_enabled = true
 state_id = "c4_waste8"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste8" index="0" unique_id=1113183116]
+position = Vector2(-240, 6)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste8" index="1" unique_id=768145877]
@@ -224,6 +231,7 @@ highlight_enabled = true
 state_id = "c4_waste9"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste9" index="0" unique_id=210119759]
+position = Vector2(280, -9)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste9" index="1" unique_id=2016800548]
@@ -239,6 +247,7 @@ highlight_enabled = true
 state_id = "c4_waste10"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste10" index="0" unique_id=1558475324]
+position = Vector2(-1980, -15)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste10" index="1" unique_id=130816959]
@@ -255,6 +264,7 @@ highlight_enabled = true
 state_id = "c4_waste11"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste11" index="0" unique_id=287358290]
+position = Vector2(88, -14)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste11" index="1" unique_id=1589370823]
@@ -270,6 +280,7 @@ highlight_enabled = true
 state_id = "c4_waste12"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Waste12" index="0" unique_id=1682202386]
+position = Vector2(-2094, -16)
 shape = SubResource("waste_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Waste12" index="1" unique_id=421558521]

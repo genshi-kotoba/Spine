@@ -26,6 +26,7 @@ position = Vector2(960, 620)
 
 [node name="Background" type="Sprite2D" parent="."]
 position = Vector2(960, 620)
+scale = Vector2(1.72222, 1.72222)
 texture = ExtResource("5")
 
 [node name="SettingIcon" type="Area2D" parent="."]

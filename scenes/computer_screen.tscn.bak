@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://03fqet36l3m3" path="res://scripts/objects/SettingIcon.gd" id="2"]
 [ext_resource type="Script" uid="uid://bm23h78xokupc" path="res://scripts/objects/MailIcon.gd" id="3"]
 [ext_resource type="Script" uid="uid://dha5fndjas66h" path="res://scripts/objects/WorkIcon.gd" id="4"]
-[ext_resource type="Texture2D" uid="uid://cbxr4644vtt3n" path="res://assets/sprites/computer screen.jpeg" id="5"]
+[ext_resource type="Texture2D" uid="uid://dutjawr7phlr5" path="res://assets/sprites/computer_screen.PNG" id="5"]
 [ext_resource type="Texture2D" uid="uid://cjpb6tkcaygmr" path="res://assets/sprites/setting_icon.png" id="6"]
 [ext_resource type="Texture2D" uid="uid://qyu7y42ocekb" path="res://assets/sprites/mail_icon.png" id="7"]
 [ext_resource type="Texture2D" uid="uid://up4df1mau73g" path="res://assets/sprites/work_icon.png" id="8"]

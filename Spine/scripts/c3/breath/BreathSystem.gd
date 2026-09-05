@@ -2,8 +2,9 @@ class_name BreathSystem
 extends Node
 ## BreathSystem — 呼吸机制组件（C3 gameplay §4）
 ## 单击 breathe(空格)：启动一次呼吸（重置计时、恢复气泡、清除缺氧）。
-## breathe_timeout 内未按 → 气泡破裂 → 触发缺氧（DarknessMask 非全黑渐变压暗，5s 后仅角色一圈正常）。
-## 长按 breathe ≥ hold_burst_delay（需 hold_breath_unlocked_flag 为真，④ 解锁）→ 气泡直接破裂 → 缺氧。
+## breathe_timeout 内未按 → 气泡破裂 → 触发缺氧（DarknessMask 昏暗透光渐变压暗，5s 后仅角色一圈正常）。
+## 长按 breathe ≥ hold_burst_delay（需 hold_breath_unlocked_flag 为真，④ 解锁）→ 屏息持续（刷新呼吸计时）；
+## 缺氧不再由长按触发（用户定案：长按 1s 的全屏昏暗 + 粒子震动由 Corridor 承担）。
 ## StoryMonitor.input_locked 时不响应任何输入；set_enabled(false) 关闭呼吸机制（卧室结局解除）。
 ## 输入动作 breathe：规格 D8 允许新增（唯一 project.godot [input] 变更点）；此处做运行时兜底注册
 ## （若 project.godot 已定义则跳过），使组件可独立、可在 headless --self-check 下工作。
@@ -36,7 +37,7 @@ signal hypoxia_cleared
 @export var hold_burst_delay: float = 0.5
 
 ## 缺氧遮罩颜色（非全黑，深蓝黑；用户口径「非全黑」）。
-@export var hypoxia_color: Color = Color(0.02, 0.02, 0.05, 1)
+@export var hypoxia_color: Color = Color(0.02, 0.03, 0.09, 0.55)  ## 昏暗透光（用户定案：非全黑）
 
 ## 缺氧初始半径（大）。
 @export var hypoxia_radius_outer: float = 1200.0
@@ -214,8 +215,7 @@ func _update_hold(delta: float) -> void:
 	var unlocked: bool = GameState.get_process_flag(hold_breath_unlocked_flag)
 	if unlocked and _hold_reached and not _hold_burst_done:
 		_hold_burst_done = true
-		_break_bubble()
-		_start_hypoxia()
+		_countdown = breathe_timeout
 
 
 func _reset_hold() -> void:
@@ -315,12 +315,13 @@ func run_self_check() -> void:
 	# 3. 呼吸解除缺氧
 	breathe()
 	checks.append("clear1" if (not _hypoxia_active and _countdown == breathe_timeout) else "clear_FAIL1")
-	# 4. 长按屏息（解锁后）→ 气泡破裂 → 缺氧
+	# 4. 长按屏息（解锁后）→ 屏息持续（刷新计时；不再触发缺氧）
 	GameState.set_process_flag(hold_breath_unlocked_flag, true)
 	_reset_hold()
 	_hold_pressed = true
+	_countdown = breathe_timeout - 1.0
 	_update_hold(hold_burst_delay + 0.1)
-	checks.append("hold1" if (_hold_burst_done and _hypoxia_active) else "hold_FAIL1")
+	checks.append("hold1" if (_hold_burst_done and not _hypoxia_active and _countdown == breathe_timeout) else "hold_FAIL1")
 	# 5. 再呼吸清除
 	breathe()
 	checks.append("clear2" if (not _hypoxia_active) else "clear_FAIL1")

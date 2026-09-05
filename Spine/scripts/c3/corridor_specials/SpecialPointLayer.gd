@@ -8,9 +8,9 @@ extends Node2D
 ##  2) 内容挂到无限墙段（CorridorSegment）上作为段子节点——内容随段 fposmod 回跳自动循环，
 ##     修复 B6 定位漂移（不再依赖 _cbx 单次赋值基准；装饰时按「段锚 + fposmod(tau, W)」换算本地坐标，
 ##     任意装饰时刻/任意 travel 下每个特异点恰落在一段上且世界位置正确）。
-##  3) D-R6 屏息判定参数：本层导出 hold_threshold（默认 0.5s），sync_hold_threshold=true 时同步到
+##  3) D-R6 屏息判定参数：本层导出 hold_threshold（默认 1.0s，用户定案），sync_hold_threshold=true 时同步到
 ##     Corridor.hold_threshold；判定入口仍为 Corridor.is_holding_breath()（长按 ≥ hold_threshold 且
-##     hold_breath_unlocked）。BreathSystem.hold_burst_delay（缺氧触发 0.5s）独立、本层不触碰。
+##     hold_breath_unlocked）。BreathSystem.hold_burst_delay 独立、本层不触碰。
 ##
 ## 不写 GameState 旗标、不发射判定信号、不移动玩家——屏息通过/未屏息传送/有限化全部仍由
 ## Corridor 按 travel 阈值独占执行（本层内容为纯视觉，不影响判定）。
@@ -18,8 +18,8 @@ extends Node2D
 ## —— 指向走廊控制器 ——
 @export var corridor_path: NodePath = NodePath("../Corridor")
 
-## 屏息判定阈值（D-R6，默认 0.5s；与 BreathSystem.hold_burst_delay 参数独立）。
-@export var hold_threshold: float = 0.5
+## 屏息判定阈值（用户定案：长按 1s；与 BreathSystem.hold_burst_delay 参数独立）。
+@export var hold_threshold: float = 1.0
 
 ## 是否把本层 hold_threshold 同步到 Corridor.hold_threshold（true=以本层参数为准；
 ## t6 若直接改 Corridor 侧参数，置 false 避免覆盖）。

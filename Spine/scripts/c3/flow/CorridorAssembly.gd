@@ -59,6 +59,7 @@ func _build_special_node(i: int, x: float) -> Node2D:
 	var root := Node2D.new()
 	root.name = "FixedSpecial%d" % i
 	root.position = Vector2(x - (_corridor as Node2D).position.x, 0.0) if _corridor is Node2D else Vector2(x, 0.0)
+	_build_judgment_zone(root)
 	if i == 0:
 		_build_certificate_wall(root)
 	elif i == 1:
@@ -66,6 +67,30 @@ func _build_special_node(i: int, x: float) -> Node2D:
 	else:
 		_build_floating_text(root)
 	return root
+
+
+## 判定区域标记（用户定案）：每个特异点地面标出屏息判定带 + 亮线 + 「屏息」标签。
+func _build_judgment_zone(root: Node2D) -> void:
+	var band := Polygon2D.new()
+	band.name = "JudgeZone"
+	band.z_index = 2
+	band.color = Color(1.0, 0.8, 0.3, 0.16)
+	band.polygon = PackedVector2Array([Vector2(-180, 845), Vector2(180, 845), Vector2(180, 1012), Vector2(-180, 1012)])
+	root.add_child(band)
+	var line := Polygon2D.new()
+	line.name = "JudgeLine"
+	line.z_index = 3
+	line.color = Color(1.0, 0.85, 0.4, 0.6)
+	line.polygon = PackedVector2Array([Vector2(-3, 845), Vector2(3, 845), Vector2(3, 1012), Vector2(-3, 1012)])
+	root.add_child(line)
+	var lab := Label.new()
+	lab.name = "JudgeLabel"
+	lab.z_index = 3
+	lab.text = "屏息"
+	lab.position = Vector2(-24, 800)
+	lab.add_theme_font_size_override("font_size", 30)
+	lab.add_theme_color_override("font_color", Color(1.0, 0.9, 0.55, 0.95))
+	root.add_child(lab)
 
 
 ## 特异点①：贴满墙奖状（白色/浅黄占位块，贴墙 y 带）。
@@ -132,6 +157,11 @@ func run_self_check() -> bool:
 	var checks: Array[String] = []
 	checks.append("corridor_ref" if _corridor != null else "corridor_ref_FAIL1")
 	checks.append("specials3" if _special_nodes.size() >= 3 else "specials3_FAIL1(%d)" % _special_nodes.size())
+	var zones: int = 0
+	for s in _special_nodes:
+		if s != null and is_instance_valid(s) and s.get_node_or_null("JudgeZone") != null and s.get_node_or_null("JudgeLabel") != null:
+			zones += 1
+	checks.append("zones3" if zones == 3 else "zones_FAIL(%d)" % zones)
 	checks.append("corridor_hidden_initial" if (_corridor is CanvasItem and not (_corridor as CanvasItem).visible) else "corridor_hidden_initial_FAIL")
 	checks.append("legacy_cleaned" if legacy_cleanup_done() else "legacy_cleaned_FAIL1")
 	var failed := false

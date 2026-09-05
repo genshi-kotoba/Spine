@@ -216,7 +216,7 @@ ui/dialogue_box.tscn                                          TAKE_INNER
 
 | | 说明 |
 |---|---|
-| 外层 | `config/name="Spine"`；`run/main_scene="res://scenes/main.tscn"`；viewport 1920×1240；`[autoload]` GameState、StoryMonitor；`[input]` move_left/right/interact。 |
+| 外层 | `config/name="Spine"`；`run/main_scene="res://scenes/main.tscn"`；游戏内部视口 1920×817、输出窗口 1920×1080；`[autoload]` GameState、StoryMonitor；`[input]` move_left/right/interact。 |
 | 内层 | 除上述**完全一致**外，另加：`[autoload] DialogueManager="*res://scripts/autoload/DialogueManager.gd"`、`[input] dialogue_t`（物理键 T）、`dialogue_y`（物理键 Y）。 |
 | 决策 | 内层为**纯超集**，其余配置镜像一致。取内层即仅补上对话系统的 autoload 与输入映射，风险极低。 |
 

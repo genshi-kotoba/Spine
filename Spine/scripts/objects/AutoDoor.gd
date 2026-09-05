@@ -25,6 +25,7 @@ var is_open: bool = false
 var _tween: Tween = null
 var _close_countdown: float = 0.0
 var _base_scale: Vector2 = Vector2.ONE
+var _auto_open_enabled: bool = true
 
 
 func _ready() -> void:
@@ -46,6 +47,8 @@ func _process(delta: float) -> void:
 ## 开门：播放开合动画并禁用门体碰撞（开启后不得阻挡玩家，规格⑤）
 ## 重入触发区时取消待关闭倒计时，避免门关在角色身上（评审 F1）。
 func open() -> void:
+	if not _auto_open_enabled:
+		return
 	_close_countdown = 0.0
 	if is_open:
 		return
@@ -53,6 +56,17 @@ func open() -> void:
 	_set_blocking(false)
 	_animate_to(true)
 	door_opened.emit()
+
+
+## 外部流程可临时锁住自动门。禁用时立即结束已开始的开门，所有 open() 调用均无效。
+func set_auto_open_enabled(enabled: bool) -> void:
+	_auto_open_enabled = enabled
+	if not enabled:
+		_do_close()
+
+
+func is_auto_open_enabled() -> bool:
+	return _auto_open_enabled
 
 
 ## 关门：延迟 close_delay 后执行（规格⑤，规格⑩的 close_delay）

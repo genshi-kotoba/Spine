@@ -41,7 +41,8 @@ var _breath_req_count: int = 0
 
 func _ready() -> void:
 	_wire_items()
-	_run_self_check()
+	if "--component-self-check" in OS.get_cmdline_user_args():
+		_run_self_check()
 
 
 ## 连接三个 item 的联动信号（脚本零房间字面量；未配置的 NodePath 跳过）。
@@ -64,16 +65,48 @@ func _wire_items() -> void:
 
 
 ## 进入卧室（黑屏后重显卧室靠左）。由 C3Flow 在走廊尽头黑屏后调用。
+## 已完成的卧室可反复往返：保留门锁、墙面和结局状态，只重新安放玩家。
 func begin() -> void:
+	if _is_sequence_completed():
+		_restore_completed_state()
+		_move_player(_bedroom_global(bedroom_spawn))
+		print("[bedroom_ending] begin: resumed completed bedroom at %s" % str(_bedroom_global(bedroom_spawn)))
+		return
 	_wall_interactions = 0
 	_sequence_done = false
 	_breath_req_count = 0
 	GameState.set_process_flag("bedroom_interactions_done", false)
 	GameState.set_process_flag("bedroom_unlocked", false)
 	GameState.set_process_flag("end_white", false)
+	var w := get_node_or_null(wall_item) as BedroomWallItem
+	if w != null:
+		w.reset_progress()
+	var e := get_node_or_null(end_item) as BedroomEndItem
+	if e != null:
+		e.set_state(0)
 	# 用卧室实例全局换算：bedroom_spawn 为卧室局部坐标，转全局后搬运主 Player（f2/f3）
 	_move_player(_bedroom_global(bedroom_spawn))
 	print("[bedroom_ending] begin: respawn player to %s" % str(_bedroom_global(bedroom_spawn)))
+
+
+## 完成态以持久流程旗标为准；_sequence_done 只是不跨节点重建的运行时缓存。
+func _is_sequence_completed() -> bool:
+	return _sequence_done or (
+		GameState.get_process_flag("bedroom_interactions_done")
+		and GameState.get_process_flag("bedroom_unlocked")
+	)
+
+
+## 重进已完成卧室时，从持久旗标恢复局部 item 视觉，但绝不改写任何流程旗标。
+func _restore_completed_state() -> void:
+	_sequence_done = true
+	_wall_interactions = wall_interactions_max
+	var w := get_node_or_null(wall_item) as BedroomWallItem
+	if w != null:
+		w.set_state(wall_interactions_max)
+	var e := get_node_or_null(end_item) as BedroomEndItem
+	if e != null and GameState.get_process_flag("end_white"):
+		e.set_state(1)
 
 
 ## 墙 item 每次交互回调：计数；达上限后一次：呼吸解除 + 门解锁 + 置 interactions_done。
@@ -101,6 +134,8 @@ func _on_door_return() -> void:
 
 ## 右手靠墙 item 交互回调：置 end_white + 白屏结束。
 func _on_end_white() -> void:
+	if not _sequence_done:
+		return
 	GameState.set_process_flag("end_white", true)
 	white_screen_end_requested.emit()
 	bedroom_sequence_complete.emit()
@@ -175,6 +210,9 @@ func _run_self_check() -> void:
 		if w != null:
 			w.touched()
 			await get_tree().process_frame
+			var expected_state := i + 1
+			var visual := _first_polygon_child(w)
+			checks.append("wall_step%d" % expected_state if w.current_state == expected_state and visual != null and visual.color == w.color_for_state(expected_state) else "wall_step%d_FAIL" % expected_state)
 	checks.append("wall_state_capped1" if w != null and w.current_state == wall_interactions_max else "wall_state_capped_FAIL1")
 	checks.append("wall_unlock1" if GameState.get_process_flag("bedroom_unlocked") and GameState.get_process_flag("bedroom_interactions_done") else "wall_unlock_FAIL1")
 	checks.append("breath_req1" if _breath_req_count == 1 else "breath_req_FAIL1")

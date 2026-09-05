@@ -50,8 +50,10 @@ func _build_room() -> void:
 		child.queue_free()
 	var cx := room_width * 0.5
 	var ceiling_y := stand_surface_y - THICKNESS * 0.5 - wall_height
-	_collider_box("Floor", Vector2(cx, stand_surface_y + THICKNESS * 0.5), Vector2(room_width + THICKNESS, THICKNESS), floor_color)
-	_collider_box("Ceiling", Vector2(cx, ceiling_y), Vector2(room_width + THICKNESS, THICKNESS), wall_color)
+	# Floor and ceiling stop at the side-wall centerlines. This keeps an isolated room a clean box
+	# instead of extending a horizontal strip into the black space outside it.
+	_collider_box("Floor", Vector2(cx, stand_surface_y + THICKNESS * 0.5), Vector2(room_width, THICKNESS), floor_color)
+	_collider_box("Ceiling", Vector2(cx, ceiling_y), Vector2(room_width, THICKNESS), wall_color)
 	# 侧墙几何延伸至地面以封闭房间（无洞口泄漏）：墙顶=天花平面，墙底=地面碰撞底(stand_surface_y+THICKNESS)
 	var wall_bottom_y: float = stand_surface_y + THICKNESS
 	var wall_center_y: float = (ceiling_y + wall_bottom_y) * 0.5

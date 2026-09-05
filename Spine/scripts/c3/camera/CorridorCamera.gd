@@ -12,9 +12,8 @@ extends Camera2D
 ##     全部导出，官方机制落地，零手写插值。
 ##
 ## 与走廊玩家固定模式共存（不改白模/走廊脚本）：
-##  - 监听走廊组（c3corridor）节点信号：corridor_entered → FOLLOW_ROLLING（无 clamp 纯
-##    跟随），corridor_finite → 切回 FOLLOW_CLAMPED；信号不存在则自动跳过（兼容重做后
-##    的 Corridor，届时由集成方显式 set_mode）。
+##  - 监听走廊组（c3corridor）节点信号；默认保持地图 clamp，避免滚轴阶段越过地图边缘。
+##    需要真正无限滚轴时才显式关闭 clamp_during_corridor。
 ##  - 可选旗标联动 auto_flag_switch（GameState process_flag）。
 ##  - set_mode(MANUAL) 让出相机控制权（如 C3Flow 光影序列），本组件不写位置/limit。
 ##  - 本组件只操作自身（Camera2D）属性与位置；C3Flow 的 offset 为独立属性，互不冲突。
@@ -23,6 +22,7 @@ extends Camera2D
 enum Mode {
 	FOLLOW_CLAMPED, ## 居中跟随 + 地图边缘 clamp（官方 limit_*）
 	FOLLOW_ROLLING, ## 无限走廊滚轴：纯跟随不 clamp（Corridor 固定玩家时相机保持居中）
+	FRAME_LOCKED, ## 固定在指定构图中心（独立房间展示，不随玩家移动）
 	MANUAL,         ## 控制权让出：不写位置/limit（外部接管相机）
 }
 
@@ -42,6 +42,9 @@ enum Mode {
 @export var smoothing_speed: float = 8.0
 @export var limit_smooth_enabled: bool = true
 
+## 滚轴阶段是否仍受地图边界约束。C3 固定地图开启；无限地图才关闭。
+@export var clamp_during_corridor: bool = true
+
 ## 走廊信号联动：滚轴期 ROLLING / 有限化 CLAMPED（组节点无对应信号则跳过）。
 @export var corridor_group: String = "c3corridor"
 
@@ -55,6 +58,7 @@ signal mode_changed(mode: int)
 var _target: Node2D = null
 var _corridor: Node = null
 var _applied_mode: int = -1
+var _frame_center_x: float = 0.0
 
 
 func _ready() -> void:
@@ -69,6 +73,9 @@ func _process(_delta: float) -> void:
 	if auto_flag_switch and mode != Mode.MANUAL:
 		_apply_flag_mode()
 	if mode == Mode.MANUAL:
+		return
+	if mode == Mode.FRAME_LOCKED:
+		_apply_frame_center()
 		return
 	if _target == null or not is_instance_valid(_target):
 		_resolve_target()
@@ -117,6 +124,22 @@ func set_map_bounds(left: float, right: float, top: float = -10000000.0, bottom:
 	_apply_limits()
 
 
+## 固定横向构图中心。用于独立房间：玩家可自由移动，但镜头保持完整房间与两侧黑边可见。
+func lock_frame_center_x(center_x: float) -> void:
+	_frame_center_x = center_x
+	set_mode(Mode.FRAME_LOCKED)
+	_apply_frame_center()
+
+
+## Camera2D 是 Player 子节点。锁定时必须写相对父节点的局部偏移，
+## 否则 Player 移动会把全局目标重复叠加，造成构图漂移。
+func _apply_frame_center() -> void:
+	if _target == null or not is_instance_valid(_target):
+		_resolve_target()
+	if _target != null:
+		position.x = _frame_center_x - _target.global_position.x
+
+
 ## 官方 limit 落地：CLAMPED=地图边界；ROLLING=无限（默认极限值）；MANUAL=不触碰。
 func _apply_limits() -> void:
 	match mode:
@@ -130,15 +153,20 @@ func _apply_limits() -> void:
 			limit_right = 10000000
 			limit_top = -10000000
 			limit_bottom = 10000000
+		Mode.FRAME_LOCKED:
+			limit_left = -10000000
+			limit_right = 10000000
+			limit_top = -10000000
+			limit_bottom = 10000000
 		Mode.MANUAL:
 			pass
 
 
-## 走廊信号：切入滚轴（玩家被钉在 stop_center_x，相机保持居中 = 玩家 x）。
+## 走廊信号：切入滚轴；固定地图仍 clamp，角色在可见边缘继续移动。
 func _on_corridor_entered() -> void:
 	if mode == Mode.MANUAL:
 		return
-	set_mode(Mode.FOLLOW_ROLLING)
+	set_mode(Mode.FOLLOW_CLAMPED if clamp_during_corridor else Mode.FOLLOW_ROLLING)
 
 
 ## 走廊信号：有限化，恢复地图边缘 clamp。
@@ -152,7 +180,7 @@ func _on_corridor_finite() -> void:
 func _apply_flag_mode() -> void:
 	var entered: bool = GameState.get_process_flag(corridor_entered_flag)
 	var ended: bool = GameState.get_process_flag(corridor_end_flag)
-	var desired: Mode = Mode.FOLLOW_ROLLING if (entered and not ended) else Mode.FOLLOW_CLAMPED
+	var desired: Mode = Mode.FOLLOW_ROLLING if (entered and not ended and not clamp_during_corridor) else Mode.FOLLOW_CLAMPED
 	if mode != desired:
 		set_mode(desired)
 

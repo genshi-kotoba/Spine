@@ -157,9 +157,9 @@ func _apply_wall_offset() -> void:
 func _scroll_texture(delta: float) -> void:
 	if _wall_mat == null:
 		return
-	if _wall_mat is CanvasItemMaterial:
-		(_wall_mat as CanvasItemMaterial).texture_offset.x -= move_speed * delta
-	elif _wall_mat is ShaderMaterial:
+	# CanvasItemMaterial 无 texture_offset 属性（Godot 4.7 实测报 invalid access）；墙壁随廊体左移已完成前向滚动，
+	# 此处仅对持有 texture_offset uniform 的 ShaderMaterial 做平铺纹理滚动。
+	if _wall_mat is ShaderMaterial:
 		var sm := _wall_mat as ShaderMaterial
 		var cur: Variant = sm.get_shader_parameter("texture_offset")
 		if cur is Vector2:

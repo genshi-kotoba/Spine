@@ -33,6 +33,37 @@ const FLAG_END_WHITE := "end_white"
 var current_stage: int = STAGE_STUDY
 var _study_papers_collected: int = 0
 
+# ─── LIGHT 分步子步骤（§7.2 A-E；t32 重做为分步时序：A 书房外全黑→B 出门黑屏重显+重置→C 二次靠门触发消散+震动+粒子→D 微压暗→E 解锁屏息）───
+const LIGHT_NONE := 0
+const LIGHT_A := 1
+const LIGHT_B := 2
+const LIGHT_C := 3
+const LIGHT_D := 4
+const LIGHT_E := 5
+
+## LIGHT 时序常量（s）。
+const LIGHT_C_DUR := 3.0
+const LIGHT_D_DUR := 1.5
+const LIGHT_SHAKE_DUR := 5.0
+const LIGHT_B_REVEAL := 1.2
+
+## LIGHT 遮罩参数（白模：亮区=书房/跟随玩家，四周全黑；C 后亮区扩大；D 微压暗氛围）。
+const LIGHT_A_INNER := 500.0
+const LIGHT_A_OUTER := 900.0
+const LIGHT_A_COLOR := Color(0.01, 0.01, 0.02, 1)
+const LIGHT_BLACK := Color(0.0, 0.0, 0.0, 1.0)
+const LIGHT_EXPAND_INNER := 900.0
+const LIGHT_EXPAND_OUTER := 1350.0
+const LIGHT_DIM_COLOR := Color(0.05, 0.05, 0.07, 0.30)
+const LIGHT_DIM_INNER := 150.0
+const LIGHT_DIM_OUTER := 360.0
+
+## LIGHT 分步运行状态（t32）。
+var _light_step: int = LIGHT_NONE
+var _light_b_reset_done: bool = false
+var _light_c_t: float = 0.0
+var _light_d_t: float = 0.0
+
 signal stage_changed(new_stage: int)
 
 ## ─── 场景编排引用（t16 接线）───
@@ -112,6 +143,10 @@ func _reset_flags() -> void:
 	GameState.set_process_flag(FLAG_END_WHITE, false)
 	current_stage = STAGE_STUDY
 	_study_papers_collected = 0
+	_light_step = LIGHT_NONE
+	_light_b_reset_done = false
+	_light_c_t = 0.0
+	_light_d_t = 0.0
 
 
 ## 设置阶段；进入关键阶段时应用旗标/序列。
@@ -124,7 +159,6 @@ func set_stage(s: int) -> void:
 ## 应用阶段侧效（旗标 + LIGHT 序列 + 走廊启用）。
 func _apply_stage_effects(s: int) -> void:
 	if s >= STAGE_LIGHT:
-		GameState.set_process_flag(FLAG_HOLD_BREATH_UNLOCKED, true)
 		GameState.set_process_flag(FLAG_LIGHT_PHASE_DONE, true)
 	if s >= STAGE_CORRIDOR:
 		GameState.set_process_flag(FLAG_CORRIDOR_ENTERED, true)
@@ -139,7 +173,7 @@ func _apply_stage_effects(s: int) -> void:
 		else:
 			_corridor.set("enabled", s >= STAGE_CORRIDOR)
 	if s == STAGE_LIGHT:
-		enter_stage_light()
+		_start_light_a()
 
 
 # ─── 事件钩子（场景/t16 接线调用）───
@@ -193,34 +227,94 @@ func on_enter_bedroom() -> void:
 	_fade_black_and_begin_bedroom()
 
 
-# ─── LIGHT 序列（§7.2 A-E）───
+# ─── LIGHT 序列（§7.2 A-E 分步时序；t32 重做）───
+## 进入 STAGE_LIGHT 只起步 A（书房外全黑，亮区跟随玩家）；B/C/D/E 由 _process_light 依玩家事件 / 计时推进。
 
-## 进入 STAGE_LIGHT 执行光影子步骤：A 全黑(除书房) → B 黑屏渐变+角色重置书房初始位 →
-## C 隐藏门墙+ScreenShake+ParticleBurst → C2 corridor_entered=true → D 微压暗 → E hold_breath_unlocked。
-func enter_stage_light() -> void:
-	# A: 遮罩全黑（除书房）：follow_player 但以书房为中央、极大亮区被书房覆盖（白模近似：全黑跟随玩家）
-	if _mask != null:
-		_mask.enabled = true
-		_mask.follow_player = true
-		_mask.darkness_color = Color(0.01, 0.01, 0.02, 1)
-		_mask.radius_inner = 500.0
-		_mask.radius_outer = 900.0
-		_mask.softness = 0.3
-	# B: 玩家重置书房初始位
-	_reset_player_to_study()
-	# C: 隐藏门/墙 + 粒子震撼
-	_hide_walls()
-	if _screen_shake != null and _screen_shake.has_method("shake"):
-		(_screen_shake as Node).shake(14.0, 0.4)
-	if _particle_burst != null and _particle_burst.has_method("burst"):
-		(_particle_burst as Node).burst()
-	# C2: corridor_entered=true
-	GameState.set_process_flag(FLAG_CORRIDOR_ENTERED, true)
-	# D: 微压暗（不明显；Tween 渐变，f7）
-	if _mask != null:
-		_tween_mask_to(Color(0.06, 0.06, 0.08, 0.35), 2000.0, 2600.0, 0.6)
-	# E: hold_breath_unlocked=true
+## A 步：遮罩全黑（除书房=跟随玩家的亮区），等待玩家出门。
+func _start_light_a() -> void:
+	if _light_step != LIGHT_NONE:
+		return
+	_light_step = LIGHT_A
+	_light_b_reset_done = false
+	_light_c_t = 0.0
+	_light_d_t = 0.0
+	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR)
+
+
+## B 步：玩家出门 → 黑屏渐变 → 重置书房初始位 → 重显（亮区回 A 态），随后等待二次靠门。
+func _enter_light_b() -> void:
+	if _light_step != LIGHT_A and _light_step != LIGHT_B:
+		return
+	_light_step = LIGHT_B
+	_light_b_reset_done = false
+	if _mask == null:
+		_light_b_reset_done = true
+		_reset_player_to_study()
+		return
+	_mask.enabled = true
+	_mask.follow_player = true
+	var tw := create_tween()
+	# 黑屏渐变（A 态 → 全黑）
+	tw.tween_property(_mask, "darkness_color", LIGHT_BLACK, 0.5)
+	tw.tween_property(_mask, "radius_inner", 12.0, 0.5)
+	tw.tween_property(_mask, "radius_outer", 24.0, 0.5)
+	# 黑屏中点重置玩家 → 重显回 A 态（亮区）
+	tw.tween_callback(Callable(self, "_reset_player_to_study"))
+	tw.tween_property(_mask, "darkness_color", LIGHT_A_COLOR, LIGHT_B_REVEAL)
+	tw.tween_property(_mask, "radius_inner", LIGHT_A_INNER, LIGHT_B_REVEAL)
+	tw.tween_property(_mask, "radius_outer", LIGHT_A_OUTER, LIGHT_B_REVEAL)
+	tw.tween_callback(Callable(self, "_mark_light_b_reset_done"))
+
+
+## C 步：二次靠门 → 房间间隔门/墙全部消散 + 震动 5 秒 + 粒子震撼沿边沿衔接 + 遮罩亮区缓缓展开。
+func _enter_light_c() -> void:
+	if _light_step != LIGHT_B:
+		return
+	_light_step = LIGHT_C
+	_light_c_t = 0.0
+	_hide_room_structures()
+	_run_light_shake()
+	_run_light_particles()
+	if _mask != null and _mask.enabled:
+		_tween_mask_to(LIGHT_A_COLOR, LIGHT_EXPAND_INNER, LIGHT_EXPAND_OUTER, LIGHT_C_DUR)
+
+
+## D 步：环境微压暗（只渲染氛围，亮区四周轻微暗角）。
+func _enter_light_d() -> void:
+	if _light_step != LIGHT_C:
+		return
+	_light_step = LIGHT_D
+	_light_d_t = 0.0
+	if _mask != null and _mask.enabled:
+		_tween_mask_to(LIGHT_DIM_COLOR, LIGHT_DIM_INNER, LIGHT_DIM_OUTER, LIGHT_D_DUR)
+
+
+## E 步：解锁长按屏息 + 进入走廊阶段（启动无限走廊）。
+func _finish_light_e() -> void:
+	if _light_step != LIGHT_D and _light_step != LIGHT_E:
+		return
+	if _light_step == LIGHT_E:
+		return
+	_light_step = LIGHT_E
 	GameState.set_process_flag(FLAG_HOLD_BREATH_UNLOCKED, true)
+	GameState.set_process_flag(FLAG_LIGHT_PHASE_DONE, true)
+	if current_stage < STAGE_CORRIDOR:
+		set_stage(STAGE_CORRIDOR)
+
+
+func _mark_light_b_reset_done() -> void:
+	_light_b_reset_done = true
+
+
+## 配置遮罩到指定亮区参数（即时态；供各 LIGHT 步设置及自检强制态）。
+func _mask_config(inner: float, outer: float, col: Color) -> void:
+	if _mask == null:
+		return
+	_mask.enabled = true
+	_mask.follow_player = true
+	_mask.darkness_color = col
+	_mask.radius_inner = inner
+	_mask.radius_outer = outer
 
 
 func _reset_player_to_study() -> void:
@@ -228,15 +322,35 @@ func _reset_player_to_study() -> void:
 		_player.global_position = study_spawn
 
 
-func _hide_walls() -> void:
+## 隐藏并禁碰撞全部房间间隔门/墙（含 auto_door×2、locked_bedroom_door、分隔墙×3、最右墙）；递归禁用子孙 CollisionShape2D。
+func _hide_room_structures() -> void:
 	for wp in wall_hide_paths:
 		var n := get_node_or_null(wp)
-		if n != null:
-			n.visible = false
-			# 无条件禁用其子 CollisionShape2D（f4：去掉 meta 条件）
-			for child in n.get_children():
-				if child is CollisionShape2D:
-					(child as CollisionShape2D).set_deferred("disabled", true)
+		if n == null:
+			continue
+		n.visible = false
+		_disable_collisions_recursive(n)
+
+
+func _disable_collisions_recursive(n: Node) -> void:
+	if n == null:
+		return
+	for child in n.get_children():
+		if child is CollisionShape2D:
+			(child as CollisionShape2D).set_deferred("disabled", true)
+		_disable_collisions_recursive(child)
+
+
+## LIGHT-C 震动（5 秒；验收：ScreenShake 调用参数 5.0s）。
+func _run_light_shake() -> void:
+	if _screen_shake != null and _screen_shake.has_method("shake"):
+		(_screen_shake as Node).shake(14.0, LIGHT_SHAKE_DUR)
+
+
+## LIGHT-C 粒子震撼（沿边缘/边界衔接新场景）。
+func _run_light_particles() -> void:
+	if _particle_burst != null and _particle_burst.has_method("burst"):
+		(_particle_burst as Node).burst()
 
 
 # ─── 信号响应（f5）───
@@ -276,6 +390,8 @@ func _tween_mask_to(col: Color, ri: float, ro: float, dur: float) -> void:
 		return
 	var m := _mask
 	var tw := create_tween()
+	# 颜色/两个半径同步渐变（t32：LIGHT 展开需在 LIGHT_C_DUR 内整体过渡，避免顺序 tween 与计时错位）
+	tw.set_parallel(true)
 	tw.tween_property(m, "darkness_color", col, dur)
 	tw.tween_property(m, "radius_inner", ri, dur)
 	tw.tween_property(m, "radius_outer", ro, dur)
@@ -311,6 +427,35 @@ func _call_bool_selftest(n: Node) -> bool:
 	return res is bool and (res as bool)
 
 
+## 同步强制推进 LIGHT A→E（仅自检/校验用，跳过动画 Tween）：设终态 + 校验用状态。
+func _force_light_to_e() -> void:
+	_light_step = LIGHT_A
+	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR)
+	_light_step = LIGHT_B
+	_light_b_reset_done = true
+	_reset_player_to_study()
+	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR)
+	_light_step = LIGHT_C
+	_hide_room_structures()
+	_run_light_shake()
+	_run_light_particles()
+	_mask_config(LIGHT_EXPAND_INNER, LIGHT_EXPAND_OUTER, LIGHT_A_COLOR)
+	_light_step = LIGHT_D
+	_mask_config(LIGHT_DIM_INNER, LIGHT_DIM_OUTER, LIGHT_DIM_COLOR)
+	_finish_light_e()
+
+
+## 全部房间间隔结构（wall_hide_paths）是否隐藏。
+func _light_structures_hidden() -> bool:
+	if wall_hide_paths.is_empty():
+		return false
+	for wp in wall_hide_paths:
+		var n := get_node_or_null(wp)
+		if n == null or n.visible:
+			return false
+	return true
+
+
 func _run_flow_checks(checks: Array[String]) -> void:
 	_reset_flags()
 	checks.append("s1_study_locked" if (not GameState.get_process_flag(FLAG_STUDY_ITEMS_UNLOCKED) and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN) and current_stage == STAGE_STUDY) else "s1_study_locked_FAIL")
@@ -322,7 +467,13 @@ func _run_flow_checks(checks: Array[String]) -> void:
 	on_paper_collected("study_b", 99)
 	checks.append("s5_study_b" if not GameState.get_process_flag(FLAG_LIGHT_PHASE_DONE) else "s5_study_b_FAIL")
 	on_paper_collected("study_a", 100)
-	checks.append("s6_light" if (GameState.get_process_flag(FLAG_LIGHT_PHASE_DONE) and current_stage == STAGE_LIGHT and GameState.get_process_flag(FLAG_HOLD_BREATH_UNLOCKED)) else "s6_light_FAIL")
+	checks.append("s6_light" if (GameState.get_process_flag(FLAG_LIGHT_PHASE_DONE) and current_stage == STAGE_LIGHT and _light_step == LIGHT_A) else "s6_light_FAIL")
+	# t32：驱动 LIGHT A→E，校验 hold_breath_unlocked + 房间结构消散 + 震动 5s
+	_force_light_to_e()
+	checks.append("s6_breath" if GameState.get_process_flag(FLAG_HOLD_BREATH_UNLOCKED) else "s6_breath_FAIL")
+	checks.append("s6_hide" if _light_structures_hidden() else "s6_hide_FAIL")
+	var sd: float = float(_screen_shake.get("duration")) if _screen_shake != null else 0.0
+	checks.append("s6_shake" if sd >= 4.9 else "s6_shake_FAIL(%.1f)" % sd)
 	_reset_flags()
 	on_bedroom_door_named()
 	checks.append("s8_bedroom_named" if GameState.get_process_flag(FLAG_BEDROOM_DOOR_ACTIVE) else "s8_bedroom_named_FAIL")
@@ -353,13 +504,20 @@ func _physical_assertions() -> bool:
 		if _player != null:
 			var bx: float = _player.global_position.x
 			checks.append("bedroom_x" if (absf(bx - 4820.0) < 5.0) else "bedroom_x_FAIL(%.1f)" % bx)
-	# ④LIGHT-C → WallRight/WallStudyLiving 隐藏
-	set_stage(STAGE_LIGHT)
+	# ④LIGHT A→E → 房间结构消散 + 震动 5s + hold_breath_unlocked + 玩家齐位
+	_force_light_to_e()
 	await get_tree().process_frame
-	for wp in wall_hide_paths:
-		var n := get_node_or_null(wp)
-		if n != null:
-			checks.append("hide_" + str(wp) if (not n.visible) else "hide_FAIL_" + str(wp))
+	checks.append("light_hide" if _light_structures_hidden() else "light_hide_FAIL")
+	if _screen_shake != null:
+		var sdu: float = float(_screen_shake.get("duration"))
+		checks.append("light_shake5" if sdu >= 4.9 else "light_shake5_FAIL(%.1f)" % sdu)
+	checks.append("light_breath" if GameState.get_process_flag(FLAG_HOLD_BREATH_UNLOCKED) else "light_breath_FAIL")
+	# ⑤走廊地板：传送玩家到走廊中心（stop_center_x=4480），物理稳定后不坠穿（y≈948 站立）
+	if _player != null:
+		_player.global_position = Vector2(4480.0, 940.0)
+		await get_tree().create_timer(0.6).timeout
+		var cy: float = _player.global_position.y
+		checks.append("corridor_stand" if (cy > 900.0 and cy < 1000.0) else "corridor_stand_FAIL(%.1f)" % cy)
 	var failed := false
 	for c in checks:
 		if c.ends_with("FAIL") or c.contains("FAIL"):
@@ -570,9 +728,34 @@ func _apply_phase_arg() -> void:
 				_phase_debug_loaded = true
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if _phase_debug_loaded:
 		return
-	if _player != null and current_stage == STAGE_STUDY:
+	if _player == null:
+		return
+	if current_stage == STAGE_STUDY:
 		if _player.global_position.x >= study_right_x:
 			on_player_left_study()
+	elif current_stage == STAGE_LIGHT:
+		_process_light(delta)
+
+
+## LIGHT 分步驱动：A→B 依玩家出门；B→C 依二次靠门；C→D→E 依计时。
+func _process_light(delta: float) -> void:
+	match _light_step:
+		LIGHT_A:
+			if _player.global_position.x >= study_right_x:
+				_enter_light_b()
+		LIGHT_B:
+			if _light_b_reset_done and _player.global_position.x >= study_right_x:
+				_enter_light_c()
+		LIGHT_C:
+			_light_c_t += delta
+			if _light_c_t >= LIGHT_C_DUR:
+				_enter_light_d()
+		LIGHT_D:
+			_light_d_t += delta
+			if _light_d_t >= LIGHT_D_DUR:
+				_finish_light_e()
+		_:
+			pass

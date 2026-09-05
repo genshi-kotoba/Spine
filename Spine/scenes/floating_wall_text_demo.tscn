@@ -1,0 +1,50 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/scenes/FloatingWallTextDemo.gd" id="1_demo"]
+[ext_resource type="PackedScene" path="res://scenes/floating_wall_text.tscn" id="2_text"]
+
+[sub_resource type="Gradient" id="Gradient_wall"]
+colors = PackedColorArray(0.035, 0.033, 0.032, 1, 0.105, 0.097, 0.091, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture_wall"]
+gradient = SubResource("Gradient_wall")
+width = 1920
+height = 817
+fill_from = Vector2(0.16, 0.12)
+fill_to = Vector2(0.86, 0.9)
+
+[node name="FloatingWallTextDemo" type="Node2D"]
+script = ExtResource("1_demo")
+
+[node name="Wall" type="Sprite2D" parent="."]
+texture = SubResource("GradientTexture_wall")
+position = Vector2(960, 408.5)
+
+[node name="WallSeamLeft" type="Line2D" parent="."]
+points = PackedVector2Array(210, 0, 185, 245, 222, 466, 196, 817)
+width = 3.0
+default_color = Color(0.16, 0.15, 0.14, 0.5)
+
+[node name="WallSeamRight" type="Line2D" parent="."]
+points = PackedVector2Array(1710, 0, 1740, 190, 1702, 492, 1732, 817)
+width = 3.0
+default_color = Color(0.16, 0.15, 0.14, 0.5)
+
+[node name="FloorShadow" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 715, 1920, 684, 1920, 817, 0, 817)
+color = Color(0.015, 0.014, 0.013, 1)
+
+[node name="RedCut" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 662, 1920, 641, 1920, 649, 0, 672)
+color = Color(0.46, 0.075, 0.055, 0.8)
+
+[node name="FloatingWallText" parent="." instance=ExtResource("2_text")]
+position = Vector2(960, 365)
+phrases = PackedStringArray("这条走廊没有尽头", "不要相信门后的声音", "沉默是一种许可", "档案正在注视你", "保持清醒", "你已经来过这里")
+layout_size = Vector2(1280, 520)
+min_font_size = 34
+max_font_size = 72
+max_tilt_degrees = 6.5
+jitter_amount = 2.2
+float_amount = 4.5
+motion_speed = 1.05

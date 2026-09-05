@@ -143,7 +143,7 @@ v2 新增定案：
 v1 定案沿用（未被 v2 覆盖的部分）：
 
 - D1 背景 scale3 @ (1920,619.5)；D2 ladder (1920,578) scale0.8；D3 curten 视觉 (1920,320) scale0.8；
-- D7 EndingLayer layer=30；D8 c2_dialogue1-3 沿用不覆盖；H1 lego 占位贴图与检测区不变；H3 ladder.mp3 用户自补。
+- D7 EndingLayer layer=30；D8 c2_dialogue1-3 沿用不覆盖；H1 lego 检测区 120×200 不变（贴图 v2.3 起换 lego.png 400×400，脉冲参数不变）；H3 ladder.mp3 用户自补。
 
 被 v2 取代（作废）：
 

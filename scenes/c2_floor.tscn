@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" path="res://scenes/floor_template.tscn" id="1"]
 [ext_resource type="Script" uid="uid://bbcrdermiq0cy" path="res://scripts/scenes/C2Floor.gd" id="2"]
 [ext_resource type="Script" uid="uid://de8dghd3ib18w" path="res://scripts/objects/vanish_item.gd" id="6"]
-[ext_resource type="Texture2D" uid="uid://dhw4mn6lcfqr6" path="res://assets/sprites/item_icon.png" id="7"]
+[ext_resource type="Texture2D" uid="uid://cm6xvvd3nhne7" path="res://assets/sprites/lego.png" id="7"]
 [ext_resource type="Texture2D" uid="uid://befxj225c4rfv" path="res://assets/sprites/C2_background.png" id="8"]
 [ext_resource type="Texture2D" uid="uid://yqxynmvqqgeu" path="res://assets/sprites/curten.png" id="9"]
 [ext_resource type="Script" uid="uid://cwtwftyufmmqj" path="res://scripts/objects/Ladder.gd" id="10"]

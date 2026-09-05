@@ -58,8 +58,10 @@ corridor_end_item_path = NodePath("Items/CorridorEndItem")
 gate_blocker_path = NodePath("WhiteModel/Environment/StudyGateBlocker")
 room_table_path = NodePath("RoomTable")
 items_root_path = NodePath("Items")
+bedroom_items_path = NodePath("Rooms/Bedroom")
 parallax_path = NodePath("WhiteModel/DepthParallax")
 ok_popup_path = NodePath("OkPopup")
+camera_path = NodePath("Player/Camera2D")
 wall_hide_paths = [NodePath("WhiteModel/Environment/WallRight"), NodePath("WhiteModel/Environment/WallStudyLiving")]
 
 [node name="Player" parent="." instance=ExtResource("1")]
@@ -80,7 +82,7 @@ visible = false
 
 [node name="WallItem" type="Area2D" parent="Rooms/Bedroom"]
 script = ExtResource("10")
-position = Vector2(560, 700)
+position = Vector2(560, 880)
 size = Vector2(120, 200)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/WallItem"]

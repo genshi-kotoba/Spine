@@ -35,11 +35,13 @@ func _build_label() -> void:
 
 
 ## 显示一次 "ok"（可指定落点；空则取上一个位置/默认）。
+## 世界坐标须转屏幕坐标（CanvasLayer 用屏幕像素，f3）。
 func show_ok(global_pos: Vector2 = Vector2.ZERO) -> void:
 	if _label == null:
 		return
 	if global_pos != Vector2.ZERO:
-		_label.position = global_pos + text_offset
+		var screen := get_viewport().get_canvas_transform() * global_pos
+		_label.position = screen + text_offset
 	_show(true)
 	_reset_timer()
 

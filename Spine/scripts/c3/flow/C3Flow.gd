@@ -47,8 +47,10 @@ signal stage_changed(new_stage: int)
 @export var gate_blocker_path: NodePath
 @export var room_table_path: NodePath
 @export var items_root_path: NodePath
+@export var bedroom_items_path: NodePath
 @export var parallax_path: NodePath
 @export var ok_popup_path: NodePath
+@export var camera_path: NodePath
 @export var study_spawn: Vector2 = Vector2(320, 948)
 @export var study_right_x: float = 1280.0
 ## LIGHT-C 需隐藏的门/墙（NodePath；如 书房-客厅墙、auto_door、最右侧墙）。
@@ -367,10 +369,27 @@ func _physical_assertions() -> bool:
 
 func _ready_extra() -> void:
 	_resolve_scene_refs()
+	_activate_camera()
 	_setup_room_table()
 	_setup_parallax()
 	_connect_scene_signals()
 	_apply_phase_arg()
+
+
+## 使主相机当前(玩家 Camera2D)——OkPopup 世界→屏幕换算需相机变换。
+func _activate_camera() -> void:
+	var cam: Camera2D = null
+	if camera_path != NodePath():
+		var c := get_node_or_null(camera_path)
+		if c is Camera2D:
+			cam = c as Camera2D
+	elif _player != null:
+		for child in _player.get_children():
+			if child is Camera2D:
+				cam = child as Camera2D
+				break
+	if cam != null:
+		cam.make_current()
 
 
 ## 景深目标重定向：让 DepthParallax 跟随游戏主 Player（白模内置 Player 已禁用）。
@@ -443,13 +462,19 @@ func _on_interact_pressed() -> void:
 				area.touched()
 
 
-## 收集 items_root_path 下的 Item（Area2D）子节点。
+## 收集 items_root_path + bedroom_items_path 下的 Item（Area2D）子节点（f1：卧室 E 链需覆盖 Rooms/Bedroom 的 WallItem/DoorItem/EndItem）。
 func _find_items() -> Array[Node]:
 	var res: Array[Node] = []
 	if items_root_path != NodePath():
 		var root := get_node_or_null(items_root_path)
 		if root != null:
 			for child in root.get_children():
+				if child is Area2D:
+					res.append(child)
+	if bedroom_items_path != NodePath():
+		var broot := get_node_or_null(bedroom_items_path)
+		if broot != null:
+			for child in broot.get_children():
 				if child is Area2D:
 					res.append(child)
 	return res

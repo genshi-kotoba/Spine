@@ -114,8 +114,8 @@
 ```
 U 键(dialogue_u) → DialogueTest._unhandled_input
   → DialogueManager.start_dialogue(dialogue3.txt, MODE_GLITCH)
-    → 空闲：_begin → _glitch_box.show_dialogue(lines)
-    → 忙碌：_queue.append (FIFO)
+	→ 空闲：_begin → _glitch_box.show_dialogue(lines)
+	→ 忙碌：_queue.append (FIFO)
 _glitch_box 播完 → dialogue_finished → DialogueManager._on_box_finished
   → _active=false → dialogue_finished.emit → 队列下一段 _begin（按 mode 路由 _box/_glitch_box）
 ```

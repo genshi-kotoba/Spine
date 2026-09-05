@@ -1,107 +1,118 @@
 class_name C2Floor
 extends FloorTemplate
-## C2Floor — c2 关卡：三区域解锁流程（godot_c2_c4_prompt §3）
-## kitchen 初始可见；living/study_room 初始黑暗（shader 遮罩）+ 边界阻挡，lego 与 bedroom_door 初始不可交互。
-## 解锁连锁统一由本脚本监听 GameState.state_changed 驱动，item 脚本内不做互相引用。
-## 读档恢复：_ready 按 GameState 既有状态重建（已消失不现、已解锁不黑）。
+## C2Floor — c2 关卡：ladder 四态状态机驱动的线性流程 + 白屏转场结局
+## （docs/c2_refactor_constraints.md §4.2；取代旧三区域解锁设计）
+## 连锁统一由本脚本监听 GameState.state_changed 驱动，item 脚本内不做互相引用。
+## 任一 lego 消失 → ① Ladder.advance_state() ② LadderSfx（缺失优雅降级）③ 按已消失
+## 总数唤起 c2_dialogue{n}（MODE_INTERACTIVE）。
+## 结局：c2_dialogue3 播完且 ladder=="3" → 锁输入 → curten 消失 → 开窗音效 →
+## 4s 渐白 → 纯白 3s → 进入 computer_screen（防重入，整局一次）。
 
 
-## 区域边界（遮罩与阻挡共用）：[x0, x1, x2, x3] → kitchen[x0,x1] / living[x1,x2] / study_room[x2,x3]
-@export var zone_boundaries: PackedFloat32Array = [0.0, 1280.0, 2560.0, 3840.0]
+## 三个 lego 的 GameState 状态键
+const LEGO_IDS: Array[String] = ["c2_lego1", "c2_lego2", "c2_lego3"]
 
-const ID_CANDLE := "c2_candle"
-const ID_STAR := "c2_star"
-const ID_LEGO1 := "c2_lego1"
-const ID_LEGO2 := "c2_lego2"
-const ID_LEGO3 := "c2_lego3"
+## 第 n 次 lego 交互 → 对话文件（与具体哪个 lego 解耦）
+const DIALOGUE_PATHS: Dictionary = {
+	1: "res://dialogues/c2_dialogue1.txt",
+	2: "res://dialogues/c2_dialogue2.txt",
+	3: "res://dialogues/c2_dialogue3.txt",
+}
 
-const ZONE_TOP := 211.0
-const ZONE_HEIGHT := 817.0
-const BLOCKER_Y := 868.0
+## curten 的 GameState 状态键（结局消失后读档一致）
+const ID_CURTEN: String = "c2_curten"
 
-@onready var _mask_living: ColorRect = $DarknessMasks/MaskLiving
-@onready var _mask_study: ColorRect = $DarknessMasks/MaskStudy
-@onready var _blocker_living: StaticBody2D = $ZoneBlockers/BlockerLiving
-@onready var _blocker_study: StaticBody2D = $ZoneBlockers/BlockerStudy
-@onready var _bedroom_door: Area2D = $Doors/BedroomDoor
-@onready var _lego1: Area2D = $Items/Lego1
-@onready var _lego2: Area2D = $Items/Lego2
-@onready var _lego3: Area2D = $Items/Lego3
+## 结局已播 process_flag（防重入 + 读档一致）
+const FLAG_ENDING: String = "c2_ending_done"
+
+## 结局目标场景
+const ENDING_SCENE: String = "res://scenes/computer_screen.tscn"
+
+## ladder 音效路径（文件暂缺：禁止 preload，运行时存在性检查后加载，缺失仅 warning）
+@export var ladder_sfx_path: String = "res://assets/audio/ladder.mp3"
+
+@onready var _ladder: Ladder = $Items/Ladder
+@onready var _curten: Node2D = $Items/Curten
+@onready var _ladder_sfx: AudioStreamPlayer = $LadderSfx
+@onready var _window_sfx: AudioStreamPlayer = $WindowSfx
+@onready var _fade_rect: ColorRect = $EndingLayer/FadeRect
 
 
 func _ready() -> void:
 	super._ready()
-	_layout_zones()
 	GameState.state_changed.connect(_on_state_changed)
-	_apply_saved_progress()
+	DialogueManager.dialogue_finished.connect(_on_dialogue_finished)
+	_restore_progress()
 
 
-## 按 zone_boundaries 摆放遮罩与阻挡（配置改动只调导出变量）
-func _layout_zones() -> void:
-	var x1: float = zone_boundaries[1]
-	var x2: float = zone_boundaries[2]
-	var x3: float = zone_boundaries[3]
-	if _mask_living != null:
-		_mask_living.position = Vector2(x1, ZONE_TOP)
-		_mask_living.size = Vector2(x2 - x1, ZONE_HEIGHT)
-	if _mask_study != null:
-		_mask_study.position = Vector2(x2, ZONE_TOP)
-		_mask_study.size = Vector2(x3 - x2, ZONE_HEIGHT)
-	if _blocker_living != null:
-		_blocker_living.position = Vector2(x1, BLOCKER_Y)
-	if _blocker_study != null:
-		_blocker_study.position = Vector2(x2, BLOCKER_Y)
-
-
+## lego 消失（状态 "1"）→ ladder 推进 + 音效 + 按总数唤起对话
 func _on_state_changed(object_id: String, new_state: String) -> void:
 	if new_state != "1":
 		return
-	match object_id:
-		ID_CANDLE:
-			_unlock_living()
-		ID_STAR:
-			_unlock_study()
-		ID_LEGO1, ID_LEGO2, ID_LEGO3:
-			_check_door_unlock()
-
-
-## 读档恢复：按 GameState 既有状态重建区域与门（已解锁的区域不再黑暗/阻挡）
-func _apply_saved_progress() -> void:
-	if GameState.get_object_state(ID_CANDLE) == "1":
-		_unlock_living()
-	if GameState.get_object_state(ID_STAR) == "1":
-		_unlock_study()
-	_check_door_unlock()
-
-
-## candle 已交互：living 黑暗遮罩移除 + 边界阻挡移除
-func _unlock_living() -> void:
-	if _mask_living != null:
-		_mask_living.queue_free()
-		_mask_living = null
-	if _blocker_living != null:
-		_blocker_living.queue_free()
-		_blocker_living = null
-
-
-## star 已交互：study_room 黑暗移除 + 阻挡移除 + 三个 lego 变为可交互
-func _unlock_study() -> void:
-	if _mask_study != null:
-		_mask_study.queue_free()
-		_mask_study = null
-	if _blocker_study != null:
-		_blocker_study.queue_free()
-		_blocker_study = null
-	for lego in [_lego1, _lego2, _lego3]:
-		if lego != null:
-			lego.set_interaction_enabled(true)
-
-
-## 三个 lego 全部已交互 → bedroom_door 变为可交互（高亮提示随范围进出自动恢复）
-func _check_door_unlock() -> void:
-	if _bedroom_door == null:
+	if not LEGO_IDS.has(object_id):
 		return
-	if GameState.get_object_state(ID_LEGO1) == "1" \
-			and GameState.get_object_state(ID_LEGO2) == "1" \
-			and GameState.get_object_state(ID_LEGO3) == "1":
-		_bedroom_door.set_interaction_enabled(true)
+	_ladder.advance_state()
+	_play_ladder_sfx()
+	var n: int = _lego_count()
+	if DIALOGUE_PATHS.has(n):
+		print("[c2_floor] lego count=%d, start dialogue %d" % [n, n])
+		DialogueManager.start_dialogue(DIALOGUE_PATHS[n], DialogueManager.MODE_INTERACTIVE)
+
+
+## 已消失 lego 计数（读档恢复后计数仍正确）
+func _lego_count() -> int:
+	var n: int = 0
+	for id: String in LEGO_IDS:
+		if GameState.get_object_state(id) == "1":
+			n += 1
+	return n
+
+
+## ladder 音效：文件缺失时优雅降级（push_warning 跳过，不允许报错中断流程）
+func _play_ladder_sfx() -> void:
+	if not ResourceLoader.exists(ladder_sfx_path):
+		push_warning("[c2_floor] ladder sfx missing, skipped: %s" % ladder_sfx_path)
+		return
+	_ladder_sfx.stream = load(ladder_sfx_path)
+	_ladder_sfx.play()
+
+
+## c2_dialogue3 播完且 ladder 已到状态 "3" → 启动结局（防重入，整局一次）
+func _on_dialogue_finished() -> void:
+	if GameState.get_object_state(Ladder.STATE_KEY) != "3":
+		return
+	_start_ending()
+
+
+## 结局序列：锁输入 → curten 消失 → 开窗音效 → 4s 渐白 → 纯白 3s → 转场
+func _start_ending() -> void:
+	if GameState.get_process_flag(FLAG_ENDING):
+		return
+	GameState.set_process_flag(FLAG_ENDING, true)
+	print("[c2_floor] ending started")
+	StoryMonitor.lock_input()
+	# curten 消失（写 GameState 便于读档一致）
+	GameState.set_object_state(ID_CURTEN, "1")
+	if _curten != null:
+		_curten.queue_free()
+		_curten = null
+	_window_sfx.play()
+	# 4 秒内渐变为纯白
+	var tween: Tween = create_tween()
+	tween.tween_property(_fade_rect, "modulate:a", 1.0, 4.0)
+	await tween.finished
+	# 纯白保持 3 秒
+	await get_tree().create_timer(3.0).timeout
+	_window_sfx.stop()
+	get_tree().change_scene_to_file(ENDING_SCENE)
+
+
+## 读档恢复：curten 已消失不重现；ladder=="3" 但结局未播（对话3 中途退出）→ 补触发结局
+## （lego 消失态与 ladder 贴图分别由 VanishItem / Ladder 各自 _ready 恢复）
+func _restore_progress() -> void:
+	if GameState.get_object_state(ID_CURTEN) == "1" and _curten != null:
+		_curten.queue_free()
+		_curten = null
+	if GameState.get_object_state(Ladder.STATE_KEY) == "3" \
+			and not GameState.get_process_flag(FLAG_ENDING):
+		call_deferred("_start_ending")

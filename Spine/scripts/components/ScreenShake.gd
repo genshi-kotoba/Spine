@@ -31,10 +31,17 @@ var _sway_rotation: float = 0.0
 var _rocking_enabled: bool = false
 var _rocking_target: float = 0.0
 var _rocking_rotation: float = 0.0
+## 角速度保留上一帧的惯性；阻尼弹簧会自然穿过或靠近中心，而不是匀速折返。
+var _rocking_angular_velocity: float = 0.0
 var _rocking_max_rotation: float = 0.0
-var _rocking_interval: float = 0.28
+var _rocking_interval: float = 0.42
 var _rocking_timer: float = 0.0
 var _rocking_direction: int = 0
+
+## 跷跷板的回正力度与阻尼。保持轻微过冲，但不会在随机换向时出现机械折角。
+@export var rocking_response: float = 32.0
+@export var rocking_damping: float = 8.0
+@export var rocking_max_speed_degrees: float = 18.0
 
 
 func _ready() -> void:
@@ -127,7 +134,7 @@ func get_sway_offset() -> Vector2:
 
 ## 开关持续的跷跷板镜头。角度围绕 Camera2D 中心旋转，目标侧每一拍交替、力度随机。
 ## 这是状态接口：可逐帧更新 max_degrees，而不会每帧重置当前摆动。
-func set_rocking(active: bool, max_degrees: float = 1.8, interval: float = 0.28) -> void:
+func set_rocking(active: bool, max_degrees: float = 1.8, interval: float = 0.42) -> void:
 	if _camera == null:
 		_resolve_camera()
 	if _camera == null:
@@ -140,13 +147,16 @@ func set_rocking(active: bool, max_degrees: float = 1.8, interval: float = 0.28)
 	if active and not _rocking_enabled:
 		_base_rotation = _camera.rotation - _sway_rotation - _rocking_rotation
 		_rocking_enabled = true
-		_rocking_timer = 0.0
+		# 保留首次目标一个完整节拍，避免激活的下一帧立即反向。
+		_rocking_timer = _rocking_interval
 		_rocking_direction = 0
+		_rocking_angular_velocity = 0.0
 		_choose_rocking_target()
 	elif not active and _rocking_enabled:
 		_rocking_enabled = false
 		_rocking_target = 0.0
 		_rocking_rotation = 0.0
+		_rocking_angular_velocity = 0.0
 		_apply_camera_rotation()
 	elif active and absf(_rocking_target) > _rocking_max_rotation:
 		_rocking_target = signf(_rocking_target) * _rocking_max_rotation
@@ -155,6 +165,10 @@ func set_rocking(active: bool, max_degrees: float = 1.8, interval: float = 0.28)
 ## 当前跷跷板将要靠向的目标弧度；用于调试与回归断言。
 func get_rocking_target() -> float:
 	return _rocking_target
+
+
+func get_rocking_angular_velocity() -> float:
+	return _rocking_angular_velocity
 
 
 func is_rocking() -> bool:
@@ -166,9 +180,14 @@ func _update_rocking(delta: float) -> void:
 	while _rocking_timer <= 0.0:
 		_choose_rocking_target()
 		_rocking_timer += _rocking_interval
-	# 稍快于目标节拍地靠向目标，确保每次换向都经过中线，而非突跳。
-	var max_speed := maxf(_rocking_max_rotation * 5.5, deg_to_rad(0.25))
-	_rocking_rotation = move_toward(_rocking_rotation, _rocking_target, max_speed * delta)
+	# 角度以阻尼弹簧靠近随机目标：保留势能和惯性，换向不会产生匀速的生硬折角。
+	var response := maxf(rocking_response, 0.0)
+	var damping := maxf(rocking_damping, 0.0)
+	_rocking_angular_velocity += (_rocking_target - _rocking_rotation) * response * delta
+	_rocking_angular_velocity *= exp(-damping * delta)
+	var max_speed := deg_to_rad(maxf(rocking_max_speed_degrees, 0.25))
+	_rocking_angular_velocity = clampf(_rocking_angular_velocity, -max_speed, max_speed)
+	_rocking_rotation += _rocking_angular_velocity * delta
 	_apply_camera_rotation()
 
 
@@ -180,8 +199,8 @@ func _choose_rocking_target() -> void:
 		_rocking_direction = 1 if randf() >= 0.5 else -1
 	else:
 		_rocking_direction *= -1
-	# 每一侧至少保留可感知的倾斜，强度随机，避免退化成周期性正弦。
-	var force := lerpf(0.35, 1.0, randf())
+	# 每一侧保留相近但不恒定的力度；节拍由弹簧消化，避免随机值造成突兀摆动。
+	var force := lerpf(0.58, 0.90, randf())
 	_rocking_target = float(_rocking_direction) * _rocking_max_rotation * force
 
 

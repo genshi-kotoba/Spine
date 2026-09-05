@@ -1,498 +1,444 @@
-[gd_scene load_steps=23 format=3]
+[gd_scene format=3 uid="uid://c7d6tpkioqljt"]
 
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/c3_bedroom_room.tscn" id="2"]
-[ext_resource type="Script" path="res://scripts/c3/flow/C3Flow.gd" id="3"]
-[ext_resource type="Script" path="res://scripts/c3/flow/C3PaperItem.gd" id="4"]
-[ext_resource type="Script" path="res://scripts/c3/flow/C3DoorEntryItem.gd" id="19"]
-[ext_resource type="Script" path="res://scripts/c3/breath/BreathSystem.gd" id="5"]
-[ext_resource type="Script" path="res://scripts/c3/breath/Bubble.gd" id="6"]
-[ext_resource type="Script" path="res://scripts/c3/corridor/Corridor.gd" id="7"]
-[ext_resource type="Script" path="res://scripts/c3/corridor/CorridorEndItem.gd" id="8"]
-[ext_resource type="Script" path="res://scripts/c3/bedroom/BedroomEnding.gd" id="9"]
-[ext_resource type="Script" path="res://scripts/c3/bedroom/BedroomWallItem.gd" id="10"]
-[ext_resource type="Script" path="res://scripts/c3/bedroom/BedroomDoorItem.gd" id="11"]
-[ext_resource type="Script" path="res://scripts/c3/bedroom/BedroomEndItem.gd" id="12"]
-[ext_resource type="Script" path="res://scripts/components/InteractHint.gd" id="13"]
-[ext_resource type="Script" path="res://scripts/components/DarknessMask.gd" id="14"]
-[ext_resource type="Script" path="res://scripts/components/ParticleBurst.gd" id="15"]
-[ext_resource type="Script" path="res://scripts/components/ScreenShake.gd" id="16"]
-[ext_resource type="Texture2D" path="res://assets/ui/e_key.png" id="18"]
-[ext_resource type="Texture2D" path="res://assets/ui/corridor_wall.png" id="20"]
-[ext_resource type="Script" path="res://scripts/components/ItemMarker.gd" id="21"]
-[ext_resource type="Script" path="res://scripts/components/RoomTable.gd" id="22"]
-[ext_resource type="PackedScene" path="res://scenes/c3_floor.tscn" id="23"]
-[ext_resource type="Script" path="res://scripts/components/OkPopup.gd" id="24"]
-[ext_resource type="Script" path="res://scripts/c3/flow/CorridorAssembly.gd" id="25"]
-[ext_resource type="Script" path="res://scripts/c3/camera/CorridorCamera.gd" id="26"]
-
-[sub_resource type="RectangleShape2D" id="floor_col"]
-size = Vector2(3840, 40)
-
-[sub_resource type="RectangleShape2D" id="ceiling_col"]
-size = Vector2(3840, 40)
-
-[sub_resource type="RectangleShape2D" id="wall_side_col"]
-size = Vector2(20, 817)
-
-[sub_resource type="RectangleShape2D" id="wall_lintel_col"]
-size = Vector2(20, 497)
+[ext_resource type="Script" uid="uid://dj0em5qfbf128" path="res://scripts/c3/flow/C3Flow.gd" id="3"]
+[ext_resource type="Script" uid="uid://dtxqsdbu33ubq" path="res://scripts/c3/flow/C3PaperItem.gd" id="4"]
+[ext_resource type="Script" uid="uid://buvqqur6asfuq" path="res://scripts/c3/breath/BreathSystem.gd" id="5"]
+[ext_resource type="Script" uid="uid://dbxujkqbseepq" path="res://scripts/c3/breath/Bubble.gd" id="6"]
+[ext_resource type="Script" uid="uid://bg64vqgbpe4iq" path="res://scripts/c3/corridor/Corridor.gd" id="7"]
+[ext_resource type="Script" uid="uid://2nowf1vbcatl" path="res://scripts/c3/corridor/CorridorEndItem.gd" id="8"]
+[ext_resource type="Script" uid="uid://dg8igi0ychynq" path="res://scripts/c3/bedroom/BedroomEnding.gd" id="9"]
+[ext_resource type="Script" uid="uid://o5h1o2bbahlc" path="res://scripts/c3/bedroom/BedroomWallItem.gd" id="10"]
+[ext_resource type="Script" uid="uid://cqdq0newsgoak" path="res://scripts/c3/bedroom/BedroomDoorItem.gd" id="11"]
+[ext_resource type="Script" uid="uid://bduarrspyw3mx" path="res://scripts/c3/bedroom/BedroomEndItem.gd" id="12"]
+[ext_resource type="Script" uid="uid://b1i0v1dv2k74q" path="res://scripts/components/InteractHint.gd" id="13"]
+[ext_resource type="Script" uid="uid://n1bufv3xi03s" path="res://scripts/components/DarknessMask.gd" id="14"]
+[ext_resource type="Script" uid="uid://cor87k3qd2i33" path="res://scripts/components/ParticleBurst.gd" id="15"]
+[ext_resource type="Script" uid="uid://6rmgphpij431" path="res://scripts/components/ScreenShake.gd" id="16"]
+[ext_resource type="Texture2D" uid="uid://bc03rwkcj3pqn" path="res://assets/ui/e_key.png" id="18"]
+[ext_resource type="Script" uid="uid://bfw1ft7ujfuxu" path="res://scripts/c3/flow/C3DoorEntryItem.gd" id="19"]
+[ext_resource type="Texture2D" uid="uid://b6d2pjkfxk3ut" path="res://assets/ui/corridor_wall.png" id="20"]
+[ext_resource type="Script" uid="uid://limmy5y0vghx" path="res://scripts/components/ItemMarker.gd" id="21"]
+[ext_resource type="Script" uid="uid://dxl118a4wp34q" path="res://scripts/components/RoomTable.gd" id="22"]
+[ext_resource type="PackedScene" uid="uid://dc4yso4br36vf" path="res://scenes/c3_floor.tscn" id="23"]
+[ext_resource type="Script" uid="uid://ib5ohivdymht" path="res://scripts/components/OkPopup.gd" id="24"]
+[ext_resource type="Script" uid="uid://bbmpcjmv60ouk" path="res://scripts/c3/flow/CorridorAssembly.gd" id="25"]
 
 [sub_resource type="RectangleShape2D" id="item_col"]
-size = Vector2(120, 200)
+size = Vector2(179.5, 269)
 
-[sub_resource type="RectangleShape2D" id="blocker_col"]
-size = Vector2(40, 460)
+[sub_resource type="CanvasItemMaterial" id="wall_mat"]
 
 [sub_resource type="RectangleShape2D" id="corridor_floor_col"]
 size = Vector2(3320, 40)
 
-[sub_resource type="CanvasItemMaterial" id="wall_mat"]
-texture_repeat = 1
+[sub_resource type="RectangleShape2D" id="wall_side_col"]
+size = Vector2(20, 817)
 
-[node name="C3Level" type="Node2D"]
+[node name="C3Level" type="Node2D" unique_id=862856325]
 script = ExtResource("3")
 player_path = NodePath("Player")
 corridor_path = NodePath("Corridor")
 bedroom_path = NodePath("Rooms/Bedroom/BedroomEnding")
 breath_path = NodePath("Breath")
 darkness_mask_path = NodePath("DarknessMask")
+black_screen_path = NodePath("OverlayLayer/BlackScreen")
+white_screen_path = NodePath("OverlayLayer/WhiteScreen")
 screen_shake_path = NodePath("Effects/ScreenShake")
 particle_burst_path = NodePath("Effects/ParticleBurst")
 corridor_end_item_path = NodePath("Items/CorridorEndItem")
-corridor_assembly_path = NodePath("CorridorAssembly")
-corridor_floor_path = NodePath("CorridorFloor")
-corridor_end_wall_path = NodePath("CorridorEndWall")
 gate_blocker_path = NodePath("WhiteModel/Environment/StudyGateBlocker")
 room_table_path = NodePath("RoomTable")
 items_root_path = NodePath("Items")
 bedroom_items_path = NodePath("Rooms/Bedroom")
-bedroom_left_wall_path = NodePath("Rooms/Bedroom/Environment/WallLeft")
-bedroom_frame_left = 4500.0
-bedroom_frame_right = 5780.0
-world_camera_left = 0.0
-world_camera_right = 3840.0
-corridor_camera_left = 0.0
-corridor_camera_right = 4600.0
 ok_popup_path = NodePath("OkPopup")
 camera_path = NodePath("Player/Camera2D")
-black_screen_path = NodePath("OverlayLayer/BlackScreen")
-white_screen_path = NodePath("OverlayLayer/WhiteScreen")
-door_study_living_path = NodePath("WhiteModel/Doors/AutoDoorStudyLiving")
-door_living_dining_path = NodePath("WhiteModel/Doors/AutoDoorLivingDining")
-wall_hide_paths = [NodePath("WhiteModel/Environment/WallRight"), NodePath("WhiteModel/Environment/WallStudyLiving"), NodePath("WhiteModel/Environment/WallLivingDining"), NodePath("WhiteModel/Doors/AutoDoorStudyLiving"), NodePath("WhiteModel/Doors/AutoDoorLivingDining"), NodePath("WhiteModel/Doors/LockedBedroomDoor")]
+corridor_assembly_path = NodePath("CorridorAssembly")
+corridor_floor_path = NodePath("CorridorFloor")
+corridor_end_wall_path = NodePath("CorridorEndWall")
+wall_hide_paths = Array[NodePath]([NodePath("WhiteModel/RoomArtwork")])
+bedroom_left_wall_path = NodePath("Rooms/Bedroom/Environment/WallLeft")
+world_camera_right = 3840.0
+corridor_camera_right = 4600.0
 
-[node name="Player" parent="." instance=ExtResource("1")]
-groups=["player"]
+[node name="Player" parent="." unique_id=1121437611 instance=ExtResource("1")]
 position = Vector2(320, 948)
+motion_profile = null
 
-[node name="Camera2D" parent="Player" index="2"]
-script = ExtResource("26")
-map_left = 0.0
-map_right = 3840.0
-ignore_rotation = false
-smoothing_enabled = false
-limit_smooth_enabled = false
-clamp_during_corridor = true
-
-[node name="RoomTable" type="Node" parent="."]
+[node name="RoomTable" type="Node" parent="." unique_id=806411172]
 script = ExtResource("22")
 
-[node name="Rooms" type="Node2D" parent="."]
+[node name="Rooms" type="Node2D" parent="." unique_id=1817748626]
 
-[node name="Bedroom" parent="Rooms" instance=ExtResource("2")]
+[node name="Bedroom" parent="Rooms" unique_id=1224782816 instance=ExtResource("2")]
 position = Vector2(4500, 0)
 
-[node name="WallItem" type="Area2D" parent="Rooms/Bedroom"]
-script = ExtResource("10")
-position = Vector2(360, 880)
-size = Vector2(120, 200)
+[node name="WallItem" type="Area2D" parent="Rooms/Bedroom" unique_id=117542460]
 z_index = 2
+position = Vector2(360, 880)
+script = ExtResource("10")
+size = Vector2(120, 200)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/WallItem"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/WallItem" unique_id=392079148]
 shape = SubResource("item_col")
 
-[node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/WallItem"]
-color = Color(0.30, 0.29, 0.32, 1)
+[node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/WallItem" unique_id=56438296]
+color = Color(0.3, 0.29, 0.32, 1)
 polygon = PackedVector2Array(-140, -360, 140, -360, 140, 100, -140, 100)
 
-[node name="InteractHint" type="Node2D" parent="Rooms/Bedroom/WallItem"]
+[node name="InteractHint" type="Node2D" parent="Rooms/Bedroom/WallItem" unique_id=265143944]
 script = ExtResource("13")
 hint_texture = ExtResource("18")
 head_offset = Vector2(0, -50)
 
-[node name="Visual" type="Sprite2D" parent="Rooms/Bedroom/WallItem/InteractHint"]
+[node name="Visual" type="Sprite2D" parent="Rooms/Bedroom/WallItem/InteractHint" unique_id=333575506]
 texture = ExtResource("18")
 
-[node name="ItemMarker" type="Node2D" parent="Rooms/Bedroom/WallItem"]
+[node name="ItemMarker" type="Node2D" parent="Rooms/Bedroom/WallItem" unique_id=120451489]
 script = ExtResource("21")
 room_table_path = NodePath("../../../../RoomTable")
 player_path = NodePath("../../../../Player")
 
-[node name="DoorItem" type="Area2D" parent="Rooms/Bedroom"]
-script = ExtResource("11")
+[node name="DoorItem" type="Area2D" parent="Rooms/Bedroom" unique_id=10046750]
+z_index = 2
 position = Vector2(640, 828)
+script = ExtResource("11")
 size = Vector2(120, 300)
 gate_flag = "bedroom_unlocked"
-z_index = 2
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/DoorItem"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/DoorItem" unique_id=2041748019]
 shape = SubResource("item_col")
 
-[node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/DoorItem"]
+[node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/DoorItem" unique_id=10942205]
 color = Color(0.3, 0.32, 0.35, 1)
 polygon = PackedVector2Array(-50, -140, 50, -140, 50, 140, -50, 140)
 
-[node name="InteractHint" type="Node2D" parent="Rooms/Bedroom/DoorItem"]
+[node name="InteractHint" type="Node2D" parent="Rooms/Bedroom/DoorItem" unique_id=874636146]
 script = ExtResource("13")
 hint_texture = ExtResource("18")
 head_offset = Vector2(0, -60)
 
-[node name="Visual" type="Sprite2D" parent="Rooms/Bedroom/DoorItem/InteractHint"]
+[node name="Visual" type="Sprite2D" parent="Rooms/Bedroom/DoorItem/InteractHint" unique_id=207715897]
 texture = ExtResource("18")
 
-[node name="ItemMarker" type="Node2D" parent="Rooms/Bedroom/DoorItem"]
+[node name="ItemMarker" type="Node2D" parent="Rooms/Bedroom/DoorItem" unique_id=270693363]
 script = ExtResource("21")
 room_table_path = NodePath("../../../../RoomTable")
 player_path = NodePath("../../../../Player")
 
-[node name="BedroomEnding" type="Node2D" parent="Rooms/Bedroom"]
+[node name="BedroomEnding" type="Node2D" parent="Rooms/Bedroom" unique_id=288225468]
 script = ExtResource("9")
 player = NodePath("../../../Player")
 wall_item = NodePath("../WallItem")
 door_item = NodePath("../DoorItem")
 end_item = NodePath("../../../Items/EndItem")
 bedroom_spawn = Vector2(220, 948)
-living_room_door_pos = Vector2(1850, 948)
 
-[node name="WhiteModel" parent="." instance=ExtResource("23")]
+[node name="WhiteModel" parent="." unique_id=191051874 instance=ExtResource("23")]
 map_max_x = 11520.0
 
-[node name="AutoDoorStudyLiving" parent="WhiteModel/Doors" index="0"]
-trigger_margin = 80.0
+[node name="Items" type="Node2D" parent="." unique_id=589056481]
 
-[node name="AutoDoorLivingDining" parent="WhiteModel/Doors" index="1"]
-trigger_margin = 80.0
-
-[node name="Player" parent="WhiteModel" index="0"]
-process_mode = 3
-visible = false
-
-[node name="StudyGateBlocker" type="StaticBody2D" parent="WhiteModel/Environment"]
-position = Vector2(1280, 800)
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="WhiteModel/Environment/StudyGateBlocker"]
-shape = SubResource("blocker_col")
-disabled = true
-
-[node name="Visual" type="Polygon2D" parent="WhiteModel/Environment/StudyGateBlocker"]
-color = Color(0.35, 0.33, 0.3, 1)
-polygon = PackedVector2Array(-20, -230, 20, -230, 20, 230, -20, 230)
-[node name="Items" type="Node2D" parent="."]
-
-[node name="EndItem" type="Area2D" parent="Items"]
-script = ExtResource("12")
+[node name="EndItem" type="Area2D" parent="Items" unique_id=2131572749]
 position = Vector2(2480, 900)
+script = ExtResource("12")
 size = Vector2(120, 300)
 gate_flag = "bedroom_interactions_done"
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/EndItem"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/EndItem" unique_id=1159194823]
+position = Vector2(39, -63)
 shape = SubResource("item_col")
 
-[node name="Visual" type="Polygon2D" parent="Items/EndItem"]
-color = Color(0.35, 0.33, 0.30, 1)
+[node name="Visual" type="Polygon2D" parent="Items/EndItem" unique_id=1128351008]
+position = Vector2(50.5, -119)
+scale = Vector2(0.53, 0.31428573)
+color = Color(0.35, 0.33, 0.3, 1)
 polygon = PackedVector2Array(-50, -140, 50, -140, 50, 140, -50, 140)
 
-[node name="InteractHint" type="Node2D" parent="Items/EndItem"]
+[node name="InteractHint" type="Node2D" parent="Items/EndItem" unique_id=1863106331]
 script = ExtResource("13")
 hint_texture = ExtResource("18")
 head_offset = Vector2(0, -60)
 
-[node name="Visual" type="Sprite2D" parent="Items/EndItem/InteractHint"]
+[node name="Visual" type="Sprite2D" parent="Items/EndItem/InteractHint" unique_id=618853641]
+position = Vector2(53, -204)
 texture = ExtResource("18")
 
-[node name="ItemMarker" type="Node2D" parent="Items/EndItem"]
+[node name="ItemMarker" type="Node2D" parent="Items/EndItem" unique_id=858381517]
 script = ExtResource("21")
 room_table_path = NodePath("../../../RoomTable")
 player_path = NodePath("../../../Player")
 
-[node name="PaperLiving" type="Area2D" parent="Items"]
-script = ExtResource("4")
+[node name="PaperLiving" type="Area2D" parent="Items" unique_id=871895884]
 position = Vector2(1500, 900)
-size = Vector2(120, 200)
+script = ExtResource("4")
 paper_id = "paper_living"
-score = 100
+size = Vector2(120, 200)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/PaperLiving"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/PaperLiving" unique_id=1553275161]
+position = Vector2(151, -60)
 shape = SubResource("item_col")
 
-[node name="Visual" type="Polygon2D" parent="Items/PaperLiving"]
+[node name="Visual" type="Polygon2D" parent="Items/PaperLiving" unique_id=1629414146]
+position = Vector2(151, -100.5)
+scale = Vector2(1.36, 0.33888888)
 color = Color(0.95, 0.95, 0.9, 1)
 polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
 
-[node name="InteractHint" type="Node2D" parent="Items/PaperLiving"]
+[node name="InteractHint" type="Node2D" parent="Items/PaperLiving" unique_id=414991896]
 script = ExtResource("13")
 hint_texture = ExtResource("18")
 head_offset = Vector2(0, -40)
 
-[node name="Visual" type="Sprite2D" parent="Items/PaperLiving/InteractHint"]
+[node name="Visual" type="Sprite2D" parent="Items/PaperLiving/InteractHint" unique_id=1553352704]
+position = Vector2(157, -181)
 texture = ExtResource("18")
 
-[node name="ItemMarker" type="Node2D" parent="Items/PaperLiving"]
+[node name="ItemMarker" type="Node2D" parent="Items/PaperLiving" unique_id=1662809792]
 script = ExtResource("21")
 room_table_path = NodePath("../../../RoomTable")
 player_path = NodePath("../../../Player")
 
-[node name="PaperKitchen" type="Area2D" parent="Items"]
-script = ExtResource("4")
+[node name="PaperKitchen" type="Area2D" parent="Items" unique_id=376511328]
 position = Vector2(2600, 900)
-size = Vector2(120, 200)
+script = ExtResource("4")
 paper_id = "paper_kitchen"
-score = 100
+size = Vector2(120, 200)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/PaperKitchen"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/PaperKitchen" unique_id=1720438696]
+position = Vector2(584, -84)
 shape = SubResource("item_col")
 
-[node name="Visual" type="Polygon2D" parent="Items/PaperKitchen"]
+[node name="Visual" type="Polygon2D" parent="Items/PaperKitchen" unique_id=1579242279]
+position = Vector2(590.5, -183.5)
+scale = Vector2(1.31, 0.22777778)
 color = Color(0.95, 0.95, 0.9, 1)
 polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
 
-[node name="InteractHint" type="Node2D" parent="Items/PaperKitchen"]
+[node name="InteractHint" type="Node2D" parent="Items/PaperKitchen" unique_id=1706067767]
 script = ExtResource("13")
 hint_texture = ExtResource("18")
 head_offset = Vector2(0, -40)
 
-[node name="Visual" type="Sprite2D" parent="Items/PaperKitchen/InteractHint"]
+[node name="Visual" type="Sprite2D" parent="Items/PaperKitchen/InteractHint" unique_id=1269254937]
+position = Vector2(591, -115)
 texture = ExtResource("18")
 
-[node name="ItemMarker" type="Node2D" parent="Items/PaperKitchen"]
+[node name="ItemMarker" type="Node2D" parent="Items/PaperKitchen" unique_id=953560991]
 script = ExtResource("21")
 room_table_path = NodePath("../../../RoomTable")
 player_path = NodePath("../../../Player")
 
-[node name="StudyPaperA" type="Area2D" parent="Items"]
-script = ExtResource("4")
+[node name="StudyPaperA" type="Area2D" parent="Items" unique_id=584390363]
 position = Vector2(340, 900)
-size = Vector2(120, 200)
+script = ExtResource("4")
 paper_id = "study_a"
-score = 100
+size = Vector2(120, 200)
 gate_flag = "study_items_unlocked"
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/StudyPaperA"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/StudyPaperA" unique_id=238825173]
+position = Vector2(1.5, -81.5)
 shape = SubResource("item_col")
 
-[node name="Visual" type="Polygon2D" parent="Items/StudyPaperA"]
+[node name="Visual" type="Polygon2D" parent="Items/StudyPaperA" unique_id=1732134577]
+position = Vector2(2.5, -82.5)
+scale = Vector2(1.71, 0.31666666)
 color = Color(0.95, 0.95, 0.9, 1)
 polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
 
-[node name="InteractHint" type="Node2D" parent="Items/StudyPaperA"]
+[node name="InteractHint" type="Node2D" parent="Items/StudyPaperA" unique_id=228298858]
 script = ExtResource("13")
 hint_texture = ExtResource("18")
 head_offset = Vector2(0, -40)
 
-[node name="Visual" type="Sprite2D" parent="Items/StudyPaperA/InteractHint"]
+[node name="Visual" type="Sprite2D" parent="Items/StudyPaperA/InteractHint" unique_id=1590950329]
+position = Vector2(3, -157)
 texture = ExtResource("18")
 
-[node name="ItemMarker" type="Node2D" parent="Items/StudyPaperA"]
+[node name="ItemMarker" type="Node2D" parent="Items/StudyPaperA" unique_id=795234425]
 script = ExtResource("21")
 room_table_path = NodePath("../../../RoomTable")
 player_path = NodePath("../../../Player")
 
-[node name="StudyPaperB" type="Area2D" parent="Items"]
-script = ExtResource("4")
+[node name="StudyPaperB" type="Area2D" parent="Items" unique_id=885401629]
 position = Vector2(600, 900)
-size = Vector2(120, 200)
+script = ExtResource("4")
 paper_id = "study_b"
 score = 99
+size = Vector2(120, 200)
 gate_flag = "study_items_unlocked"
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/StudyPaperB"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/StudyPaperB" unique_id=1424387717]
+position = Vector2(414, -95)
 shape = SubResource("item_col")
 
-[node name="Visual" type="Polygon2D" parent="Items/StudyPaperB"]
+[node name="Visual" type="Polygon2D" parent="Items/StudyPaperB" unique_id=1130552044]
+position = Vector2(416.5, -132)
+scale = Vector2(1.51, 0.85555553)
 color = Color(0.95, 0.95, 0.9, 1)
 polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
 
-[node name="InteractHint" type="Node2D" parent="Items/StudyPaperB"]
+[node name="InteractHint" type="Node2D" parent="Items/StudyPaperB" unique_id=1440192249]
 script = ExtResource("13")
 hint_texture = ExtResource("18")
 head_offset = Vector2(0, -40)
 
-[node name="Visual" type="Sprite2D" parent="Items/StudyPaperB/InteractHint"]
+[node name="Visual" type="Sprite2D" parent="Items/StudyPaperB/InteractHint" unique_id=1574130773]
+position = Vector2(417, -262)
 texture = ExtResource("18")
 
-[node name="ItemMarker" type="Node2D" parent="Items/StudyPaperB"]
+[node name="ItemMarker" type="Node2D" parent="Items/StudyPaperB" unique_id=1431312240]
 script = ExtResource("21")
 room_table_path = NodePath("../../../RoomTable")
 player_path = NodePath("../../../Player")
 
-[node name="BedroomHallDoor" type="Area2D" parent="Items"]
-script = ExtResource("19")
+[node name="BedroomHallDoor" type="Area2D" parent="Items" unique_id=229457654]
 position = Vector2(1920, 828)
+script = ExtResource("19")
 size = Vector2(120, 300)
 gate_flag = "bedroom_door_active"
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/BedroomHallDoor"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/BedroomHallDoor" unique_id=678382092]
+position = Vector2(-10, 29)
 shape = SubResource("item_col")
 
-[node name="Visual" type="Polygon2D" parent="Items/BedroomHallDoor"]
+[node name="Visual" type="Polygon2D" parent="Items/BedroomHallDoor" unique_id=992458825]
+position = Vector2(-13, -217)
+scale = Vector2(2.1, 1.6928571)
 color = Color(0.3, 0.32, 0.35, 1)
 polygon = PackedVector2Array(-50, -140, 50, -140, 50, 140, -50, 140)
 
-[node name="InteractHint" type="Node2D" parent="Items/BedroomHallDoor"]
+[node name="InteractHint" type="Node2D" parent="Items/BedroomHallDoor" unique_id=896924573]
 script = ExtResource("13")
 hint_texture = ExtResource("18")
 head_offset = Vector2(0, -60)
 
-[node name="Visual" type="Sprite2D" parent="Items/BedroomHallDoor/InteractHint"]
+[node name="Visual" type="Sprite2D" parent="Items/BedroomHallDoor/InteractHint" unique_id=669739887]
+position = Vector2(-13, -107)
 texture = ExtResource("18")
 
-[node name="ItemMarker" type="Node2D" parent="Items/BedroomHallDoor"]
+[node name="ItemMarker" type="Node2D" parent="Items/BedroomHallDoor" unique_id=1524458194]
 script = ExtResource("21")
 room_table_path = NodePath("../../../RoomTable")
 player_path = NodePath("../../../Player")
 
-[node name="CorridorEndItem" type="Area2D" parent="Items"]
-script = ExtResource("8")
+[node name="CorridorEndItem" type="Area2D" parent="Items" unique_id=67072510]
 position = Vector2(4480, 900)
+script = ExtResource("8")
 size = Vector2(120, 200)
 gate_flag = "corridor_end"
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/CorridorEndItem"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/CorridorEndItem" unique_id=1859347001]
 shape = SubResource("item_col")
 
-[node name="Visual" type="Polygon2D" parent="Items/CorridorEndItem"]
+[node name="Visual" type="Polygon2D" parent="Items/CorridorEndItem" unique_id=14179207]
 color = Color(0.7, 0.6, 0.4, 1)
 polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
 
-[node name="InteractHint" type="Node2D" parent="Items/CorridorEndItem"]
+[node name="InteractHint" type="Node2D" parent="Items/CorridorEndItem" unique_id=1900999865]
 script = ExtResource("13")
 hint_texture = ExtResource("18")
 head_offset = Vector2(0, -40)
 
-[node name="Visual" type="Sprite2D" parent="Items/CorridorEndItem/InteractHint"]
+[node name="Visual" type="Sprite2D" parent="Items/CorridorEndItem/InteractHint" unique_id=732135955]
 texture = ExtResource("18")
 
-[node name="ItemMarker" type="Node2D" parent="Items/CorridorEndItem"]
+[node name="ItemMarker" type="Node2D" parent="Items/CorridorEndItem" unique_id=253758528]
 script = ExtResource("21")
 room_table_path = NodePath("../../../RoomTable")
 player_path = NodePath("../../../Player")
 
-[node name="Corridor" type="Node2D" parent="."]
-script = ExtResource("7")
+[node name="Corridor" type="Node2D" parent="." unique_id=822413359]
+visible = false
 position = Vector2(1280, 0)
+script = ExtResource("7")
 player = NodePath("../Player")
-corridor_start_x = 1280.0
-end_wall_x = 4480.0
-breath_system_path = NodePath("../Breath")
-special_x = [2080.0, 2880.0, 3680.0]
-first_special_x = 2080.0
-special_span = 800.0
-teleport_back_distance = 480.0
-hold_threshold = 0.5
-hold_pulse_alpha = 0.42
-hold_pulse_alpha_amplitude = 0.06
-hold_pulse_frequency = 0.22
-hold_rocking_degrees = 3.0
-hold_rocking_interval = 0.28
 
-[node name="CorridorWall" type="Polygon2D" parent="Corridor"]
+[node name="CorridorWall" type="Polygon2D" parent="Corridor" unique_id=874881041]
 material = SubResource("wall_mat")
-color = Color(0.62, 0.60, 0.58, 1)
+color = Color(0.62, 0.6, 0.58, 1)
 texture = ExtResource("20")
 polygon = PackedVector2Array(0, 200, 3320, 200, 3320, 980, 0, 980)
 uv = PackedVector2Array(0, 0, 52, 0, 52, 12, 0, 12)
 
-[node name="CorridorFloorVisual" type="Polygon2D" parent="Corridor"]
-position = Vector2(1660, 1008)
+[node name="CorridorFloorVisual" type="Polygon2D" parent="Corridor" unique_id=1771814070]
 z_index = 1
 material = SubResource("wall_mat")
+position = Vector2(1660, 1008)
 color = Color(0.5, 0.55, 0.5, 1)
 texture = ExtResource("20")
 polygon = PackedVector2Array(-1660, -20, 1660, -20, 1660, 20, -1660, 20)
 uv = PackedVector2Array(0, 0, 120, 0, 120, 1, 0, 1)
 
-[node name="CorridorAssembly" type="Node2D" parent="."]
-script = ExtResource("25")
+[node name="CorridorAssembly" type="Node2D" parent="." unique_id=809690666]
 position = Vector2(1280, 0)
-corridor_path = NodePath("../Corridor")
+script = ExtResource("25")
 
-[node name="Breath" type="Node" parent="."]
+[node name="Breath" type="Node" parent="." unique_id=1117495492]
 script = ExtResource("5")
 bubble = NodePath("Bubble")
 darkness_mask = NodePath("../DarknessMask")
 player = NodePath("../Player")
-hold_burst_delay = 0.5
-hypoxia_color = Color(0.01, 0.015, 0.035, 0.82)
-hypoxia_radius_inner = 300.0
-hypoxia_radius_final_outer = 460.0
-hypoxia_radius_final_inner = 80.0
-hypoxia_softness = 1.0
-hypoxia_enter_duration = 0.7
-hypoxia_exit_duration = 0.7
-hypoxia_rocking_degrees = 3.0
-hypoxia_rocking_interval = 0.28
 
-[node name="Bubble" type="Node2D" parent="Breath"]
+[node name="Bubble" type="Node2D" parent="Breath" unique_id=1638232650]
 script = ExtResource("6")
 player_path = NodePath("../../Player")
 
-[node name="Effects" type="Node2D" parent="."]
+[node name="Effects" type="Node2D" parent="." unique_id=2086481683]
 
-[node name="ParticleBurst" type="Node2D" parent="Effects"]
-script = ExtResource("15")
+[node name="ParticleBurst" type="Node2D" parent="Effects" unique_id=269592970]
 position = Vector2(1280, 700)
+script = ExtResource("15")
 
-[node name="ScreenShake" type="Node2D" parent="Effects"]
+[node name="ScreenShake" type="Node2D" parent="Effects" unique_id=1234288109]
 script = ExtResource("16")
 camera_path = NodePath("../../Player/Camera2D")
 
-[node name="DarknessMask" type="Node2D" parent="."]
+[node name="DarknessMask" type="Node2D" parent="." unique_id=774668465]
 script = ExtResource("14")
-follow_player = true
 player_path = NodePath("Player")
 enabled = false
 
-[node name="CorridorFloor" type="StaticBody2D" parent="."]
+[node name="CorridorFloor" type="StaticBody2D" parent="." unique_id=2122725509]
 position = Vector2(2940, 1008)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CorridorFloor"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CorridorFloor" unique_id=610868417]
 shape = SubResource("corridor_floor_col")
 
-[node name="Visual" type="Polygon2D" parent="CorridorFloor"]
+[node name="Visual" type="Polygon2D" parent="CorridorFloor" unique_id=1179758694]
 color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(-1660, -20, 1660, -20, 1660, 20, -1660, 20)
 
-[node name="CorridorEndWall" type="StaticBody2D" parent="."]
+[node name="CorridorEndWall" type="StaticBody2D" parent="." unique_id=486377009]
 position = Vector2(4600, 619.5)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CorridorEndWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CorridorEndWall" unique_id=1979782299]
 shape = SubResource("wall_side_col")
 
-[node name="Visual" type="Polygon2D" parent="CorridorEndWall"]
+[node name="Visual" type="Polygon2D" parent="CorridorEndWall" unique_id=996315961]
 color = Color(0.35, 0.33, 0.3, 1)
 polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
 
-[node name="OkPopup" type="CanvasLayer" parent="."]
+[node name="OkPopup" type="CanvasLayer" parent="." unique_id=278789223]
 script = ExtResource("24")
 
-[node name="OverlayLayer" type="CanvasLayer" parent="."]
+[node name="OverlayLayer" type="CanvasLayer" parent="." unique_id=336904373]
 layer = 100
 
-[node name="BlackScreen" type="ColorRect" parent="OverlayLayer"]
+[node name="BlackScreen" type="ColorRect" parent="OverlayLayer" unique_id=1814906338]
+visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 1)
-visible = false
 
-[node name="WhiteScreen" type="ColorRect" parent="OverlayLayer"]
+[node name="WhiteScreen" type="ColorRect" parent="OverlayLayer" unique_id=1170225170]
+visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(1, 1, 1, 1)
-visible = false

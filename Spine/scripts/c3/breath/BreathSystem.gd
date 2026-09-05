@@ -43,6 +43,10 @@ signal hypoxia_cleared
 ## 长按屏息判定的时长阈值（s）。与 Corridor.hold_threshold 保持一致。
 @export var hold_burst_delay: float = 0.5
 
+## 气泡耗尽爆裂时的一次短促镜头震动（复用 ScreenShake；与缺氧持续跷跷板分层）。
+@export var bubble_pop_shake_amplitude: float = 8.0
+@export var bubble_pop_shake_duration: float = 0.18
+
 ## 缺氧遮罩颜色（非全黑，深蓝黑；用户口径「非全黑」）。
 @export var hypoxia_color: Color = Color(0.01, 0.015, 0.035, 0.82) ## 深蓝黑，但保留场景细节。
 
@@ -57,9 +61,9 @@ signal hypoxia_cleared
 ## 缺氧边缘软度。
 @export var hypoxia_softness: float = 1.0
 
-## 缺氧沿用屏息的随机跷跷板镜头；强度随遮罩渐入/渐出而缩放。
+## 缺氧沿用屏息的阻尼跷跷板镜头；强度随遮罩渐入/渐出而缩放。
 @export var hypoxia_rocking_degrees: float = 3.0
-@export var hypoxia_rocking_interval: float = 0.28
+@export var hypoxia_rocking_interval: float = 0.42
 
 ## 运行时锁定（卧室结局解除呼吸机制）。
 var _enabled: bool = true
@@ -118,6 +122,7 @@ func _process(delta: float) -> void:
 		_update_hypoxia_exit(delta)
 		return
 	_countdown -= delta
+	_sync_bubble_capacity()
 	if _countdown <= 0.0:
 		_break_bubble()
 		_start_hypoxia()
@@ -177,6 +182,7 @@ func breathe(immediate_clear: bool = false) -> void:
 func cancel_hold_and_reset_hypoxia_timer() -> void:
 	_reset_hold()
 	_countdown = breathe_timeout
+	_sync_bubble_capacity()
 
 
 ## 开关呼吸机制（卧室结局解除：停止计时/缺氧并恢复气泡）。
@@ -221,7 +227,19 @@ func is_holding_breath() -> bool:
 func _break_bubble() -> void:
 	if _bubble != null and is_instance_valid(_bubble):
 		_bubble.pop()
+	if _screen_shake == null or not is_instance_valid(_screen_shake):
+		_screen_shake = _resolve_screen_shake()
+	if _screen_shake != null:
+		_screen_shake.shake(bubble_pop_shake_amplitude, bubble_pop_shake_duration)
 	bubble_broken.emit()
+
+
+## 以倒计时比例驱动气泡中的液体高度。恢复动画运行时只更新目标容量，不会逐帧打断回填。
+func _sync_bubble_capacity() -> void:
+	if _bubble == null or not is_instance_valid(_bubble):
+		return
+	var fraction := clampf(_countdown / maxf(breathe_timeout, 0.001), 0.0, 1.0)
+	_bubble.set_countdown_fraction(fraction)
 
 
 func _start_hypoxia() -> void:
@@ -445,8 +463,33 @@ func run_self_check() -> bool:
 	_enabled = true
 	breathe()
 	checks.append("breath1" if (not _hypoxia_active and _countdown == breathe_timeout) else "breath_FAIL1")
+	# 气泡液体必须直接反映可用呼吸时间；恢复后应再次满载。
+	var liquid_capacity_ok := false
+	var bubble_inertia_ok := false
+	var bubble_recovery_ok := false
+	if _bubble != null:
+		_bubble.set_liquid_fraction(0.42)
+		liquid_capacity_ok = is_equal_approx(_bubble.get_liquid_fraction(), 0.42)
+		if _player != null:
+			var expected_follow_x := _player.global_position.x + _bubble.follow_offset.x
+			_bubble.global_position = Vector2(expected_follow_x - 48.0, _player.global_position.y + _bubble.follow_offset.y)
+			_bubble._process(0.05)
+			bubble_inertia_ok = _bubble.get_follow_velocity().x > 0.0 and _bubble.global_position.x < expected_follow_x
+		_bubble.restore()
+		_bubble.set_countdown_fraction(1.0)
+		_bubble._process(_bubble.restore_anim_time * 0.5)
+		var mid_recovery := _bubble.is_recovering() and _bubble.get_liquid_fraction() > 0.42 and _bubble.get_liquid_fraction() < 1.0
+		_bubble._process(_bubble.restore_anim_time)
+		bubble_recovery_ok = mid_recovery and not _bubble.is_recovering() and is_equal_approx(_bubble.get_liquid_fraction(), 1.0) and _bubble.scale.distance_to(Vector2.ONE) <= 0.01
+	checks.append("bubble_liquid1" if liquid_capacity_ok else "bubble_liquid_FAIL1")
+	checks.append("bubble_inertia1" if bubble_inertia_ok else "bubble_inertia_FAIL1")
+	checks.append("bubble_recovery1" if bubble_recovery_ok else "bubble_recovery_FAIL1")
 	# 2. 强制缺氧（气泡破裂 + 遮罩激活）
 	_break_bubble()
+	var bubble_pop_ok := _bubble != null and _bubble.is_popping()
+	var bubble_pop_shake_ok := _screen_shake != null and is_equal_approx(_screen_shake.duration, bubble_pop_shake_duration)
+	checks.append("bubble_pop1" if bubble_pop_ok else "bubble_pop_FAIL1")
+	checks.append("bubble_pop_shake1" if bubble_pop_shake_ok else "bubble_pop_shake_FAIL1")
 	_start_hypoxia()
 	checks.append("hypoxia1" if (_hypoxia_active and _mask != null and _mask.enabled) else "hypoxia_FAIL1")
 	_update_hypoxia(hypoxia_enter_duration * 0.5)
@@ -468,7 +511,7 @@ func run_self_check() -> bool:
 	if supports_rocking:
 		first_sway_shake.call("set_rocking", true, 1.1, 0.01)
 		first_sway_shake._process(0.2)
-	var rocking_applied := supports_rocking and not is_zero_approx(float(first_sway_shake.call("get_rocking_target"))) and not is_zero_approx(framing_camera.rotation)
+	var rocking_applied := supports_rocking and not is_zero_approx(float(first_sway_shake.call("get_rocking_target"))) and not is_zero_approx(framing_camera.rotation) and not is_zero_approx(float(first_sway_shake.call("get_rocking_angular_velocity")))
 	checks.append("hypoxia_rocking1" if rocking_applied else "hypoxia_rocking_FAIL1")
 	first_sway_shake.free()
 	framing_camera.free()

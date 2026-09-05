@@ -16,6 +16,8 @@ signal end_wall_reached                ## 玩家到达尽头。
 @export var player: NodePath
 ## 呼吸系统引用；缺氧时关闭走廊屏息层，避免两层压暗叠加。
 @export var breath_system_path: NodePath = NodePath("../Breath")
+## C3 场景共享的镜头特效。屏息、缺氧和短震必须写入同一实例，避免相机旋转竞争。
+@export var screen_shake_path: NodePath = NodePath("../Effects/ScreenShake")
 
 ## —— 几何/节奏参数（固定走廊）——
 @export var corridor_start_x: float = 1280.0   ## 书房门后的走廊起点（世界 x）。
@@ -39,7 +41,7 @@ signal end_wall_reached                ## 玩家到达尽头。
 @export var hold_pulse_alpha_amplitude: float = 0.06
 @export var hold_pulse_frequency: float = 0.22
 @export var hold_rocking_degrees: float = 3.0
-@export var hold_rocking_interval: float = 0.28
+@export var hold_rocking_interval: float = 0.42
 @export var special_pass_shake_amplitude: float = 22.0
 @export var special_pass_shake_duration: float = 0.45
 
@@ -65,6 +67,7 @@ var _breath_dim_rect: ColorRect = null
 var _breath_burst: ParticleBurst = null
 var _teleport_burst: ParticleBurst = null
 var _breath_shake: ScreenShake = null
+var _hold_rocking_active := false
 
 
 func _ready() -> void:
@@ -236,15 +239,18 @@ func _update_hold_visual(active: bool, delta: float) -> void:
 		dim_color.a = clampf(hold_pulse_alpha + pulse, hold_pulse_alpha - hold_pulse_alpha_amplitude, hold_pulse_alpha + hold_pulse_alpha_amplitude)
 		_breath_dim_rect.color = dim_color
 	if _breath_shake != null and is_instance_valid(_breath_shake):
-		_breath_shake.set_rocking(true, hold_rocking_degrees, hold_rocking_interval)
+		if not _hold_rocking_active:
+			_breath_shake.set_rocking(true, hold_rocking_degrees, hold_rocking_interval)
+			_hold_rocking_active = true
 
 
 func _reset_hold_visual() -> void:
 	_hold_fx_elapsed = 0.0
 	if _breath_dim_rect != null:
 		_breath_dim_rect.color = breath_dim_color
-	if _breath_shake != null and is_instance_valid(_breath_shake):
+	if _hold_rocking_active and _breath_shake != null and is_instance_valid(_breath_shake):
 		_breath_shake.set_rocking(false)
+	_hold_rocking_active = false
 
 
 ## 全屏昏暗层（半透明深蓝黑，昏暗有透光；动态创建一次复用）。
@@ -306,16 +312,12 @@ func _run_teleport_fx() -> void:
 	_trigger_shake(30.0, 0.8)
 
 
-## 全屏震动（ScreenShake 挂到当前 Camera2D；动态创建一次复用）。
+## 全屏震动复用 C3 场景共享的 ScreenShake，不能为同一台相机创建第二个旋转写入者。
 func _trigger_shake(amp: float, dur: float) -> void:
 	if _breath_shake == null or not is_instance_valid(_breath_shake):
-		var cam: Camera2D = get_viewport().get_camera_2d()
-		if cam == null:
-			return
-		_breath_shake = ScreenShake.new()
-		_breath_shake.name = "BreathShake"
-		cam.add_child(_breath_shake)
-	_breath_shake.shake(amp, dur)
+		_breath_shake = _resolve_screen_shake()
+	if _breath_shake != null:
+		_breath_shake.shake(amp, dur)
 
 
 func _enter_finite() -> void:
@@ -343,6 +345,15 @@ func _resolve_refs() -> void:
 		var gp := get_tree().get_first_node_in_group("player")
 		if gp is Node2D:
 			_player = gp as Node2D
+	_breath_shake = _resolve_screen_shake()
+
+
+func _resolve_screen_shake() -> ScreenShake:
+	if screen_shake_path != NodePath():
+		var node := get_node_or_null(screen_shake_path)
+		if node is ScreenShake:
+			return node as ScreenShake
+	return null
 
 
 func _resolve_breath_system() -> void:

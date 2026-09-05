@@ -1,116 +1,282 @@
 class_name Bubble
 extends Node2D
-## Bubble — 蓝色气泡视觉组件（C3 gameplay §4.3 呼吸机制）
-## 白模：Polygon2D 圆近似（零贴图、零外部依赖）。每帧跟随玩家身旁。
-## restore() 恢复完整；pop() 破裂（白模可仅隐藏，可选缩放消失）；
-## set_air_fraction(f) 随计时 0→1 压缩/变暗（可选，供 BreathSystem 计时视觉表现）。
+## Floating breath vessel: remaining liquid is the countdown, and depletion produces a short burst.
 
-## 气泡半径（px）。
-@export var radius: float = 22.0
+const POP_RING_TEXTURE: Texture2D = preload("res://assets/fx/bubble_pop_ring.png")
 
-## 气泡颜色（蓝色）。
-@export var color: Color = Color(0.35, 0.62, 0.96, 1)
-
-## 跟随玩家偏移（同伴身旁）。
-@export var follow_offset: Vector2 = Vector2(46, -28)
-
-## Player 节点（NodePath；空 → 组 "player" 或场景树内查找）。
+@export var radius: float = 26.0
+@export var rim_color: Color = Color(0.50, 0.82, 1.0, 0.90)
+@export var liquid_color: Color = Color(0.16, 0.58, 1.0, 0.62)
+@export var highlight_color: Color = Color(0.88, 0.97, 1.0, 0.92)
+@export var follow_offset: Vector2 = Vector2(48, -34)
+@export var follow_spring: float = 20.0
+@export var follow_damping: float = 6.5
+@export var bob_amount: float = 5.0
+@export var bob_frequency: float = 1.35
+@export var pop_anim_time: float = 0.36
+@export var restore_anim_time: float = 0.32
+@export var restore_min_scale: float = 0.76
+@export var restore_scale_overshoot: float = 0.045
+@export var pop_droplet_count: int = 14
+@export var pop_droplet_speed_min: float = 72.0
+@export var pop_droplet_speed_max: float = 180.0
+@export var pop_droplet_gravity: float = 300.0
 @export var player_path: NodePath
 
-## 破裂时是否缩放消失（false → 直接隐藏；白模占位可直接隐藏）。
-@export var pop_scale_anim: bool = true
-
-## 缩放/隐藏计时（破裂动画时长，s）。
-@export var pop_anim_time: float = 0.18
-
 var _player: Node2D = null
-var _visual: Node2D = null
-var _air_fraction: float = 1.0
-var _pop_tween: Tween = null
+var _liquid_fraction: float = 1.0
+var _follow_velocity := Vector2.ZERO
+var _time: float = 0.0
+var _popping := false
+var _pop_elapsed: float = 0.0
+var _droplets: Array[Dictionary] = []
+var _pop_ring: Sprite2D = null
+var _restoring := false
+var _restore_elapsed: float = 0.0
+var _restore_from_fraction: float = 1.0
+var _restore_target_fraction: float = 1.0
+var _rest_scale := Vector2.ONE
 
 
 func _ready() -> void:
-	_build_visual()
+	_rest_scale = scale
 	_resolve_player()
-	_apply_visual()
+	_build_pop_ring()
+	_snap_to_follow_target()
+	queue_redraw()
 
 
-func _process(_delta: float) -> void:
-	if _player != null and is_instance_valid(_player):
-		global_position = _player.global_position + follow_offset
-
-
-## 恢复气泡完整（可见、满空气、归位）。
-func restore() -> void:
-	if _pop_tween != null and _pop_tween.is_valid():
-		_pop_tween.kill()
-		_pop_tween = null
-	visible = true
-	scale = Vector2.ONE
-	_air_fraction = 1.0
-	_apply_visual()
-
-
-## 破裂：空气归零；按 pop_scale_anim 选缩放消失或直接隐藏（白模占位可仅隐藏）。
-func pop() -> void:
-	_air_fraction = 0.0
-	_apply_visual()
-	if pop_scale_anim:
-		if _pop_tween != null and _pop_tween.is_valid():
-			_pop_tween.kill()
-		_pop_tween = create_tween()
-		_pop_tween.tween_property(self, "scale", Vector2(0.05, 0.05), pop_anim_time)
-		_pop_tween.tween_callback(_hide_after_pop)
+func _process(delta: float) -> void:
+	_time += delta
+	if _popping:
+		_update_pop(delta)
 	else:
-		visible = false
-		scale = Vector2.ONE
+		_update_follow(delta)
+		_update_restore(delta)
+	queue_redraw()
 
 
-## 设置空气占比 0→1（随计时压缩/变暗，可选）。
-func set_air_fraction(f: float) -> void:
-	_air_fraction = clampf(f, 0.0, 1.0)
-	_apply_visual()
+## Restores a full vessel with a liquid refill and a brief elastic return after a breath.
+func restore() -> void:
+	var start_fraction := _liquid_fraction if visible and not _popping else 0.0
+	_popping = false
+	_pop_elapsed = 0.0
+	_droplets.clear()
+	_follow_velocity = Vector2.ZERO
+	visible = true
+	_restoring = true
+	_restore_elapsed = 0.0
+	_restore_from_fraction = clampf(start_fraction, 0.0, 1.0)
+	_restore_target_fraction = 1.0
+	_liquid_fraction = _restore_from_fraction
+	scale = _rest_scale * clampf(restore_min_scale, 0.05, 1.0)
+	if _pop_ring != null:
+		_pop_ring.visible = false
+	_snap_to_follow_target()
+	queue_redraw()
 
 
-## 当前空气占比（读回/自检）。
-func get_air_fraction() -> float:
-	return _air_fraction
-
-
-func _hide_after_pop() -> void:
-	visible = false
-	scale = Vector2.ONE
-
-
-## 依空气占比更新视觉（压缩 + 变淡）。
-func _apply_visual() -> void:
-	if _visual == null:
+## Starts the bubble burst at its current inertial position. The Bubble remains visible until the effect completes.
+func pop() -> void:
+	if _popping:
 		return
-	var s: float = 0.6 + 0.4 * _air_fraction
-	_visual.scale = Vector2(s, s)
-	_visual.modulate.a = _air_fraction
+	_restoring = false
+	scale = _rest_scale
+	_liquid_fraction = 0.0
+	_popping = true
+	_pop_elapsed = 0.0
+	_follow_velocity = Vector2.ZERO
+	_spawn_droplets()
+	if _pop_ring != null:
+		_pop_ring.visible = true
+		_pop_ring.scale = Vector2.ONE * 0.075
+		_pop_ring.modulate = _with_alpha(highlight_color, 0.95)
+	queue_redraw()
 
 
-## 构造圆形 Polygon2D（白模可视化）。
-func _build_visual() -> void:
-	_visual = get_node_or_null("BubbleShape") as Node2D
-	if _visual == null:
-		var poly := Polygon2D.new()
-		poly.name = "BubbleShape"
-		poly.color = color
-		poly.polygon = _make_circle_points(radius)
-		add_child(poly)
-		_visual = poly
+## Immediate, manual capacity write. This deliberately cancels an in-progress recovery.
+func set_liquid_fraction(fraction: float) -> void:
+	if _popping:
+		return
+	_restoring = false
+	_restore_target_fraction = clampf(fraction, 0.0, 1.0)
+	_liquid_fraction = clampf(fraction, 0.0, 1.0)
+	scale = _rest_scale
+	queue_redraw()
 
 
-## 生成圆点数组（半径 r）。
-func _make_circle_points(r: float) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	var segs := 24
-	for i in range(segs):
-		var angle: float = TAU * float(i) / float(segs)
-		pts.append(Vector2(cos(angle), sin(angle)) * r)
-	return pts
+## Countdown writes keep the recovery animation alive while updating its destination capacity.
+func set_countdown_fraction(fraction: float) -> void:
+	if _popping:
+		return
+	_restore_target_fraction = clampf(fraction, 0.0, 1.0)
+	if not _restoring:
+		_liquid_fraction = _restore_target_fraction
+		queue_redraw()
+
+
+func get_liquid_fraction() -> float:
+	return _liquid_fraction
+
+
+## Compatibility with the earlier API. "Air" now means remaining vessel capacity.
+func set_air_fraction(fraction: float) -> void:
+	set_liquid_fraction(fraction)
+
+
+func get_air_fraction() -> float:
+	return get_liquid_fraction()
+
+
+func is_popping() -> bool:
+	return _popping
+
+
+func is_recovering() -> bool:
+	return _restoring
+
+
+func get_follow_velocity() -> Vector2:
+	return _follow_velocity
+
+
+func _update_follow(delta: float) -> void:
+	if _player == null or not is_instance_valid(_player):
+		_resolve_player()
+	if _player == null:
+		return
+	var target := _follow_target()
+	_follow_velocity += (target - global_position) * follow_spring * delta
+	_follow_velocity *= exp(-follow_damping * delta)
+	global_position += _follow_velocity * delta
+
+
+func _update_restore(delta: float) -> void:
+	if not _restoring:
+		return
+	_restore_elapsed += delta
+	var progress := clampf(_restore_elapsed / maxf(restore_anim_time, 0.001), 0.0, 1.0)
+	var fill_progress := _ease_out_cubic(progress)
+	_liquid_fraction = lerpf(_restore_from_fraction, _restore_target_fraction, fill_progress)
+	var scale_progress := lerpf(clampf(restore_min_scale, 0.05, 1.0), 1.0, fill_progress)
+	# Only a small crest at mid-animation makes the refill feel buoyant without changing the vessel's final size.
+	scale = _rest_scale * (scale_progress + sin(progress * PI) * maxf(restore_scale_overshoot, 0.0))
+	if progress >= 1.0:
+		_restoring = false
+		_liquid_fraction = _restore_target_fraction
+		scale = _rest_scale
+
+
+func _update_pop(delta: float) -> void:
+	_pop_elapsed += delta
+	for droplet in _droplets:
+		var velocity: Vector2 = droplet["velocity"]
+		velocity.y += pop_droplet_gravity * delta
+		droplet["velocity"] = velocity
+		droplet["position"] = (droplet["position"] as Vector2) + velocity * delta
+		droplet["life"] = float(droplet["life"]) - delta
+	var progress := clampf(_pop_elapsed / maxf(pop_anim_time, 0.001), 0.0, 1.0)
+	if _pop_ring != null:
+		_pop_ring.scale = Vector2.ONE * lerpf(0.075, 0.19, _ease_out_cubic(progress))
+		_pop_ring.modulate = _with_alpha(highlight_color, pow(1.0 - progress, 2.0))
+	if progress >= 1.0:
+		_popping = false
+		_droplets.clear()
+		if _pop_ring != null:
+			_pop_ring.visible = false
+		visible = false
+
+
+func _draw() -> void:
+	if _popping:
+		_draw_pop_droplets()
+		return
+	_draw_vessel()
+
+
+func _draw_vessel() -> void:
+	var inner_radius := maxf(radius - 2.5, 1.0)
+	_draw_liquid(inner_radius)
+	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, _with_alpha(rim_color, 0.90), 2.0, true)
+	draw_arc(Vector2.ZERO, inner_radius, 0.0, TAU, 48, _with_alpha(highlight_color, 0.20), 1.0, true)
+	draw_arc(Vector2(-radius * 0.18, -radius * 0.16), radius * 0.62, PI * 1.05, PI * 1.63, 20, _with_alpha(highlight_color, 0.82), 2.0, true)
+	draw_circle(Vector2(-radius * 0.30, -radius * 0.32), radius * 0.10, _with_alpha(highlight_color, 0.60))
+
+
+func _draw_liquid(inner_radius: float) -> void:
+	if _liquid_fraction <= 0.001:
+		return
+	var top_y := lerpf(inner_radius, -inner_radius, _liquid_fraction)
+	var rows := 30
+	for row in range(rows):
+		var t := float(row) / float(rows - 1)
+		var y := lerpf(top_y, inner_radius, t)
+		var half_width := sqrt(maxf(inner_radius * inner_radius - y * y, 0.0))
+		var row_alpha := 0.26 + 0.38 * _liquid_fraction
+		draw_line(Vector2(-half_width, y), Vector2(half_width, y), _with_alpha(liquid_color, row_alpha), 1.8, true)
+	var surface_width := sqrt(maxf(inner_radius * inner_radius - top_y * top_y, 0.0))
+	if surface_width <= 0.5:
+		return
+	var wave := PackedVector2Array()
+	for index in range(13):
+		var t := float(index) / 12.0
+		var x := lerpf(-surface_width, surface_width, t)
+		wave.append(Vector2(x, top_y + sin(_time * 4.0 + t * TAU * 1.5) * 1.2))
+	draw_polyline(wave, _with_alpha(highlight_color, 0.58), 1.25, true)
+
+
+func _draw_pop_droplets() -> void:
+	for droplet in _droplets:
+		var life := maxf(float(droplet["life"]), 0.0)
+		var size := float(droplet["size"])
+		draw_circle(droplet["position"], size * life / maxf(pop_anim_time, 0.001), _with_alpha(liquid_color, minf(life / maxf(pop_anim_time, 0.001), 1.0)))
+
+
+func _spawn_droplets() -> void:
+	_droplets.clear()
+	for index in range(maxi(pop_droplet_count, 1)):
+		var angle := TAU * float(index) / float(maxi(pop_droplet_count, 1)) + randf_range(-0.18, 0.18)
+		var speed := randf_range(pop_droplet_speed_min, pop_droplet_speed_max)
+		_droplets.append({
+			"position": Vector2.from_angle(angle) * randf_range(radius * 0.15, radius * 0.55),
+			"velocity": Vector2.from_angle(angle) * speed + Vector2(0.0, -35.0),
+			"size": randf_range(1.8, 4.6),
+			"life": pop_anim_time * randf_range(0.55, 1.0)
+		})
+
+
+func _build_pop_ring() -> void:
+	_pop_ring = get_node_or_null("PopRing") as Sprite2D
+	if _pop_ring == null:
+		_pop_ring = Sprite2D.new()
+		_pop_ring.name = "PopRing"
+		add_child(_pop_ring)
+	_pop_ring.texture = POP_RING_TEXTURE
+	_pop_ring.visible = false
+	_pop_ring.z_index = 2
+
+
+func _follow_target() -> Vector2:
+	return _player.global_position + follow_offset + Vector2(
+		sin(_time * bob_frequency * TAU) * bob_amount * 0.45,
+		cos(_time * bob_frequency * TAU) * bob_amount
+	)
+
+
+func _snap_to_follow_target() -> void:
+	if _player == null or not is_instance_valid(_player):
+		_resolve_player()
+	if _player != null:
+		global_position = _follow_target()
+
+
+func _ease_out_cubic(value: float) -> float:
+	var inverse := 1.0 - clampf(value, 0.0, 1.0)
+	return 1.0 - inverse * inverse * inverse
+
+
+func _with_alpha(source: Color, alpha: float) -> Color:
+	return Color(source.r, source.g, source.b, clampf(alpha, 0.0, 1.0))
 
 
 func _resolve_player() -> void:
@@ -126,12 +292,12 @@ func _resolve_player() -> void:
 	_player = _scan_for_player(get_tree().current_scene)
 
 
-func _scan_for_player(n: Node) -> Node2D:
-	if n == null:
+func _scan_for_player(node: Node) -> Node2D:
+	if node == null:
 		return null
-	if n is Player:
-		return n as Player
-	for child in n.get_children():
+	if node is Player:
+		return node as Player
+	for child in node.get_children():
 		var found := _scan_for_player(child)
 		if found != null:
 			return found

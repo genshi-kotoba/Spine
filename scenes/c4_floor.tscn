@@ -18,7 +18,7 @@ size = Vector2(20, 817)
 size = Vector2(15, 588.5)
 
 [sub_resource type="RectangleShape2D" id="door_col"]
-size = Vector2(160, 320)
+size = Vector2(192, 490)
 
 [node name="C4Floor" unique_id=1644574310 instance=ExtResource("1")]
 player_spawn_position = Vector2(320, 956)
@@ -79,6 +79,7 @@ shape = SubResource("wall_lintel_col")
 [node name="Doors" type="Node2D" parent="." index="3" unique_id=995009029]
 
 [node name="LockedBedroomDoor" parent="Doors" index="0" unique_id=1358843211 instance=ExtResource("3")]
+visible = false
 position = Vector2(1920, 828)
 
 [node name="BedroomDoor" type="Area2D" parent="Doors" index="1" unique_id=2054823455]
@@ -89,6 +90,7 @@ size = Vector2(160, 320)
 highlight_enabled = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Doors/BedroomDoor" index="0" unique_id=1869043597]
+position = Vector2(-20, -223)
 shape = SubResource("door_col")
 
 [connection signal="interact_pressed" from="Player" to="Doors/BedroomDoor" method="touched"]

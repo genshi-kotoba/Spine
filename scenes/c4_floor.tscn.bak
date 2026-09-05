@@ -3,8 +3,8 @@
 [ext_resource type="PackedScene" path="res://scenes/floor_template.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/auto_door.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/locked_bedroom_door.tscn" id="3"]
+[ext_resource type="Script" path="res://scripts/components/DepthParallax.gd" id="4"]
 [ext_resource type="Script" path="res://scripts/objects/lockedbedroom.gd" id="5"]
-[ext_resource type="Texture2D" path="res://assets/sprites/c4_floor.png" id="6"]
 
 [sub_resource type="RectangleShape2D" id="floor_col"]
 size = Vector2(3840, 40)
@@ -28,13 +28,33 @@ camera_position_offset = Vector2(0, -336.5)
 map_min_x = 0.0
 map_max_x = 3840.0
 
-[node name="Background" type="Node2D" parent="." z_index=-10]
+[node name="DepthParallax" type="Node2D" parent="." z_index=-10]
+script = ExtResource("4")
+anchor_point = Vector2(1920, 619.5)
 
-[node name="Rect" type="Polygon2D" parent="Background"]
-position = Vector2(1920, 619.5)
-texture = ExtResource("6")
-polygon = PackedVector2Array(-1920, -408.5, 1920, -408.5, 1920, 408.5, -1920, 408.5)
-uv = PackedVector2Array(0, 0, 2172, 0, 2172, 724, 0, 724)
+[node name="LayerFar" type="Node2D" parent="DepthParallax"]
+position = Vector2(1920, 599.2)
+metadata/_depth_factor = 0.04
+
+[node name="Rect" type="Polygon2D" parent="DepthParallax/LayerFar"]
+color = Color(0.18, 0.16, 0.15, 1)
+polygon = PackedVector2Array(-2200, -390, 2200, -390, 2200, 390, -2200, 390)
+
+[node name="LayerMid" type="Node2D" parent="DepthParallax"]
+position = Vector2(1920, 592)
+metadata/_depth_factor = 0.09
+
+[node name="Rect" type="Polygon2D" parent="DepthParallax/LayerMid"]
+color = Color(0.28, 0.25, 0.23, 1)
+polygon = PackedVector2Array(-2200, -375, 2200, -375, 2200, 375, -2200, 375)
+
+[node name="LayerNear" type="Node2D" parent="DepthParallax"]
+position = Vector2(1920, 582)
+metadata/_depth_factor = 0.14
+
+[node name="Rect" type="Polygon2D" parent="DepthParallax/LayerNear"]
+color = Color(0.38, 0.34, 0.32, 1)
+polygon = PackedVector2Array(-2200, -385, 2200, -385, 2200, 385, -2200, 385)
 
 [node name="Environment" type="Node2D" parent="." z_index=-5]
 

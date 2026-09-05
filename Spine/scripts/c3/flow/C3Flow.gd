@@ -42,6 +42,8 @@ const LIGHT_D := 4
 const LIGHT_E := 5
 
 ## LIGHT 时序常量（s）。
+const LIGHT_A_WAIT := 1.0
+const LIGHT_B_WAIT := 1.4
 const LIGHT_C_DUR := 1.8
 const LIGHT_D_DUR := 1.5
 const LIGHT_PARTICLE_DUR := 2.5
@@ -64,9 +66,11 @@ const LIGHT_DIM_OUTER := 360.0
 ## LIGHT-A 亮区固定中心（书房中心 x=640；t34 gap ③：A 以书房为亮区，play follow_player=false）。
 const LIGHT_STUDY_CENTER := Vector2(640, 594)
 
-## LIGHT 分步运行状态（t32）。
+## LIGHT 分步运行状态（t32；过场化：A/B 改为计时驱动，演出全程锁输入）。
 var _light_step: int = LIGHT_NONE
 var _light_b_reset_done: bool = false
+var _light_a_t: float = 0.0
+var _light_b_t: float = 0.0
 var _light_c_t: float = 0.0
 var _light_d_t: float = 0.0
 
@@ -158,6 +162,8 @@ func _reset_flags() -> void:
 	_study_papers_collected = 0
 	_light_step = LIGHT_NONE
 	_light_b_reset_done = false
+	_light_a_t = 0.0
+	_light_b_t = 0.0
 	_light_c_t = 0.0
 	_light_d_t = 0.0
 
@@ -248,14 +254,17 @@ func on_enter_bedroom() -> void:
 # ─── LIGHT 序列（§7.2 A-E 分步时序；t32 重做）───
 ## 进入 STAGE_LIGHT 只起步 A（书房外全黑，亮区跟随玩家）；B/C/D/E 由 _process_light 依玩家事件 / 计时推进。
 
-## A 步：遮罩全黑（除书房=跟随玩家的亮区），等待玩家出门。
+## A 步：遮罩全黑（书房为亮区）。过场化：全程锁输入（演出自动播放，玩家不可操作）。
 func _start_light_a() -> void:
 	if _light_step != LIGHT_NONE:
 		return
 	_light_step = LIGHT_A
 	_light_b_reset_done = false
+	_light_a_t = 0.0
+	_light_b_t = 0.0
 	_light_c_t = 0.0
 	_light_d_t = 0.0
+	StoryMonitor.lock_input()
 	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR, false, LIGHT_STUDY_CENTER)
 
 
@@ -320,6 +329,7 @@ func _finish_light_e() -> void:
 	_light_step = LIGHT_E
 	GameState.set_process_flag(FLAG_HOLD_BREATH_UNLOCKED, true)
 	GameState.set_process_flag(FLAG_LIGHT_PHASE_DONE, true)
+	StoryMonitor.unlock_input()
 	if current_stage < STAGE_CORRIDOR:
 		set_stage(STAGE_CORRIDOR)
 
@@ -803,15 +813,18 @@ func _poll_study_door_fallback() -> void:
 			_door_study_living.open()
 
 
-## LIGHT 分步驱动：A→B 依玩家出门；B→C 依二次靠门；C→D→E 依计时。
+## LIGHT 分步驱动（过场化：全计时自动播放，无玩家交互触发）。
 func _process_light(delta: float) -> void:
 	match _light_step:
 		LIGHT_A:
-			if _player.global_position.x >= study_right_x:
+			_light_a_t += delta
+			if _light_a_t >= LIGHT_A_WAIT:
 				_enter_light_b()
 		LIGHT_B:
-			if _light_b_reset_done and _player.global_position.x >= study_right_x:
-				_enter_light_c()
+			if _light_b_reset_done:
+				_light_b_t += delta
+				if _light_b_t >= LIGHT_B_WAIT:
+					_enter_light_c()
 		LIGHT_C:
 			_light_c_t += delta
 			if _light_c_t >= LIGHT_C_DUR:

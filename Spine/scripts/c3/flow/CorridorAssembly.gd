@@ -70,6 +70,9 @@ func _process(_delta: float) -> void:
 	if mode != 1:
 		return
 	_atmosphere_applied = true
+	# 走廊视觉层在进入移动模式时显示（频闪修复：三房阶段不渲染走廊视觉）。
+	if _visual != null and not _visual.visible:
+		_visual.visible = true
 	if _mask == null and darkness_mask_path != NodePath():
 		_mask = get_node_or_null(darkness_mask_path)
 	if _mask != null and _visual != null and _visual.has_method("apply_atmosphere_to"):
@@ -109,6 +112,9 @@ func _inject_visual_layer() -> void:
 			if seg is Node2D:
 				visual.decorate_segment(seg)
 	visual.build_backdrop(visual)
+	# 频闪修复：走廊视觉层初始隐藏（段初始排布覆盖三房区域，开场即渲染会与白模视觉重叠频闪）；
+	# 进入走廊移动模式（_process 检测 mode==1）后才显示。
+	visual.visible = false
 
 
 ## 特异点层：创建（其 _ready 自动解析走廊 + 同步 hold_threshold + decorate_all.call_deferred）。

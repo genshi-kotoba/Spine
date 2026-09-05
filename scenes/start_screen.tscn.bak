@@ -1,16 +1,12 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/scenes/StartScreen.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/objects/StartButton.gd" id="2"]
 [ext_resource type="Texture2D" path="res://assets/sprites/start_screen.png" id="3"]
 [ext_resource type="Texture2D" path="res://assets/sprites/start_button.png" id="4"]
-[ext_resource type="Script" path="res://scripts/objects/InitButton.gd" id="5"]
 
 [sub_resource type="RectangleShape2D" id="button_shape"]
 size = Vector2(185, 48)
-
-[sub_resource type="SystemFont" id="cjk_font"]
-font_names = PackedStringArray("Microsoft YaHei", "SimSun", "PingFang SC", "Noto Sans CJK SC")
 
 [node name="StartScreen" type="Node2D"]
 script = ExtResource("1")
@@ -32,31 +28,4 @@ initial_state = "idle"
 texture = ExtResource("4")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StartButton"]
-shape = SubResource("button_shape")
-
-[node name="InitButton" type="Area2D" parent="."]
-position = Vector2(960, 700)
-script = ExtResource("5")
-object_id = "init_button"
-initial_state = "idle"
-
-[node name="Background" type="ColorRect" parent="InitButton"]
-offset_left = -92.5
-offset_top = -24.0
-offset_right = 92.5
-offset_bottom = 24.0
-color = Color(0.15, 0.15, 0.18, 1)
-
-[node name="Text" type="Label" parent="InitButton"]
-offset_left = -92.5
-offset_top = -24.0
-offset_right = 92.5
-offset_bottom = 24.0
-theme_override_fonts/font = SubResource("cjk_font")
-theme_override_font_sizes/font_size = 22
-text = "初始化存档"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="InitButton"]
 shape = SubResource("button_shape")

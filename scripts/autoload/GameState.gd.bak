@@ -19,6 +19,12 @@ func _ready() -> void:
 	load_game()
 
 
+## 退出时自动存档（godot_c2_c4_prompt 存档验证：中途保存退出重进可恢复）
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		save_game()
+
+
 func set_object_state(object_id: String, new_state: String) -> void:
 	object_states[object_id] = new_state
 	state_changed.emit(object_id, new_state)

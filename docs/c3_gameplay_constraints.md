@@ -163,7 +163,7 @@ STAGE_STUDY(1)  : study_items_unlocked=false；书房考卷 item(第三/第四) 
 出书房         : C3Flow 检测玩家离开书房 → 锁定书房-客厅自动门(study_gate_open=false) → STAGE_LEAVE_STUDY(2)。
 STAGE_LIVING(3) : 客厅左第一处 PaperLiving(100) → touched → paper_living_collected=true。
 STAGE_KITCHEN(4): 厨房(白模餐厅位) PaperKitchen(100) → touched → paper_kitchen_collected=true。
-                : paper_living_collected && paper_kitchen_collected → study_gate_open=true, study_items_unlocked=true。
+				: paper_living_collected && paper_kitchen_collected → study_gate_open=true, study_items_unlocked=true。
 STAGE_RETURN_STUDY(5): 回书房；StudyPaperA(100,左)/StudyPaperB(99,左下) 均可(顺序无关)；二者都触发 → light_phase_done=true → STAGE_LIGHT(6)。
 ```
 

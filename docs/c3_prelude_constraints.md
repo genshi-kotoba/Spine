@@ -151,14 +151,14 @@ InteractHint (Node2D; script = scripts/components/InteractHint.gd)   # 默认 vi
 ### 6.3 切换 / 触发路径图（扩展后）
 ```
 E 键(interact) → Player.interact_pressed ─→ Item.touched()
-                                          │ ① 输入锁（input_locked，Player 侧已挡）
-                                          │ ② set_interaction_enabled(false) → 发射 interaction_available(false)，不触发
-                                          │ ③ gate_flag 非空且 get_process_flag=false → 发射 gate_blocked + interaction_available(false)，不触发
-                                          ▼ 通过
-                          set_state(new_state)    ← 唯一状态变更入口
-                                          │ current_state = new_state
-                                          ▼
-                          apply_state(new_state)  ← 唯一效果出口（基类查 states 表；子类可覆写）
+										  │ ① 输入锁（input_locked，Player 侧已挡）
+										  │ ② set_interaction_enabled(false) → 发射 interaction_available(false)，不触发
+										  │ ③ gate_flag 非空且 get_process_flag=false → 发射 gate_blocked + interaction_available(false)，不触发
+										  ▼ 通过
+						  set_state(new_state)    ← 唯一状态变更入口
+										  │ current_state = new_state
+										  ▼
+						  apply_state(new_state)  ← 唯一效果出口（基类查 states 表；子类可覆写）
 
 外部程序化 ─→ call_item(new_state) ─→ set_state(new_state)   （无 gate / 无输入锁，外部显式指定目标状态）
 

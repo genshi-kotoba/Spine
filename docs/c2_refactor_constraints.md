@@ -63,7 +63,14 @@
   - `ID_CURTEN=="1"`（结局中途退出）→ 清 `FLAG_ENDING` 后 `call_deferred("_start_ending")` 补播结局（防死档，决策 E4）；
   - 相机/lego/ladder 由各自机制恢复，不重复处理。
 
-### 4.2 c2_floor.tscn（v2 增量）
+### 4.2 lego 脉冲动画（v2.2）
+
+- **规格**：lego 未被 E 交互时，其 Sprite2D 循环：0.5s 内由基础 scale **0.01** 放大至 **0.1** → 0.5s 内缩回 0.01 → 维持 3s → 重复（用户 2026-09-06 指令）。
+- 实现：C2Floor `_ready` 对每个未消失 lego 的 Sprite2D 建 `Tween.set_loops()` 循环（scale→0.1 @0.5s → scale→0.01 @0.5s → interval 3.0s，SINE+EASE_IN_OUT）；常量 `PULSE_BASE/PEAK/UP/DOWN/HOLD`。
+- 终止：lego 变 "1"（交互或读档已消失）→ 对应 Tween `kill()`；场景初始 scale 改为 0.01（基础值）。
+- 相机/对话/结局逻辑不受影响。
+
+### 4.3 c2_floor.tscn（v2 增量）
 
 - `Items/Curten`：Node2D → **Area2D**，script=vanish_item.gd（既有 ext_resource id 6），`size = Vector2(1024, 1300)`、`state_id = "c2_curten"`、`interactable = false`、`highlight_enabled = true`；position (1920, 320) 不变；
   - 新增子节点 `CollisionShape2D`（sub_resource `curten_col`，RectangleShape2D 1024×1300，基类 _ready 同步 size）；
@@ -71,7 +78,7 @@
   - 新增连接：`interact_pressed` from Player → Items/Curten → touched。
 - 其余节点（Background / Ladder / Lego1-3 / Sfx / EndingLayer）不动。
 
-### 4.3 不变项（v1 契约继续有效）
+### 4.4 不变项（v1 契约继续有效）
 
 - Ladder.gd 全部（四态、唯一出入口、读档重建、不可交互）；
 - lego 初始可交互、state_id 不变；对话文件沿用；ladder.mp3 缺失降级；
@@ -131,6 +138,7 @@ v2 新增定案：
 - E5 相机目标：正中 = 视野中心 (1920,619.5)（相机 global_position 目标 (1920,956)）；返回目标 = clamp 后跟随 x + 玩家 y，与 LevelScene 逐帧写值一致保证无缝。
 - E6 缓动统一 `TRANS_SINE + EASE_IN_OUT`（"缓慢平滑"）。
 - E7（v2.1）回程等待：对话活跃才 `await dialogue_finished`；1 行对话可能在 1.5s 移动内播完，用 `is_dialogue_active()` 预判防挂起。
+- E8（v2.2）lego 脉冲参数经用户确认：基础 0.01 / 峰 0.1 / 升 0.5s / 降 0.5s / 停 3s；Tween 由 C2Floor 统一管理（不新建脚本、不改 item 基类）。
 
 v1 定案沿用（未被 v2 覆盖的部分）：
 
@@ -146,3 +154,4 @@ v1 定案沿用（未被 v2 覆盖的部分）：
 - 2026-09-06 v1 初版：c2 重构约束文档先行产出（prompt §1~6 全覆盖）。
 - 2026-09-06 v2：按用户指令改 lego 时序（音效+对话 → 相机 0.75s 至正中 → 换 ladder 贴图 → 0.75s 回玩家）与结局触发（ladder=3 后 curten 可交互化，E 触发结局）；影响 C2Floor.gd 与 c2_floor.tscn 的 Curten 节点；LevelScene 零改动（覆写接管）。回滚要点：`git checkout 859f7b2 -- scripts/scenes/C2Floor.gd scenes/c2_floor.tscn` 并还原本文件 v1。
 - 2026-09-06 v2.1：移至正中时长 0.75s→1.5s；回程改为「对话结束后才触发」（`await dialogue_finished`，活跃预判防挂起）；回程时长 0.75s 不变。仅影响 C2Floor.gd。回滚要点：`git checkout d9ecb8c -- scripts/scenes/C2Floor.gd`。
+- 2026-09-06 v2.2：lego 未交互时 Sprite 脉冲循环（0.01→0.1 @0.5s → 回 0.01 @0.5s → 停 3s）；交互/读档消失即终止。影响 C2Floor.gd + 场景 lego Sprite 初始 scale。回滚要点：`git checkout 6cf4ee0 -- scripts/scenes/C2Floor.gd scenes/c2_floor.tscn`。

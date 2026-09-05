@@ -102,7 +102,7 @@ state_id = "c2_lego3"
 shape = SubResource("item_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Lego3" index="1" unique_id=910637890]
-scale = Vector2(0.1, 0.1)
+scale = Vector2(0.01, 0.01)
 texture = ExtResource("7")
 
 [node name="Lego2" type="Area2D" parent="Items" index="3" unique_id=1864298901]
@@ -116,7 +116,7 @@ state_id = "c2_lego2"
 shape = SubResource("item_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Lego2" index="1" unique_id=2014091031]
-scale = Vector2(0.1, 0.1)
+scale = Vector2(0.01, 0.01)
 texture = ExtResource("7")
 
 [node name="Lego1" type="Area2D" parent="Items" index="4" unique_id=1535945224]
@@ -130,7 +130,7 @@ state_id = "c2_lego1"
 shape = SubResource("item_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Lego1" index="1" unique_id=2005792885]
-scale = Vector2(0.1, 0.1)
+scale = Vector2(0.01, 0.01)
 texture = ExtResource("7")
 
 [node name="LadderSfx" type="AudioStreamPlayer" parent="." index="4" unique_id=1938407431]

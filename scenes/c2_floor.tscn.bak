@@ -21,6 +21,9 @@ size = Vector2(20, 817)
 [sub_resource type="RectangleShape2D" id="item_col"]
 size = Vector2(120, 200)
 
+[sub_resource type="RectangleShape2D" id="curten_col"]
+size = Vector2(1024, 1300)
+
 [node name="C2Floor" unique_id=251335560 instance=ExtResource("1")]
 script = ExtResource("2")
 ladder_sfx_path = "res://assets/audio/ladder.mp3"
@@ -72,8 +75,16 @@ script = ExtResource("10")
 position = Vector2(2, 7.000061)
 scale = Vector2(0.8, 0.8)
 
-[node name="Curten" type="Node2D" parent="Items" index="1" unique_id=1709427220]
+[node name="Curten" type="Area2D" parent="Items" index="1" unique_id=1709427220]
 position = Vector2(1920, 320)
+script = ExtResource("6")
+size = Vector2(1024, 1300)
+highlight_enabled = true
+interactable = false
+state_id = "c2_curten"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Curten"]
+shape = SubResource("curten_col")
 
 [node name="Sprite2D" type="Sprite2D" parent="Items/Curten" index="0" unique_id=845399617]
 position = Vector2(4.000001, 309)
@@ -139,6 +150,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
+[connection signal="interact_pressed" from="Player" to="Items/Curten" method="touched"]
 [connection signal="interact_pressed" from="Player" to="Items/Lego3" method="touched"]
 [connection signal="interact_pressed" from="Player" to="Items/Lego2" method="touched"]
 [connection signal="interact_pressed" from="Player" to="Items/Lego1" method="touched"]

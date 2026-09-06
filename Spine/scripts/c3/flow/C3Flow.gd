@@ -47,13 +47,18 @@ const LIGHT_MASK_COLOR := Color(0.0, 0.0, 0.0, 0.96)
 ## 让角色视觉站画幅地面位置而非竖正中（t34 gap ①，不改 player.tscn）。
 const CAMERA_FRAME_OFFSET := Vector2(0, -336.5)
 
-## C3 开场：字幕结束后显示三段角色右上方提示，最后一段结束才解除冻结。
+## C3 开场：字幕结束后显示三段角色右上方提示；“不过”开始可移动，“总之”结束才可出书房。
 const INTRO_DIALOGUE_PATH := "res://dialogues/c3_intro.txt"
 const INTRO_FIRST_TEXT := "尝试按下空格深呼吸"
 const INTRO_SECOND_TEXT := "身边的气泡标识当前氧气剩余\n氧气不足时，气泡破裂，你会陷入缺氧"
-const INTRO_THIRD_TEXT := "当然，对于我们\n缺氧或许也并不会怎样……"
+const INTRO_THIRD_TEXT := "不过，对于我们\n缺氧或许也并不会怎样……"
 const INTRO_TEXT_DURATION := 4.0
+const INTRO_THIRD_HINT_DELAY := 3.0
+const INTRO_THIRD_CLEANUP_SEC := 6.5
 const INTRO_BREATH_RATE := 4.0
+const SPECIAL_POINT_SUBTITLE_DELAY_SEC := 1.0
+const FLOW_GLITCH_BOX_SCENE := preload("res://ui/glitch_dialogue_box.tscn")
+const INTRO_EXIT_HINT_ACTION := "intro_exit_hint"
 
 ## 客厅（第二间 room）电视柜绑定在房间左侧，避免误落到右侧门附近。
 const LIVING_TV_X := 1480.0
@@ -134,12 +139,18 @@ var _intro_waiting_breath: bool = false
 var _intro_breathed: bool = false
 var _intro_text_stage: int = 0
 var _intro_text_elapsed: float = 0.0
+var _intro_exit_hint_started: bool = false
+var _intro_study_exit_locked: bool = false
+var _intro_text_box: Node = null
+var _flow_floating_boxes: Array[Node] = []
 var _flow_dialogue_action: String = ""
+var _flow_interactive_dialogue_active: bool = false
 var _tv_subtitle_shown: bool = false
 var _hall_door_subtitle_shown: bool = false
 var _end_item_subtitle_shown: bool = false
 var _final_study_dialogue_started: bool = false
 var _corridor_end_hint_shown: bool = false
+var _corridor_third_special_text_shown: bool = false
 var _bedroom_arrival_dialogue_shown: bool = false
 var _bedroom_phone_dialogue_started: bool = false
 var _bedroom_exit_dialogue_shown: bool = false
@@ -190,6 +201,16 @@ func _reset_flags() -> void:
 	_light_triggered = false
 	_light_show_t = 0.0
 	_corridor_end_hint_shown = false
+	_corridor_third_special_text_shown = false
+	_intro_study_exit_locked = false
+	if is_instance_valid(_intro_text_box):
+		_intro_text_box.queue_free()
+	_intro_text_box = null
+	for box in _flow_floating_boxes:
+		if is_instance_valid(box):
+			box.queue_free()
+	_flow_floating_boxes.clear()
+	_flow_interactive_dialogue_active = false
 	_bedroom_arrival_dialogue_shown = false
 	_bedroom_phone_dialogue_started = false
 	_bedroom_exit_dialogue_shown = false
@@ -237,6 +258,8 @@ func _apply_stage_effects(s: int) -> void:
 
 ## 玩家离开书房 → 锁书房-客厅门（无法回）+ 进入 LEAVE_STUDY（§6.2）。
 func on_player_left_study() -> void:
+	if _intro_study_exit_locked:
+		return
 	_left_study = true
 	GameState.set_process_flag(FLAG_STUDY_GATE_OPEN, false)
 	_apply_gate_blocker()
@@ -303,12 +326,14 @@ func _show_flow_subtitle(lines: Array, action: String = "") -> void:
 	if lines.is_empty():
 		return
 	_flow_dialogue_action = action
+	_flow_interactive_dialogue_active = true
 	if not DialogueManager.dialogue_finished.is_connected(_on_flow_dialogue_finished):
 		DialogueManager.dialogue_finished.connect(_on_flow_dialogue_finished)
 	DialogueManager.start_lines(lines, DialogueManager.MODE_INTERACTIVE)
 
 
 func _on_flow_dialogue_finished() -> void:
+	_flow_interactive_dialogue_active = false
 	var action := _flow_dialogue_action
 	_flow_dialogue_action = ""
 	match action:
@@ -339,14 +364,38 @@ func _on_flow_dialogue_finished() -> void:
 			pass
 
 
-func _show_flow_floating(value: String, _world_anchor: Vector2, _clear_x: float = INF, _follow_player: bool = false, _duration_sec: float = INF) -> void:
-	# C3 悬浮提示直接复用 main 分支 MODE_GLITCH。
-	DialogueManager.start_lines([value], DialogueManager.MODE_GLITCH)
+func _show_flow_floating(value: String, _world_anchor: Vector2, _clear_x: float = INF, _follow_player: bool = false, _duration_sec: float = INF, finished_action: String = "", font_scale: float = 1.0, persistent: bool = false) -> void:
+	# Each floating glitch gets its own existing GlitchDialogueBox instance. DialogueManager
+	# intentionally owns the interactive dialogue queue; sharing that queue would serialize
+	# independent world annotations (notably the third special and the corridor-end hint).
+	var anchor := _world_anchor
+	# 旧调用点把跟随提示写成相对玩家偏移；只在生成瞬间解析一次，之后固定在世界中。
+	if _follow_player and _player != null:
+		anchor += _player.global_position
+	var box := FLOW_GLITCH_BOX_SCENE.instantiate()
+	add_child(box)
+	if box is CanvasLayer:
+		(box as CanvasLayer).layer = 26
+	_flow_floating_boxes.append(box)
+	box.connect("dialogue_finished", Callable(self, "_on_flow_floating_finished").bind(box, finished_action))
+	box.call("show_dialogue", [value], font_scale, anchor, persistent)
+
+
+func _on_flow_floating_finished(box: Node, action: String) -> void:
+	_flow_floating_boxes.erase(box)
+	if is_instance_valid(box):
+		box.queue_free()
+	if action == INTRO_EXIT_HINT_ACTION:
+		_intro_study_exit_locked = false
+		_apply_gate_blocker()
+		_sync_study_door_lock()
 
 
 func _hide_flow_floating() -> void:
-	# MODE_GLITCH 按 main 模块自身的逐句生命周期自动隐藏。
-	pass
+	for box in _flow_floating_boxes:
+		if is_instance_valid(box):
+			box.queue_free()
+	_flow_floating_boxes.clear()
 
 
 # ─── 卧室门三态（§5.2）───
@@ -666,6 +715,9 @@ func on_white_screen_end() -> void:
 
 ## 黑屏 + 进入卧室 begin()（全屏黑 ColorRect，无遮罩）。
 func _fade_black_and_begin_bedroom() -> void:
+	# Persistent corridor annotations live outside the DialogueManager queue. They must not
+	# survive the black-screen transition into the separate bedroom scene.
+	_hide_flow_floating()
 	_show_screen_overlay("black")
 	_set_corridor_active(false)
 	StoryMonitor.lock_input()
@@ -1010,21 +1062,36 @@ func _ready_extra() -> void:
 	_connect_scene_signals()
 	set_stage(current_stage)
 	_apply_phase_arg()
+	if "--book-mountain-preview" in OS.get_cmdline_user_args():
+		call_deferred("_open_book_mountain_preview")
+		return
 	if not _phase_debug_loaded \
 		and "--self-check" not in OS.get_cmdline_user_args() \
 		and "--physical" not in OS.get_cmdline_user_args():
 		call_deferred("_begin_intro_sequence")
 
 
+## Runtime-only art preview: starts the real C3 level at special point two without altering game state.
+func _open_book_mountain_preview() -> void:
+	_phase_debug_loaded = true
+	set_stage(STAGE_CORRIDOR)
+	if _player != null:
+		_player.global_position = Vector2(2640.0, 940.0)
+
+
 func _begin_intro_sequence() -> void:
 	if _intro_active or _phase_debug_loaded:
 		return
 	_intro_active = true
+	_intro_study_exit_locked = true
 	_intro_waiting_breath = false
 	_intro_breathed = false
 	_intro_text_stage = 0
 	_intro_text_elapsed = 0.0
+	_intro_exit_hint_started = false
 	StoryMonitor.lock_input()
+	_apply_gate_blocker()
+	_sync_study_door_lock()
 	if _breath != null and _breath.has_method("set_countdown_rate"):
 		_breath.call("set_countdown_rate", INTRO_BREATH_RATE, true)
 	if not DialogueManager.dialogue_finished.is_connected(_on_intro_dialogue_finished):
@@ -1044,13 +1111,37 @@ func _on_intro_dialogue_finished() -> void:
 
 
 func _set_intro_text(value: String) -> void:
-	# 开场悬浮提示直接使用 main 分支 MODE_GLITCH 组件。
-	DialogueManager.start_lines([value], DialogueManager.MODE_GLITCH)
+	_hide_intro_text()
+	var anchor := _player.global_position + Vector2(220.0, -220.0) if _player != null else Vector2(960.0, 300.0)
+	var box := FLOW_GLITCH_BOX_SCENE.instantiate()
+	add_child(box)
+	if box is CanvasLayer:
+		(box as CanvasLayer).layer = 26
+	_intro_text_box = box
+	box.connect("dialogue_finished", Callable(self, "_on_intro_text_finished").bind(box))
+	box.call("show_dialogue", [value], 1.0, anchor)
+
+
+func _on_intro_text_finished(box: Node) -> void:
+	if _intro_text_box == box:
+		_intro_text_box = null
+	if is_instance_valid(box):
+		box.queue_free()
+
+
+func _show_corridor_third_special_text(world_x: float) -> void:
+	# 五句由独立的 main GlitchDialogueBox 实例同时生成；允许轻微重叠，
+	# 且不进入 DialogueManager FIFO，尽头提示可以并行出现。
+	var lines := ["提升一分，干掉千人", "努力", "你一定可以", "你凭什么不行", "我就说你怎么了"]
+	for i in lines.size():
+		var anchor := Vector2(world_x - 180.0 + float(i % 2) * 28.0, 420.0 + float(i) * 46.0)
+		_show_flow_floating(lines[i], anchor, INF, false, INF, "", 2.0, true)
 
 
 func _hide_intro_text() -> void:
-	# MODE_GLITCH 按自身生命周期自动清理。
-	pass
+	if is_instance_valid(_intro_text_box):
+		_intro_text_box.queue_free()
+	_intro_text_box = null
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -1078,12 +1169,16 @@ func _update_intro(delta: float) -> void:
 	if _intro_text_stage == 2 and _intro_text_elapsed >= INTRO_TEXT_DURATION:
 		_intro_text_stage = 3
 		_intro_text_elapsed = 0.0
+		_intro_exit_hint_started = false
 		_set_intro_text(INTRO_THIRD_TEXT)
-		_show_flow_floating("总之，先进里面看看吧\n得时刻注意呼吸", Vector2(1080.0, 640.0), 1200.0)
-		# The third hint marks the end of the mandatory opening freeze.
 		_intro_waiting_breath = false
 		StoryMonitor.unlock_input()
-	elif _intro_text_stage == 3 and _intro_text_elapsed >= INTRO_TEXT_DURATION:
+	elif _intro_text_stage == 3:
+		if not _intro_exit_hint_started and _intro_text_elapsed >= INTRO_THIRD_HINT_DELAY:
+			_intro_exit_hint_started = true
+			_show_flow_floating("总之，先进里面看看吧\n得时刻注意呼吸", Vector2(1080.0, 640.0), 1200.0, false, INF, INTRO_EXIT_HINT_ACTION)
+		if _intro_text_elapsed < INTRO_THIRD_CLEANUP_SEC:
+			return
 		_hide_intro_text()
 		_intro_text_stage = 4
 		_intro_active = false
@@ -1224,12 +1319,32 @@ func _on_corridor_finite() -> void:
 
 
 func _on_corridor_special_point_passed(index: int) -> void:
+	# 成功屏息通过后留一秒给震动和环境视觉，再播放对应底部字幕。
+	# 判定信号可重复触发，因此不使用一次性旗标，玩家回头再次通过时仍会得到反馈。
+	_show_corridor_special_point_subtitle_delayed(index)
 	# 第三个特异点通过的瞬间就告知尽头位置，不再等角色走到尽头附近。
 	if index != 2 or _corridor_end_hint_shown or _corridor == null:
 		return
 	_corridor_end_hint_shown = true
 	var end_x := float(_corridor.get("end_wall_x"))
 	_show_flow_floating("尽头似乎有什么东西", Vector2(end_x - 120.0, 650.0), end_x, false)
+
+
+func _show_corridor_special_point_subtitle_delayed(index: int) -> void:
+	await get_tree().create_timer(SPECIAL_POINT_SUBTITLE_DELAY_SEC).timeout
+	match index:
+		0:
+			_show_flow_subtitle([
+				"很多奖状贴满了整面墙",
+				"毫无疑问的好学生……",
+			], "")
+		1:
+			_show_flow_subtitle([
+				"成山的书籍散步满天",
+				"看着有些喘不来气",
+			], "")
+		2:
+			_show_flow_subtitle(["有点头疼……"], "")
 
 
 func _on_special_breath_hint_requested(message: String = "长按空格屏住呼吸，这样或许好受一点") -> void:
@@ -1264,7 +1379,7 @@ func _on_item_succeeded(it: Node) -> void:
 
 ## E 键按下 → 对统一范围判定命中的 item 调 touched()。
 func _on_interact_pressed() -> void:
-	if _player == null or DialogueManager.is_dialogue_active():
+	if _player == null or _flow_interactive_dialogue_active:
 		return
 	var items := _find_items()
 	for it in items:
@@ -1332,8 +1447,9 @@ func _apply_gate_blocker() -> void:
 	var blocker := get_node_or_null(gate_blocker_path)
 	if blocker == null:
 		return
-	# 仅当『已出过书房 且 study_gate_open=false』时阻挡（f3：初始不阻挡，可自由出入书房）
-	var blocked: bool = _left_study and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN)
+	# Intro holds the same physical exit until its final "总之" floating hint ends.
+	var blocked: bool = (_intro_study_exit_locked or _left_study) \
+		and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN)
 	for child in blocker.get_children():
 		if child is CollisionShape2D:
 			(child as CollisionShape2D).set_deferred("disabled", not blocked)
@@ -1345,7 +1461,8 @@ func _apply_gate_blocker() -> void:
 func _sync_study_door_lock() -> void:
 	if _door_study_living == null:
 		return
-	var locked: bool = _left_study and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN)
+	var locked: bool = (_intro_study_exit_locked or _left_study) \
+		and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN)
 	if _door_study_living.has_method("set_auto_open_enabled"):
 		_door_study_living.call("set_auto_open_enabled", not locked)
 	if _door_study_living is Area2D:
@@ -1394,6 +1511,10 @@ func _process(delta: float) -> void:
 		return
 	if _player == null:
 		return
+	if _intro_study_exit_locked and _player.global_position.x > study_right_x:
+		_player.global_position.x = study_right_x
+		if _player is CharacterBody2D:
+			(_player as CharacterBody2D).velocity.x = 0.0
 	if not _tv_subtitle_shown and _player.global_position.x >= LIVING_TV_X \
 		and current_stage >= STAGE_LEAVE_STUDY and current_stage < STAGE_LIGHT \
 		and not DialogueManager.is_dialogue_active():
@@ -1404,6 +1525,12 @@ func _process(delta: float) -> void:
 		and _player.global_position.x >= float(_corridor.get("end_wall_x")) - 240.0:
 		_corridor_end_hint_shown = true
 		_show_flow_floating("尽头似乎有什么东西", Vector2(float(_corridor.get("end_wall_x")) - 120.0, 650.0), float(_corridor.get("end_wall_x")), false)
+	if (current_stage == STAGE_CORRIDOR or current_stage == STAGE_CORRIDOR_END) \
+		and not _corridor_third_special_text_shown and _corridor != null:
+		var special_points: Array = _corridor.get("special_x") as Array
+		if special_points.size() >= 3 and _player.global_position.x >= float(special_points[2]) - 240.0:
+			_corridor_third_special_text_shown = true
+			_show_corridor_third_special_text(float(special_points[2]))
 	if current_stage == STAGE_LIVING and GameState.get_process_flag(FLAG_BEDROOM_INTERACTIONS_DONE) \
 		and not _bedroom_return_end_dialogue_shown and not DialogueManager.is_dialogue_active():
 		var returned_end := get_node_or_null("Items/EndItem") as Node2D
@@ -1414,10 +1541,11 @@ func _process(delta: float) -> void:
 				"捡起来擦擦看还能不能用",
 			], "bedroom_return_end")
 	if current_stage == STAGE_STUDY:
-		_poll_study_door_fallback()
-		# t14 锁门余量：x ≥ study_lock_x（完全出书房）才触发 on_player_left_study（锁门+blocker）。
-		if _player.global_position.x >= study_lock_x:
-			on_player_left_study()
+		if not _intro_study_exit_locked:
+			_poll_study_door_fallback()
+			# t14 锁门余量：x ≥ study_lock_x（完全出书房）才触发 on_player_left_study（锁门+blocker）。
+			if _player.global_position.x >= study_lock_x:
+				on_player_left_study()
 	elif current_stage == STAGE_LIGHT:
 		_process_light_show(delta)
 
@@ -1425,7 +1553,7 @@ func _process(delta: float) -> void:
 ## t14 兜底轮询：窗口环境 body_entered 信号偶发丢失时，STAGE_STUDY 玩家接近书房-客厅左门
 ## （x ∈ [door_fallback_min_x, door_fallback_max_x]）且门未开 → 直接 open()（每帧检查，open 幂等）。
 func _poll_study_door_fallback() -> void:
-	if _door_study_living == null:
+	if _door_study_living == null or _intro_study_exit_locked:
 		return
 	var is_open: bool = bool(_door_study_living.get("is_open"))
 	if is_open:

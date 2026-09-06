@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://cufl4vtbmhnvf"]
+
+[ext_resource type="Script" path="res://scripts/components/FloatingWallText.gd" id="1_floating"]
+
+[node name="FloatingWallText" type="Node2D" unique_id=1237190359]
+script = ExtResource("1_floating")
+phrases = PackedStringArray("知道得太多，也是一种病。", "不要回头", "门后没有答案", "保持安静", "记录不会说谎", "它在阅读你")

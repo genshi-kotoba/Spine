@@ -37,15 +37,15 @@ func is_dialogue_active() -> bool:
 
 
 ## 请求开始一段对话；进行中则进入队列等待
-func start_dialogue(file_path: String, mode: int) -> void:
+func start_dialogue(file_path: String, mode: int, font_scale: float = 1.0, world_anchor: Variant = null) -> void:
 	if _active:
-		_queue.append({"file_path": file_path, "mode": mode})
+		_queue.append({"file_path": file_path, "mode": mode, "font_scale": font_scale, "world_anchor": world_anchor})
 		return
-	_begin(file_path, mode)
+	_begin(file_path, mode, font_scale, world_anchor)
 
 
 ## 直接播放运行时提供的句子；适合交互反馈等不需要独立文件的短字幕。
-func start_lines(lines: Array, mode: int = MODE_INTERACTIVE) -> void:
+func start_lines(lines: Array, mode: int = MODE_INTERACTIVE, font_scale: float = 1.0, world_anchor: Variant = null) -> void:
 	var clean_lines: Array = []
 	for line in lines:
 		var clean := str(line).strip_edges()
@@ -54,21 +54,21 @@ func start_lines(lines: Array, mode: int = MODE_INTERACTIVE) -> void:
 	if clean_lines.is_empty():
 		return
 	if _active:
-		_queue.append({"lines": clean_lines, "mode": mode})
+		_queue.append({"lines": clean_lines, "mode": mode, "font_scale": font_scale, "world_anchor": world_anchor})
 		return
-	_begin_lines(clean_lines, mode)
+	_begin_lines(clean_lines, mode, font_scale, world_anchor)
 
 
-func _begin(file_path: String, mode: int) -> void:
-	_begin_lines(_load_lines(file_path), mode)
+func _begin(file_path: String, mode: int, font_scale: float = 1.0, world_anchor: Variant = null) -> void:
+	_begin_lines(_load_lines(file_path), mode, font_scale, world_anchor)
 
 
-func _begin_lines(lines: Array, mode: int) -> void:
+func _begin_lines(lines: Array, mode: int, font_scale: float = 1.0, world_anchor: Variant = null) -> void:
 	_active = true
 	dialogue_started.emit()
 	print("[dialogue_manager] begin mode=%d lines=%d" % [mode, lines.size()])
 	if mode == MODE_GLITCH:
-		_glitch_box.show_dialogue(lines)
+		_glitch_box.show_dialogue(lines, font_scale, world_anchor)
 	else:
 		_box.show_dialogue(lines, mode)
 
@@ -96,6 +96,6 @@ func _on_box_finished() -> void:
 	if not _queue.is_empty():
 		var next: Dictionary = _queue.pop_front()
 		if next.has("lines"):
-			_begin_lines(next["lines"], next["mode"])
+			_begin_lines(next["lines"], next["mode"], next.get("font_scale", 1.0), next.get("world_anchor", null))
 		else:
-			_begin(next["file_path"], next["mode"])
+			_begin(next["file_path"], next["mode"], next.get("font_scale", 1.0), next.get("world_anchor", null))

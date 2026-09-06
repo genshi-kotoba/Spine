@@ -98,6 +98,8 @@ var _hold_pressed: bool = false
 var _hold_time: float = 0.0
 var _hold_reached: bool = false
 var _hold_burst_done: bool = false
+## 开局首次缺氧前锁住空格输入；倒计时仍会正常流逝。
+var _initial_breathe_locked: bool = true
 
 
 func _ready() -> void:
@@ -157,6 +159,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if StoryMonitor.input_locked:
 		return
+	if _initial_breathe_locked:
+		return
 	if event.is_action_pressed("breathe"):
 		_begin_breath_hold()
 	elif event.is_action_released("breathe"):
@@ -165,6 +169,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## 每帧同步物理按键状态。这样即使某个 UI/节点先消费 InputEvent，缺氧中的长按仍会启动。
 func _sync_breathe_input() -> void:
+	if _initial_breathe_locked:
+		_reset_hold()
+		return
 	if Input.is_action_pressed("breathe"):
 		if not _hold_pressed:
 			_begin_breath_hold()
@@ -198,6 +205,10 @@ func breathe(immediate_clear: bool = false) -> void:
 		_bubble.restore()
 	_clear_hypoxia(immediate_clear)
 	breathed.emit()
+
+
+func is_breathe_input_unlocked() -> bool:
+	return _enabled and not _initial_breathe_locked
 
 
 ## 特异点通过时由 Corridor 调用：结束本次长按，并重新给予完整缺氧倒计时。
@@ -268,6 +279,9 @@ func _sync_bubble_capacity() -> void:
 func _start_hypoxia() -> void:
 	if _hypoxia_active:
 		return
+	# 首次缺氧前使用加速倒计时；缺氧开始后恢复正常速度并开放空格。
+	_initial_breathe_locked = false
+	_countdown_rate_multiplier = 1.0
 	_hypoxia_active = true
 	_hypoxia_exiting = false
 	_shrink_t = 0.0

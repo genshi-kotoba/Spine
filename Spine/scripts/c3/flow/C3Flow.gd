@@ -53,7 +53,7 @@ const INTRO_FIRST_TEXT := "尝试按下空格深呼吸"
 const INTRO_SECOND_TEXT := "身边的气泡标识当前氧气剩余\n氧气不足时，气泡破裂，你会陷入缺氧"
 const INTRO_THIRD_TEXT := "当然，对于我们\n缺氧或许也并不会怎样……"
 const INTRO_TEXT_DURATION := 4.0
-const INTRO_BREATH_RATE := 2.0
+const INTRO_BREATH_RATE := 4.0
 
 ## 客厅（第二间 room）电视柜绑定在房间左侧，避免误落到右侧门附近。
 const LIVING_TV_X := 1480.0
@@ -85,7 +85,6 @@ signal story_sfx_requested(cue: String)
 @export var room_table_path: NodePath
 @export var items_root_path: NodePath
 @export var bedroom_items_path: NodePath
-@export var ok_popup_path: NodePath
 @export var camera_path: NodePath
 @export var corridor_assembly_path: NodePath
 ## 独立卧室阶段需要隐藏的走廊边界视觉；碰撞保留，避免流程切回走廊时重建物理体。
@@ -140,6 +139,7 @@ var _intro_text_elapsed: float = 0.0
 var _intro_floating_text: Node = null
 var _flow_floating_text: Node = null
 var _flow_text_clear_x: float = INF
+var _flow_text_clear_time_msec: int = 0
 var _flow_text_world_anchor := Vector2.ZERO
 var _flow_text_follow_player := false
 var _flow_dialogue_action: String = ""
@@ -271,7 +271,7 @@ func on_paper_collected(paper_id: String, score: int) -> void:
 			"这里也有一张考了100分的试卷",
 			"可是，这才两张",
 			"书房没有找过，要不去书房看看？",
-		], "")
+		], "kitchen_study_hint")
 	elif paper_id == "study_a" or paper_id == "study_b":
 		# 文本按玩家实际拾取顺序决定，不按场景中纸张的资源 ID 决定。
 		if _study_papers_collected <= 1:
@@ -328,6 +328,9 @@ func _on_flow_dialogue_finished() -> void:
 			_show_flow_floating("外面什么声音，怎么回事?", Vector2(1080.0, 640.0), 1200.0, false)
 			_final_study_dialogue_started = true
 			call_deferred("_trigger_light_show")
+		"kitchen_study_hint":
+			# 厨房对白结束后给出短暂方向提示，箭头跟随角色并始终朝左。
+			_show_flow_floating("←", Vector2(220.0, -250.0), INF, true, 4.0)
 		"bedroom_arrival":
 			# Arrival text is intentionally terminal; wall interactions remain available afterwards.
 			pass
@@ -344,11 +347,15 @@ func _on_flow_dialogue_finished() -> void:
 			pass
 
 
-func _show_flow_floating(value: String, world_anchor: Vector2, clear_x: float = INF, follow_player: bool = false) -> void:
+func _show_flow_floating(value: String, world_anchor: Vector2, clear_x: float = INF, follow_player: bool = false, duration_sec: float = INF) -> void:
 	if _flow_floating_text == null or not is_instance_valid(_flow_floating_text):
 		return
 	if _flow_floating_text.has_method("set_phrases"):
 		_flow_floating_text.call("set_phrases", PackedStringArray([value]))
+	elif _flow_floating_text is Label:
+		(_flow_floating_text as Label).text = value
+	elif _flow_floating_text is RichTextLabel:
+		(_flow_floating_text as RichTextLabel).text = value
 	_flow_text_world_anchor = world_anchor
 	_flow_text_follow_player = follow_player
 	_update_flow_floating_position()
@@ -356,6 +363,7 @@ func _show_flow_floating(value: String, world_anchor: Vector2, clear_x: float = 
 	if _flow_floating_text.has_method("set_revealed"):
 		_flow_floating_text.call("set_revealed", true, 0.2)
 	_flow_text_clear_x = clear_x
+	_flow_text_clear_time_msec = 0 if is_inf(duration_sec) else Time.get_ticks_msec() + int(maxf(duration_sec, 0.0) * 1000.0)
 
 
 func _hide_flow_floating() -> void:
@@ -367,6 +375,7 @@ func _hide_flow_floating() -> void:
 		_flow_floating_text.visible = false
 	_flow_text_clear_x = INF
 	_flow_text_follow_player = false
+	_flow_text_clear_time_msec = 0
 
 
 func _update_flow_floating_position() -> void:
@@ -1083,12 +1092,18 @@ func _set_intro_text(value: String) -> void:
 		return
 	if _intro_floating_text.has_method("set_phrases"):
 		_intro_floating_text.call("set_phrases", PackedStringArray([value]))
+	elif _intro_floating_text is Label:
+		(_intro_floating_text as Label).text = value
+	elif _intro_floating_text is RichTextLabel:
+		(_intro_floating_text as RichTextLabel).text = value
 	var floating_canvas := _intro_floating_text as CanvasItem
 	if floating_canvas != null:
 		floating_canvas.visible = true
 		floating_canvas.modulate.a = 0.0
 	if _intro_floating_text.has_method("set_revealed"):
 		_intro_floating_text.call("set_revealed", true, 0.2)
+	elif floating_canvas != null:
+		floating_canvas.modulate.a = 1.0
 
 
 func _hide_intro_text() -> void:
@@ -1111,10 +1126,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_intro_waiting_breath = false
 		_intro_text_stage = 2
 		_intro_text_elapsed = 0.0
-		if _breath != null and _breath.has_method("breathe"):
+		if _breath != null and _breath.has_method("is_breathe_input_unlocked") \
+			and _breath.call("is_breathe_input_unlocked") and _breath.has_method("breathe"):
 			_breath.call("breathe", true)
-			if _breath.has_method("set_countdown_rate"):
-				_breath.call("set_countdown_rate", 1.0, false)
 		_set_intro_text(INTRO_SECOND_TEXT)
 
 
@@ -1146,8 +1160,6 @@ func _update_intro(delta: float) -> void:
 		_hide_intro_text()
 		_intro_text_stage = 4
 		_intro_active = false
-		if _breath != null and _breath.has_method("set_countdown_rate"):
-			_breath.call("set_countdown_rate", 1.0, false)
 
 
 ## 绑定主 Player 到两个自动门（左门按流程锁定/解锁，右门常开）。
@@ -1198,7 +1210,7 @@ func _on_door_body_exited(body: Node2D, door: Node) -> void:
 		door.close()
 
 
-## 使主相机当前(玩家 Camera2D)——OkPopup 世界→屏幕换算需相机变换。
+## 使主相机当前(玩家 Camera2D)——交互提示使用世界→屏幕换算需相机变换。
 func _activate_camera() -> void:
 	var cam: Camera2D = null
 	if camera_path != NodePath():
@@ -1240,7 +1252,7 @@ func _connect_scene_signals() -> void:
 	# E 键 → 范围内 item touched()（问题三：补 Player.interact_pressed 链路）
 	if _player != null and _player.has_signal("interact_pressed"):
 		_player.connect("interact_pressed", Callable(self, "_on_interact_pressed"))
-	# ok 占位提示：连接每个 item 的 interaction_succeeded → OkPopup.show_ok
+	# 交互成功保留轻微 ItemShake 占位，不再显示“OK”提示。
 	for it in _find_items():
 		if it.has_signal("interaction_succeeded"):
 			it.connect("interaction_succeeded", Callable(self, "_on_item_succeeded").bind(it))
@@ -1312,7 +1324,7 @@ func _on_corridor_end_interaction_signal() -> void:
 		on_corridor_end_interaction(1)
 
 
-## item 确定交互成功 → ok 占位提示（黑字，短暂显示）。
+## item 确定交互成功 → 轻微反馈占位，不显示“OK”。
 func _on_item_succeeded(it: Node) -> void:
 	if it is Node2D:
 		var shaker := it.get_node_or_null("ItemShake") as ItemShake
@@ -1321,11 +1333,6 @@ func _on_item_succeeded(it: Node) -> void:
 			shaker.name = "ItemShake"
 			(it as Node2D).add_child(shaker)
 		shaker.shake(4.0, 0.18)
-	if ok_popup_path != NodePath():
-		var pop := get_node_or_null(ok_popup_path)
-		if pop != null and pop.has_method("show_ok"):
-			var pos: Vector2 = it.global_position if it is Node2D else Vector2.ZERO
-			pop.show_ok(pos)
 
 
 ## E 键按下 → 对统一范围判定命中的 item 调 touched()。
@@ -1469,6 +1476,10 @@ func _process(delta: float) -> void:
 		_show_flow_subtitle(["这间房子相当整洁，电视柜上一丝灰尘都没有留下"], "")
 	if _flow_floating_text != null and _flow_floating_text.visible \
 		and _player.global_position.x >= _flow_text_clear_x:
+		_hide_flow_floating()
+	if _flow_floating_text != null and _flow_floating_text.visible \
+		and _flow_text_clear_time_msec > 0 \
+		and Time.get_ticks_msec() >= _flow_text_clear_time_msec:
 		_hide_flow_floating()
 	if (current_stage == STAGE_CORRIDOR or current_stage == STAGE_CORRIDOR_END) \
 		and not _corridor_end_hint_shown and _corridor != null \

@@ -12,7 +12,7 @@ func _ready() -> void:
 	states = {
 		"idle": {
 			"texture": "res://assets/sprites/mail_icon.png",
-			"size": Vector2(50, 50),
+			"size": Vector2(256, 256),
 		},
 	}
 	super._ready()

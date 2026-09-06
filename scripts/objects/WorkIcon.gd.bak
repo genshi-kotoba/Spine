@@ -1,10 +1,12 @@
 class_name WorkIcon
 extends InteractableObject
 ## WorkIcon — 工作图标
-## 点击后切换场景到 c3_level（场景跳转非状态机变更，直接执行）。
+## 点击后发出 open_work 信号，由 ComputerScreen 打开 work_screen 弹层
+## （docs/desktop_screens_constraints.md §4.4；取消点击直接跳场景）。
 
 
-const NEXT_SCENE := "res://scenes/c3_level.tscn"
+## 请求打开工作弹层
+signal open_work
 
 
 func _ready() -> void:
@@ -17,6 +19,6 @@ func _ready() -> void:
 	super._ready()
 
 
-## 点击 → 切换到 c3_floor
+## 点击 → 请求打开工作弹层
 func interact() -> void:
-	get_tree().change_scene_to_file(NEXT_SCENE)
+	open_work.emit()

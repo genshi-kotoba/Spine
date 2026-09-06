@@ -12,10 +12,10 @@ C5 楼层：单背景 + 3 个隐形触发区顺序唤起 tr1/tr2/tr3 对话 + �
 
 - **D1 文本路径**：prompt 写 `res://dialogues/tr*.txt`、`res://dialogues/1~7.txt`，但用户已把 10 份**真实文本**放在
   `res://texts/`（tr1~tr3.txt、1~7.txt，非占位）。以实际位置 **texts/** 为准，不再创建占位、不挪动文件。
-- **D2 C5.png 缺失**：`res://assets/sprites/C5.png` 当前不存在。按 prompt：背景节停止、不找替代。
-  场景 Background/Rect 先放**纯色占位**（Polygon2D 无贴图，Color(0.10,0.10,0.12)），规则预留：
-  高度 1280、宽度 = 1280 × 素材宽高比、uv = 素材原生尺寸、map_max_x = 实际宽度。补图后按此接线。
-- **D3 地图宽度占位**：C5.png 未定 → 暂用与 c4 相同的 **3840**（`map_max_x = 3840`），补图后按实测改。
+- **D2 C5.png 缺失（已解决 2026-09-06）**：`res://assets/sprites/C5.png` 已到位，实测 **2172×724**（宽高比 3:1）。
+  按预留规则接线：高度 1280 → 宽度 = 1280 × 3 = **3840**，uv = 原生尺寸 (2172,724)，接法与 c4_floor Background/Rect 完全一致。
+  ~~场景 Background/Rect 先放纯色占位（Color(0.10,0.10,0.12)）~~ 已替换为纹理。
+- **D3 地图宽度（已确认 2026-09-06）**：实测宽度 3840，与占位值一致 → `map_max_x = 3840` 不变，触发区 960/1920/2880 均分三段亦不变。
 - **D4 退出出口**：EndingTextSequence 播完发 `sequence_finished`；`get_tree().quit()` 由 C5Floor 执行（组件不自带退出）。
 
 ## 3. 场景骨架（c5_floor.tscn，继承 floor_template.tscn）
@@ -69,4 +69,4 @@ C5 楼层：单背景 + 3 个隐形触发区顺序唤起 tr1/tr2/tr3 对话 + �
 只新增/改：c5_floor.tscn、C5Floor.gd、EndingTextSequence.gd、WorkScreen.gd（一处）、本文档。
 不改：输入映射、其他场景/脚本。
 验收：headless c5_floor 加载 0 报错；运行走查三触发区 → 渐黑 → 七段序列 → 自动退出；v4 按钮可用进 c5。
-待办（补 C5.png 后）：背景贴图接线 + map_max_x 按实测宽度更新 + 触发区 x 按新宽度重排。
+~~待办（补 C5.png 后）：背景贴图接线 + map_max_x 按实测宽度更新 + 触发区 x 按新宽度重排。~~ 已完成（2026-09-06）：纹理接线完成，map_max_x=3840 与触发区 960/1920/2880 实测均无需改动。

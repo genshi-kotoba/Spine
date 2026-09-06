@@ -2,7 +2,7 @@ class_name DialogueBox
 extends CanvasLayer
 ## DialogueBox — 剧情对话 UI
 ## 文本左右居中、距画面下边缘 100px（锚点布局，分辨率变化保持相对位置）。
-## 交互模式：Enter 切句 + 1s 冷却 + 锁定输入；自动模式：每句 4s 自动切换，不锁输入。
+## 交互模式：任意键切句 + 1s 冷却 + 锁定输入；自动模式：每句 4s 自动切换，不锁输入。
 
 ## 播完一段对话时发出（DialogueManager 监听以驱动队列）
 signal dialogue_finished
@@ -62,8 +62,7 @@ func next_line() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _active or _mode != MODE_INTERACTIVE:
 		return
-	if event is InputEventKey and event.pressed and not event.echo \
-		and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
+	if event is InputEventKey and event.pressed and not event.echo:
 		# 全程拦截按键，防止穿透到游戏场景
 		get_viewport().set_input_as_handled()
 		if Time.get_ticks_msec() < _cooldown_until_msec:

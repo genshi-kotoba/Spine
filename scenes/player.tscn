@@ -1,10 +1,22 @@
-[gd_scene load_steps=3 format=3 uid="uid://8nar38nj0gwg"]
+[gd_scene load_steps=5 format=3 uid="uid://8nar38nj0gwg"]
 
 [ext_resource type="Script" uid="uid://c6yq4y7ih1xb6" path="res://scripts/player/Player.gd" id="1"]
 [ext_resource type="Resource" path="res://scripts/player/default_player_motion.tres" id="2"]
+[ext_resource type="Texture2D" uid="uid://cxuj3rpgynigp" path="res://assets/sprites/static.png" id="3"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(32, 64)
+
+[sub_resource type="SpriteFrames" id="2"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3")
+}],
+"loop": true,
+"name": &"static",
+"speed": 5.0
+}]
 
 [node name="Player" type="CharacterBody2D" unique_id=1238261288]
 z_index = 5
@@ -14,8 +26,11 @@ motion_profile = ExtResource("2")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2070503681]
 shape = SubResource("1")
 
-[node name="Visual" type="Polygon2D" parent="." unique_id=585462095]
-color = Color(0.9, 0.86, 0.8, 1)
-polygon = PackedVector2Array(-16, -32, 16, -32, 16, 32, -16, 32)
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(76.48, -148.23)
+scale = Vector2(0.5348, 0.5348)
+sprite_frames = SubResource("2")
+animation = &"static"
+autoplay = "static"
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1837632655]

@@ -9,9 +9,9 @@ extends CanvasLayer
 signal sequence_finished
 
 ## 字号
-const FONT_SIZE := 18
+const FONT_SIZE := 68
 ## 行间距（= 字号的一半）
-const LINE_SPACING := 9
+const LINE_SPACING := 34
 ## 单行亮起时长（秒）
 const LINE_FADE_SEC := 1.0
 ## 行间停顿（秒）：一行亮起完成后等待再亮起下一行

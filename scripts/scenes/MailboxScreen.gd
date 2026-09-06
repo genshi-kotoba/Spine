@@ -43,7 +43,7 @@ func _ready() -> void:
 	_dim.gui_input.connect(_on_dim_gui_input)
 	MailWorkManager.mails_changed.connect(_on_mails_changed)
 	_reload_mails()
-	_show_mail(0)
+	_show_mail(_mails.size() - 1)
 
 
 func _center_panel() -> void:
@@ -54,7 +54,10 @@ func _center_panel() -> void:
 ## 重取已解锁列表并钳制当前索引
 func _reload_mails() -> void:
 	_mails = MailWorkManager.get_unlocked_mails()
-	_current = clamp(_current, 0, _mails.size() - 1)
+	if _mails.is_empty():
+		_current = 0
+	else:
+		_current = clampi(_current, 0, _mails.size() - 1)
 
 
 ## 显示指定索引邮件并播放刷新动画（越界 = 重显当前，不循环跳变）

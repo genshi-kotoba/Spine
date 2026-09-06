@@ -86,6 +86,7 @@ func _on_mailbox_closed() -> void:
 func _on_work_screen_closed() -> void:
 	_work_screen = null
 	StoryMonitor.unlock_input()
+	_work_icon.show_reminder()
 
 
 ## 调试键 R（docs/save_system_refactor_constraints.md 决策 D2/D4）：

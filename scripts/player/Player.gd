@@ -44,6 +44,12 @@ var _reversal_active := false
 ## before normal movement can be re-armed.
 var _movement_rearm_required := false
 
+## The source PNGs share a canvas but their opaque bounds differ by a couple of
+## pixels. Keep the visual foot line stable when AnimatedSprite2D changes frame.
+var _sprite_base_position: Vector2 = Vector2.ZERO
+var _frame_anchor_offsets: Dictionary = {}
+var _last_anchor_key: String = ""
+
 
 func suspend_movement_until_released() -> void:
 	velocity = Vector2.ZERO
@@ -180,8 +186,11 @@ func _snap_to_floor() -> void:
 
 
 func _ready() -> void:
+	_sprite_base_position = _sprite.position
+	_build_frame_anchor_offsets()
 	# 初始朝向 RIGHT：素材朝左 → 反转显示（flip_h 唯一出口）
 	_apply_facing()
+	_sync_sprite_frame_anchor()
 	_debug_fall = OS.get_cmdline_user_args().has("--debug-fall")
 	if _debug_fall:
 		print("[player] mask=%d layer=%d" % [collision_mask, collision_layer])
@@ -193,8 +202,65 @@ func _ready() -> void:
 				print("[player] floor shape=%s size=%s disabled=%s shape_pos=%s" % [cs.shape.get_class(), str(cs.shape.size), str(cs.disabled), str(cs.position)])
 			else:
 				print("[player] floor has NO CollisionShape2D")
-		else:
-			print("[player] Environment/Floor NOT FOUND")
+	else:
+		print("[player] Environment/Floor NOT FOUND")
+
+
+func _process(_delta: float) -> void:
+	_sync_sprite_frame_anchor()
+
+
+func _build_frame_anchor_offsets() -> void:
+	_frame_anchor_offsets.clear()
+	if _sprite == null or _sprite.sprite_frames == null:
+		return
+	var baseline_texture: Texture2D = _sprite.sprite_frames.get_frame_texture(STATIC_ANIM, 0)
+	var baseline_rect := _texture_used_rect(baseline_texture)
+	if baseline_rect.size == Vector2i.ZERO:
+		return
+	var baseline_bottom: float = float(baseline_rect.position.y + baseline_rect.size.y)
+	var baseline_center_x: float = float(baseline_rect.position.x) + float(baseline_rect.size.x) * 0.5
+	var scale_x: float = absf(_sprite.scale.x)
+	var scale_y: float = absf(_sprite.scale.y)
+	for animation_name: StringName in [STATIC_ANIM, WALK_ANIM]:
+		var frame_count: int = _sprite.sprite_frames.get_frame_count(animation_name)
+		for frame_index: int in frame_count:
+			var texture: Texture2D = _sprite.sprite_frames.get_frame_texture(animation_name, frame_index)
+			var used_rect := _texture_used_rect(texture)
+			if used_rect.size == Vector2i.ZERO:
+				continue
+			var bottom: float = float(used_rect.position.y + used_rect.size.y)
+			var center_x: float = float(used_rect.position.x) + float(used_rect.size.x) * 0.5
+			var source_offset := Vector2(baseline_center_x - center_x, baseline_bottom - bottom)
+			_frame_anchor_offsets[_frame_anchor_key(animation_name, frame_index)] = Vector2(
+				source_offset.x * scale_x,
+				source_offset.y * scale_y
+			)
+
+
+func _texture_used_rect(texture: Texture2D) -> Rect2i:
+	if texture == null:
+		return Rect2i()
+	var image: Image = texture.get_image()
+	return image.get_used_rect() if image != null else Rect2i()
+
+
+func _frame_anchor_key(animation_name: StringName, frame_index: int) -> String:
+	return "%s:%d" % [String(animation_name), frame_index]
+
+
+func _sync_sprite_frame_anchor() -> void:
+	if _sprite == null or _sprite.sprite_frames == null:
+		return
+	var frame_key := _frame_anchor_key(_sprite.animation, _sprite.frame)
+	var key := "%s:%s" % [frame_key, "flip" if _sprite.flip_h else "normal"]
+	if key == _last_anchor_key:
+		return
+	_last_anchor_key = key
+	var offset: Vector2 = _frame_anchor_offsets.get(frame_key, Vector2.ZERO)
+	if _sprite.flip_h:
+		offset.x = -offset.x
+	_sprite.position = _sprite_base_position + offset
 
 
 ## 按下 interact(E) 时发射 interact_pressed（先查输入锁；与 LevelScene 既有 E 键处理写法一致）

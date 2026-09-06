@@ -2,3 +2,4 @@
 shots/
 .workbuddy/
 *.log
+build/

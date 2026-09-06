@@ -302,14 +302,3 @@ texture = ExtResource("13")
 [connection signal="interact_pressed" from="Player" to="Items/Waste10" method="touched"]
 [connection signal="interact_pressed" from="Player" to="Items/Waste11" method="touched"]
 [connection signal="interact_pressed" from="Player" to="Items/Waste12" method="touched"]
-
-[node name="EndingLayer" type="CanvasLayer" parent="."]
-layer = 50
-
-[node name="WhiteScreen" type="ColorRect" parent="EndingLayer"]
-modulate = Color(1, 1, 1, 0)
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-color = Color(1, 1, 1, 1)

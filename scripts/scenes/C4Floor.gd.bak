@@ -25,16 +25,6 @@ const DIALOGUE_PATHS: Dictionary = {
 ## process_flags 已播标记键前缀（键 = FLAG_PREFIX + str(阈值)）
 const FLAG_PREFIX: String = "c4_dialogue_shown_"
 
-## 白屏转场时长（秒，docs/c4_end_transition_constraints.md §3.2）
-const END_FADE_SEC: float = 2.0
-
-## 第 12 阈值对话已起、等待其 dialogue_finished
-var _ending_pending: bool = false
-## 结局转场防重入（整局一次）
-var _end_done: bool = false
-
-@onready var _white_screen: ColorRect = $EndingLayer/WhiteScreen
-
 
 func _ready() -> void:
 	super._ready()
@@ -54,38 +44,8 @@ func _on_state_changed(object_id: String, new_state: String) -> void:
 		if n >= t and not GameState.get_process_flag(FLAG_PREFIX + str(t)):
 			GameState.set_process_flag(FLAG_PREFIX + str(t), true)
 			print("[c4_floor] waste count=%d, start dialogue %d" % [n, t])
-			if t == THRESHOLDS[THRESHOLDS.size() - 1] and not _end_done:
-				_ending_pending = true
-				if not DialogueManager.dialogue_finished.is_connected(_on_dialogue_finished):
-					DialogueManager.dialogue_finished.connect(_on_dialogue_finished)
 			DialogueManager.start_dialogue(DIALOGUE_PATHS[t], DialogueManager.MODE_INTERACTIVE)
 			break
-
-
-## 最后一段对话结束 → 2s 渐白 → 切 computer_screen（解锁侧由 MailWorkManager 条件二自动完成）
-func _on_dialogue_finished() -> void:
-	if not _ending_pending or _end_done:
-		return
-	_end_done = true
-	_ending_pending = false
-	if DialogueManager.dialogue_finished.is_connected(_on_dialogue_finished):
-		DialogueManager.dialogue_finished.disconnect(_on_dialogue_finished)
-	StoryMonitor.lock_input()
-	if _white_screen == null:
-		push_error("[c4_floor] WhiteScreen 节点缺失，直接完成转场")
-		_finish_end_transition()
-		return
-	_white_screen.modulate.a = 0.0
-	var tween := create_tween()
-	tween.tween_property(_white_screen, "modulate:a", 1.0, END_FADE_SEC)
-	await tween.finished
-	_finish_end_transition()
-
-
-## 转场收尾：解锁输入（保险）→ 切桌面（mail4/work4 由 MailWorkManager 条件二到达即生效）
-func _finish_end_transition() -> void:
-	StoryMonitor.unlock_input()
-	get_tree().change_scene_to_file("res://scenes/computer_screen.tscn")
 
 
 ## 已消失 waste 计数（GameState 状态为 "1" 的个数）

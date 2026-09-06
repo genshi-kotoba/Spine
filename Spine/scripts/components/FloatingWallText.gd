@@ -1,8 +1,10 @@
 @tool
 class_name FloatingWallText
 extends Node2D
-## 可直接实例化的墙面悬浮文字组件。
-## 负责确定性排版、错位阴影、大小/倾斜变化、轻微漂浮与抖动，不依赖关卡或全局单例。
+## 可直接实例化的破碎悬浮文字组件。
+## 复用 main 分支的 glitch_char shader：逐字散落、切片错位、RGB 分离、闪烁和抖动。
+
+const GLITCH_SHADER := preload("res://assets/shaders/glitch_char.gdshader")
 
 @export_group("Content")
 @export var phrases: PackedStringArray = PackedStringArray([
@@ -87,9 +89,12 @@ var _content: Node2D
 var _entries: Array[Dictionary] = []
 var _elapsed := 0.0
 var _rebuild_queued := false
+var _glitch_material: ShaderMaterial = null
 
 
 func _ready() -> void:
+	_glitch_material = ShaderMaterial.new()
+	_glitch_material.shader = GLITCH_SHADER
 	_ensure_content()
 	_rebuild()
 	set_process(animated or Engine.is_editor_hint())
@@ -108,11 +113,10 @@ func _process(delta: float) -> void:
 		var phase := float(entry["phase"])
 		var base_position := entry["base_position"] as Vector2
 		var base_rotation := float(entry["base_rotation"])
-		var slow_wave := sin(_elapsed * motion_speed + phase)
 		var micro_x := sin(_elapsed * motion_speed * 5.7 + phase * 1.3) * jitter_amount
 		var micro_y := sin(_elapsed * motion_speed * 7.9 + phase * 0.7) * jitter_amount * 0.55
-		holder.position = base_position + Vector2(micro_x, slow_wave * float_amount + micro_y)
-		holder.rotation = base_rotation + deg_to_rad(sin(_elapsed * motion_speed * 4.3 + phase) * jitter_amount * 0.13)
+		holder.position = base_position + Vector2(micro_x, micro_y)
+		holder.rotation = base_rotation
 
 
 ## 运行时替换全部文字；布局与动画会立即重建。
@@ -241,38 +245,27 @@ func _rebuild() -> void:
 
 func _add_label(holder: Node2D, value: String, font_size: int, measured: Vector2, accent: bool) -> void:
 	var label_position := -measured * 0.5
-	# Soft white halo behind the glyphs; the dark outline keeps the text readable over the scene.
-	var glow := Label.new()
-	glow.name = "Glow"
-	glow.text = value
-	glow.position = label_position
-	glow.add_theme_font_override("font", _font)
-	glow.add_theme_font_size_override("font_size", font_size)
-	glow.add_theme_color_override("font_color", glow_color)
-	glow.add_theme_color_override("font_outline_color", glow_color)
-	glow.add_theme_constant_override("outline_size", outline_size + 5)
-	holder.add_child(glow)
-
-	var displaced := Label.new()
-	displaced.name = "OffsetPrint"
-	displaced.text = value
-	displaced.position = label_position + Vector2(4.0, 2.0)
-	displaced.add_theme_font_override("font", _font)
-	displaced.add_theme_font_size_override("font_size", font_size)
-	displaced.add_theme_color_override("font_color", accent_color if not accent else text_color.darkened(0.25))
-	displaced.modulate.a = 0.48
-	holder.add_child(displaced)
-
-	var label := Label.new()
-	label.name = "Text"
-	label.text = value
-	label.position = label_position
-	label.add_theme_font_override("font", _font)
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", Color.WHITE if not accent else text_color)
-	label.add_theme_color_override("font_outline_color", shadow_color)
-	label.add_theme_constant_override("outline_size", outline_size)
-	holder.add_child(label)
+	# 每个字独立生成，沿用 MODE_GLITCH 的右移步进与上下 10~30px 散落。
+	var char_rng := RandomNumberGenerator.new()
+	char_rng.seed = hash(value) ^ seed_value
+	var cursor := label_position
+	for i in range(value.length()):
+		var ch := value.substr(i, 1)
+		var glyph := Label.new()
+		glyph.name = "Glyph%02d" % i
+		glyph.text = ch
+		glyph.position = cursor + Vector2(0.0, char_rng.randf_range(-30.0, 30.0))
+		glyph.rotation = deg_to_rad(char_rng.randf_range(-5.0, 5.0))
+		glyph.scale = Vector2.ONE * char_rng.randf_range(0.9, 1.1)
+		glyph.add_theme_font_override("font", _font)
+		glyph.add_theme_font_size_override("font_size", font_size)
+		glyph.add_theme_color_override("font_color", Color.WHITE if not accent else text_color)
+		glyph.add_theme_color_override("font_outline_color", shadow_color)
+		glyph.add_theme_constant_override("outline_size", outline_size)
+		if _glitch_material != null:
+			glyph.material = _glitch_material
+		holder.add_child(glyph)
+		cursor.x += _font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 
 
 func _fit_label_size(value: String, initial_size: int, available_width: float) -> Vector2:

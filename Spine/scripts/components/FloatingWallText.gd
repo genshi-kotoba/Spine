@@ -5,6 +5,7 @@ extends Node2D
 ## 复用 main 分支的 glitch_char shader：逐字散落、切片错位、RGB 分离、闪烁和抖动。
 
 const GLITCH_SHADER := preload("res://assets/shaders/glitch_char.gdshader")
+const CHAR_INTERVAL_SEC := 0.15
 
 @export_group("Content")
 @export var phrases: PackedStringArray = PackedStringArray([
@@ -128,16 +129,19 @@ func set_phrases(value: PackedStringArray) -> void:
 func play_entrance() -> void:
 	for i in range(_entries.size()):
 		var holder := _entries[i]["holder"] as Node2D
-		holder.modulate.a = 0.0
-		holder.scale = Vector2(0.96, 0.96)
-		if entrance_duration <= 0.0:
-			holder.modulate.a = 1.0
-			holder.scale = Vector2.ONE
-			continue
-		var tween := create_tween()
-		tween.tween_interval(float(i) * entrance_stagger)
-		tween.tween_property(holder, "modulate:a", 1.0, entrance_duration).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-		tween.parallel().tween_property(holder, "scale", Vector2.ONE, entrance_duration).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		holder.modulate.a = 1.0
+		holder.scale = Vector2.ONE
+		for j in range(holder.get_child_count()):
+			var glyph := holder.get_child(j) as CanvasItem
+			if glyph == null:
+				continue
+			glyph.modulate.a = 0.0
+			if entrance_duration <= 0.0:
+				glyph.modulate.a = 1.0
+				continue
+			var tween := create_tween()
+			tween.tween_interval(float(j) * CHAR_INTERVAL_SEC)
+			tween.tween_property(glyph, "modulate:a", 1.0, entrance_duration).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 
 
 ## 供流程脚本控制整体淡入/淡出，不改变各条文字配置。

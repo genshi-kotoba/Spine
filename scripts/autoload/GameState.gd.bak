@@ -53,6 +53,15 @@ func save_game() -> void:
 	file.store_string(JSON.stringify({"object_states": object_states, "process_flags": process_flags}))
 
 
+## 删除存档并清空内存状态（init_button：游戏进度从头开始）
+func delete_save() -> void:
+	object_states.clear()
+	process_flags.clear()
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	print("[game_state] save deleted")
+
+
 func load_game() -> void:
 	if not FileAccess.file_exists(SAVE_PATH):
 		object_states = {}

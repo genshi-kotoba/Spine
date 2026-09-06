@@ -69,20 +69,6 @@ func _recheck() -> void:
 		print("[mail_work] work version -> %d" % target_work)
 
 
-## 调试入口（docs/save_system_refactor_constraints.md 决策 D3）：
-## 直接设置邮件解锁列表与 work 版本并广播（弹层开着即时刷新）。
-## 写入触发的 _recheck 重入由幂等设计收敛；仅供调试键/测试使用。
-func debug_set_unlock(mails: Array[int], work_version: int) -> void:
-	var parts: PackedStringArray = []
-	for m: int in mails:
-		parts.append(str(m))
-	GameState.set_object_state(KEY_MAILS, ",".join(parts))
-	mails_changed.emit()
-	GameState.set_object_state(KEY_WORK, str(work_version))
-	work_version_changed.emit()
-	print("[mail_work] debug unlock: mails=%s work=%d" % [str(mails), work_version])
-
-
 ## 已解锁邮件编号（升序；空存档 = [1]；始终含 1）
 func get_unlocked_mails() -> Array[int]:
 	var result: Array[int] = [1]

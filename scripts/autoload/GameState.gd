@@ -6,6 +6,11 @@ signal state_changed(object_id: String, new_state: String)
 
 const SAVE_PATH := "user://savegame.json"
 
+## 存档总开关（docs/save_system_refactor_constraints.md 决策 D1）：
+## false = 暂时废弃存档系统——每次启动不读档（全状态机回初始）、退出不写档；
+## 磁盘旧存档保留但完全忽略。恢复存档系统只需改回 true。
+const SAVE_ENABLED := false
+
 ## key = 对象唯一 ID，value = 该对象状态机当前状态
 var object_states: Dictionary = {}
 
@@ -16,12 +21,13 @@ var process_flags: Dictionary = {}
 
 
 func _ready() -> void:
-	load_game()
+	if SAVE_ENABLED:
+		load_game()
 
 
-## 退出时自动存档（godot_c2_c4_prompt 存档验证：中途保存退出重进可恢复）
+## 退出时自动存档（SAVE_ENABLED=false 时跳过：暂时废弃存档，每次重开全重置）
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and SAVE_ENABLED:
 		save_game()
 
 

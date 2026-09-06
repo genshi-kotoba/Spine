@@ -86,20 +86,15 @@ offset_top = 560.0
 offset_right = 1360.0
 offset_bottom = 620.0
 mouse_filter = 2
-theme_override_font_sizes/normal_font = 32
-theme_override_font_sizes/bold_font = 32
-theme_override_font_sizes/italics_font = 32
-theme_override_font_sizes/bold_italics_font = 32
 bbcode_enabled = true
 horizontal_alignment = 1
 
 [node name="LinkBody" type="RichTextLabel" parent="LinkLayer"]
 modulate = Color(1, 1, 1, 0)
 offset_left = 560.0
-offset_top = 660.0
+offset_top = 640.0
 offset_right = 1360.0
-offset_bottom = 720.0
+offset_bottom = 700.0
 mouse_filter = 2
-theme_override_font_sizes/normal_font = 32
 bbcode_enabled = true
 horizontal_alignment = 1

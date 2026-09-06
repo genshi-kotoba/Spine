@@ -48,6 +48,8 @@ shape = SubResource("1")
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 position = Vector2(76.48, -148.23)
 scale = Vector2(0.5348, 0.5348)
+centered = true
+offset = Vector2(0, 0)
 sprite_frames = SubResource("2")
 animation = &"static"
 autoplay = "static"

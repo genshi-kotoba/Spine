@@ -423,6 +423,10 @@ func _resolve_refs() -> void:
 	_mask = _resolve_mask()
 	_player = _resolve_player()
 	_screen_shake = _resolve_screen_shake()
+	# Keep the vessel bound to the authoritative gameplay Player resolved here;
+	# this prevents an inherited white-model preview from becoming its target.
+	if _bubble != null and _player != null and _bubble.has_method("set_player"):
+		_bubble.call("set_player", _player)
 
 
 func _resolve_screen_shake() -> ScreenShake:

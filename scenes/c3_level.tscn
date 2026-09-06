@@ -154,6 +154,9 @@ disabled = true
 [node name="Camera2D" parent="WhiteModel/Player" index="2"]
 enabled = false
 
+[node name="AnimatedSprite2D" parent="WhiteModel/Player" index="1"]
+visible = false
+
 [node name="Items" type="Node2D" parent="." unique_id=589056481]
 
 [node name="EndItem" type="Area2D" parent="Items" unique_id=2131572749]
@@ -405,8 +408,10 @@ darkness_mask = NodePath("../DarknessMask")
 player = NodePath("../Player")
 
 [node name="Bubble" type="Node2D" parent="Breath" unique_id=1638232650]
+z_index = 8
 script = ExtResource("6")
 player_path = NodePath("../../Player")
+follow_anchor_path = NodePath("../../Player/AnimatedSprite2D")
 
 [node name="Effects" type="Node2D" parent="." unique_id=2086481683]
 

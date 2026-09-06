@@ -22,8 +22,13 @@ const POP_RING_TEXTURE: Texture2D = preload("res://assets/fx/bubble_pop_ring.png
 @export var pop_droplet_speed_max: float = 180.0
 @export var pop_droplet_gravity: float = 300.0
 @export var player_path: NodePath
+## Optional visual anchor under the player (normally AnimatedSprite2D). Using the
+## sprite anchor keeps the vessel beside the large character artwork rather than
+## at the CharacterBody2D feet/origin.
+@export var follow_anchor_path: NodePath
 
 var _player: Node2D = null
+var _follow_anchor: Node2D = null
 var _liquid_fraction: float = 1.0
 var _follow_velocity := Vector2.ZERO
 var _time: float = 0.0
@@ -257,7 +262,10 @@ func _build_pop_ring() -> void:
 
 
 func _follow_target() -> Vector2:
-	return _player.global_position + follow_offset + Vector2(
+	var anchor_position := _player.global_position
+	if _follow_anchor != null and is_instance_valid(_follow_anchor):
+		anchor_position = _follow_anchor.global_position
+	return anchor_position + follow_offset + Vector2(
 		sin(_time * bob_frequency * TAU) * bob_amount * 0.45,
 		cos(_time * bob_frequency * TAU) * bob_amount
 	)
@@ -284,12 +292,37 @@ func _resolve_player() -> void:
 		var node := get_node_or_null(player_path)
 		if node is Node2D:
 			_player = node as Node2D
+			_resolve_follow_anchor()
 			return
 	var group_player := get_tree().get_first_node_in_group("player")
 	if group_player is Node2D:
 		_player = group_player as Node2D
+		_resolve_follow_anchor()
 		return
 	_player = _scan_for_player(get_tree().current_scene)
+	_resolve_follow_anchor()
+
+
+## BreathSystem uses this explicit handoff so a stale scene path cannot leave the
+## vessel following a preview/legacy Player instance.
+func set_player(target: Node2D) -> void:
+	_player = target
+	_resolve_follow_anchor()
+	_snap_to_follow_target()
+
+
+func _resolve_follow_anchor() -> void:
+	_follow_anchor = null
+	if _player == null or not is_instance_valid(_player):
+		return
+	if follow_anchor_path != NodePath():
+		var explicit_anchor := get_node_or_null(follow_anchor_path)
+		if explicit_anchor is Node2D:
+			_follow_anchor = explicit_anchor as Node2D
+			return
+	var sprite := _player.get_node_or_null("AnimatedSprite2D")
+	if sprite is Node2D:
+		_follow_anchor = sprite as Node2D
 
 
 func _scan_for_player(node: Node) -> Node2D:

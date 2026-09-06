@@ -35,6 +35,7 @@ var _drag_offset: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
+	_center_panel()
 	_close_button.pressed.connect(close)
 	_pre_button.pressed.connect(_on_pre_pressed)
 	_next_button.pressed.connect(_on_next_pressed)
@@ -45,6 +46,11 @@ func _ready() -> void:
 	_show_mail(0)
 
 
+func _center_panel() -> void:
+	var view_size: Vector2 = get_viewport().get_visible_rect().size
+	_panel.position = (view_size - _panel.size) * 0.5
+
+
 ## 重取已解锁列表并钳制当前索引
 func _reload_mails() -> void:
 	_mails = MailWorkManager.get_unlocked_mails()
@@ -53,6 +59,9 @@ func _reload_mails() -> void:
 
 ## 显示指定索引邮件并播放刷新动画（越界 = 重显当前，不循环跳变）
 func _show_mail(idx: int) -> void:
+	if _mails.is_empty():
+		_mail_text.text = "[暂无邮件]"
+		return
 	_current = clamp(idx, 0, _mails.size() - 1)
 	_mail_text.text = MailWorkManager.get_mail_text(_mails[_current])
 	_play_refresh()
@@ -85,6 +94,9 @@ func _on_next_pressed() -> void:
 ## 弹层打开期间解锁新邮件：刷新列表，保持当前索引（不强制跳新邮件）
 func _on_mails_changed() -> void:
 	_reload_mails()
+	if _mails.is_empty():
+		_mail_text.text = "[暂无邮件]"
+		return
 	_mail_text.text = MailWorkManager.get_mail_text(_mails[_current])
 
 

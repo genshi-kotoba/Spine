@@ -28,7 +28,11 @@ func _auto_advance() -> void:
 	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(fade)
 	get_tree().root.add_child(layer)
-	get_tree().change_scene_to_file(NEXT_SCENE)
+	var change_error: Error = get_tree().change_scene_to_file(NEXT_SCENE)
+	if change_error != OK:
+		push_error("StartScreen: unable to open %s (error %d)" % [NEXT_SCENE, change_error])
+		layer.queue_free()
+		return
 	var tween := layer.create_tween()
 	tween.tween_property(fade, "modulate:a", 0.0, FADE_IN_DURATION)
 	tween.tween_callback(layer.queue_free)

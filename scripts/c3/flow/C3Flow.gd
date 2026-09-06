@@ -849,12 +849,19 @@ func _run_flow_checks(checks: Array[String]) -> void:
 	var white_model_player := get_node_or_null("WhiteModel/Player") as Player
 	var white_model_shape := get_node_or_null("WhiteModel/Player/CollisionShape2D") as CollisionShape2D
 	var white_model_camera := get_node_or_null("WhiteModel/Player/Camera2D") as Camera2D
+	var white_model_sprite := get_node_or_null("WhiteModel/Player/AnimatedSprite2D") as CanvasItem
 	var duplicate_player_disabled := white_model_player != null \
 		and white_model_player.process_mode == Node.PROCESS_MODE_DISABLED \
 		and not white_model_player.visible \
 		and white_model_shape != null and white_model_shape.disabled \
-		and white_model_camera != null and not white_model_camera.enabled
+		and white_model_camera != null and not white_model_camera.enabled \
+		and white_model_sprite != null and not white_model_sprite.visible
 	checks.append("s0_white_model_player_disabled" if duplicate_player_disabled else "s0_white_model_player_disabled_FAIL")
+	var bubble := get_node_or_null("Breath/Bubble") as Bubble
+	var bubble_front_anchor := bubble != null \
+		and bubble.z_index > (_player.z_index if _player != null else 0) \
+		and bubble.follow_anchor_path == NodePath("../../Player/AnimatedSprite2D")
+	checks.append("s0_bubble_front_anchor" if bubble_front_anchor else "s0_bubble_front_anchor_FAIL")
 	var aspect_keep := str(ProjectSettings.get_setting("display/window/stretch/aspect", "keep")) == "keep"
 	checks.append("s0_aspect_keep" if aspect_keep else "s0_aspect_keep_FAIL")
 	# The living-room bedroom door is intentionally a proximity-visible no-op before the
@@ -1080,6 +1087,7 @@ func _physical_assertions() -> bool:
 
 func _ready_extra() -> void:
 	_resolve_scene_refs()
+	_disable_white_model_player()
 	_activate_camera()
 	_setup_room_table()
 	_bind_doors()
@@ -1095,6 +1103,26 @@ func _ready_extra() -> void:
 		and "--self-check" not in OS.get_cmdline_user_args() \
 		and "--physical" not in OS.get_cmdline_user_args():
 		call_deferred("_begin_intro_sequence")
+
+
+## c3_floor is reusable as a standalone preview and therefore owns a template
+## Player. C3 has one authoritative gameplay Player; disable every visual/physics
+## part of the inherited preview before it can render a second character.
+func _disable_white_model_player() -> void:
+	var preview := get_node_or_null("WhiteModel/Player") as Player
+	if preview == null:
+		return
+	preview.process_mode = Node.PROCESS_MODE_DISABLED
+	preview.visible = false
+	var preview_shape := preview.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if preview_shape != null:
+		preview_shape.set_deferred("disabled", true)
+	var preview_sprite := preview.get_node_or_null("AnimatedSprite2D") as CanvasItem
+	if preview_sprite != null:
+		preview_sprite.visible = false
+	var preview_camera := preview.get_node_or_null("Camera2D") as Camera2D
+	if preview_camera != null:
+		preview_camera.enabled = false
 
 
 ## Runtime-only art preview: starts the real C3 level at special point two without altering game state.

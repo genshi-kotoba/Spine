@@ -25,6 +25,9 @@ func _ready() -> void:
 	_mail_icon.open_mailbox.connect(open_mailbox)
 	_work_icon.open_work.connect(open_work)
 	_play_fade_in()
+	# The desktop's first view is the mailbox; defer until this scene has
+	# finished wiring its signals and the fade-in layer.
+	call_deferred("open_mailbox")
 
 
 ## 进入淡入（docs/c3_end_transition_constraints.md §5）：白罩 alpha 1→0 0.5s 后隐藏。
@@ -57,7 +60,7 @@ func open_mailbox() -> void:
 		return
 	if _work_screen != null:
 		_work_screen.close()
-	_mailbox = MAILBOX_SCENE.instantiate()
+	_mailbox = MAILBOX_SCENE.instantiate() as MailboxScreen
 	_mailbox.closed.connect(_on_mailbox_closed)
 	add_child(_mailbox)
 	StoryMonitor.lock_input()
@@ -69,7 +72,7 @@ func open_work() -> void:
 		return
 	if _mailbox != null:
 		_mailbox.close()
-	_work_screen = WORK_SCENE.instantiate()
+	_work_screen = WORK_SCENE.instantiate() as WorkScreen
 	_work_screen.closed.connect(_on_work_screen_closed)
 	add_child(_work_screen)
 	StoryMonitor.lock_input()

@@ -16,6 +16,10 @@ func _run() -> void:
 	get_tree().root.add_child(player)
 	player.set_physics_process(false)
 	var checks: Array[String] = []
+	var sprite := player.get_node("AnimatedSprite2D") as AnimatedSprite2D
+	var anchor_stable: bool = sprite.centered and sprite.offset == Vector2.ZERO
+	var walk_frames_stable: bool = sprite.sprite_frames.get_frame_count("walk") == 4
+	checks.append("sprite_anchor" if anchor_stable and walk_frames_stable else "sprite_anchor_FAIL")
 
 	# Default profile: 0 -> 400 in 0.18s, 400 -> 0 in 0.12s, and 400 -> -400 in 0.14s.
 	Input.action_press("move_right")

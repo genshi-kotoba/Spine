@@ -81,25 +81,25 @@ color = Color(0, 0, 0, 1)
 
 [node name="LinkTitle" type="RichTextLabel" parent="LinkLayer"]
 visible = false
-offset_left = 560.0
-offset_top = 560.0
-offset_right = 1360.0
+offset_left = 320.0
+offset_top = 500.0
+offset_right = 1600.0
 offset_bottom = 620.0
 mouse_filter = 2
-theme_override_font_sizes/normal_font = 34
-theme_override_font_sizes/bold_font = 34
-theme_override_font_sizes/italics_font = 34
-theme_override_font_sizes/bold_italics_font = 34
+theme_override_font_sizes/normal_font_size = 68
+theme_override_font_sizes/bold_font_size = 68
+theme_override_font_sizes/italics_font_size = 68
+theme_override_font_sizes/bold_italics_font_size = 68
 bbcode_enabled = true
 horizontal_alignment = 1
 
 [node name="LinkBody" type="RichTextLabel" parent="LinkLayer"]
 modulate = Color(1, 1, 1, 0)
-offset_left = 560.0
+offset_left = 320.0
 offset_top = 660.0
-offset_right = 1360.0
-offset_bottom = 720.0
+offset_right = 1600.0
+offset_bottom = 800.0
 mouse_filter = 2
-theme_override_font_sizes/normal_font = 34
+theme_override_font_sizes/normal_font_size = 68
 bbcode_enabled = true
 horizontal_alignment = 1

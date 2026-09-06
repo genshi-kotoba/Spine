@@ -183,3 +183,4 @@ Select-String -Path project.godot -Pattern 'MailWorkManager'
 - 2026-09-06 v1.2：computer_screen 去除自定义鼠标光标（CURSOR_TEXTURE/set_custom_mouse_cursor 全删），改回系统原生光标。用户指示覆盖 scene1 prompt 的 cursor_icon 约定；cursor_icon.png 素材保留在库不再引用。
 - 2026-09-06 v1.3：computer_screen 背景改 contain 适配——按图片原比例完整显示（脚本按纹理尺寸算 min 缩放），居中，上下余量纯黑（BlackBars ColorRect 垫底）。废弃硬编码 scale=1.5（换图即错）。用户指示：不裁剪、不拉伸变形。
 - 2026-09-06 v1.4：修复 v1.3 引入的图标点击失效——BlackBars ColorRect 默认 mouse_filter=STOP 吃掉全部点击，改 IGNORE(2)。约定：纯展示 Control 一律 mouse_filter=IGNORE。
+- 2026-09-06 v1.5：适配新背景的图标点击区重定位（用户给视口坐标）。MailIcon 检测区占据 x∈(575,625)、y∈(275,325)；WorkIcon 占据 x∈(575,625)、y∈(330,400)。实现：Area2D 节点位置不动（160,620 / 160,930），只改 CollisionShape2D 局部偏移与 sub_resource 尺寸——mail_shape 50×50 @ 局部 (440,-320)（世界中心 600,300）；work_shape 50×70 @ 局部 (440,-565)（世界中心 600,365）。相机固定 (960,620)，视口坐标=世界坐标。

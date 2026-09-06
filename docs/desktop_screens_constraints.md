@@ -182,3 +182,4 @@ Select-String -Path project.godot -Pattern 'MailWorkManager'
 
 - 2026-09-06 v1.2：computer_screen 去除自定义鼠标光标（CURSOR_TEXTURE/set_custom_mouse_cursor 全删），改回系统原生光标。用户指示覆盖 scene1 prompt 的 cursor_icon 约定；cursor_icon.png 素材保留在库不再引用。
 - 2026-09-06 v1.3：computer_screen 背景改 contain 适配——按图片原比例完整显示（脚本按纹理尺寸算 min 缩放），居中，上下余量纯黑（BlackBars ColorRect 垫底）。废弃硬编码 scale=1.5（换图即错）。用户指示：不裁剪、不拉伸变形。
+- 2026-09-06 v1.4：修复 v1.3 引入的图标点击失效——BlackBars ColorRect 默认 mouse_filter=STOP 吃掉全部点击，改 IGNORE(2)。约定：纯展示 Control 一律 mouse_filter=IGNORE。

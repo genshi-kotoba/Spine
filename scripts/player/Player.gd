@@ -2,11 +2,27 @@ class_name Player
 extends CharacterBody2D
 ## Player — 关卡场景角色
 ## 仅支持左右移动（A/D 或方向键），带简单重力与地面碰撞。
+## v2 动画（docs/player_animation_constraints.md）：朝向状态机（facing LEFT/RIGHT，
+## 唯一来源 = 移动输入轴非零）+ walk/static 动画切换；flip_h 唯一出口 _apply_facing()。
 
 const PlayerMotionProfileResource = preload("res://scripts/player/PlayerMotionProfile.gd")
 
 ## 交互信号：按下 interact(E) 时发射，供 item 等低耦合监听（不写 GameState）
 signal interact_pressed
+
+## 朝向状态机：运行态，不写 GameState、不入存档，场景载入重置 RIGHT
+enum Facing { LEFT, RIGHT }
+
+## 动画名（player.tscn SpriteFrames）
+const STATIC_ANIM: StringName = &"static"
+const WALK_ANIM: StringName = &"walk"
+## is_moving 判定阈值（px/s，v2 §6）
+const MOVE_ANIM_THRESHOLD: float = 10.0
+
+## 当前朝向（初始 RIGHT；只随非零移动输入变化，松手/锁输入/顶墙保持不变）
+var _facing: int = Facing.RIGHT
+
+@onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 ## 所有层默认共用 player.tscn 绑定的时间制运动配置（merge 自 Spine_to_merge）；需要例外时复制 .tres 再覆写。
 @export var motion_profile: PlayerMotionProfileResource
@@ -28,6 +44,8 @@ func _physics_process(delta: float) -> void:
 	if StoryMonitor.input_locked:
 		velocity = Vector2.ZERO
 		_reversal_active = false
+		# 锁输入：velocity 清零 → 动画自然回落 static，朝向不变
+		_update_animation()
 		return
 
 	# 出生落地吸附：首帧向下发射线找地板表面，把角色贴到实际碰撞面上
@@ -40,9 +58,16 @@ func _physics_process(delta: float) -> void:
 		velocity.y += _get_gravity() * delta
 
 	var direction := Input.get_axis("move_left", "move_right")
+	# 朝向更新唯一来源：非零移动输入；松手/顶墙/锁输入保持原朝向
+	if not is_zero_approx(direction):
+		var new_facing: int = Facing.RIGHT if direction > 0.0 else Facing.LEFT
+		if new_facing != _facing:
+			_facing = new_facing
+			_apply_facing()
 	velocity.x = _approach_horizontal_velocity(direction, delta)
 
 	move_and_slide()
+	_update_animation()
 
 	# TEMP debug（--debug-fall）：打印落体轨迹后退出
 	if _debug_fall:
@@ -74,6 +99,21 @@ func _approach_horizontal_velocity(direction: float, delta: float) -> float:
 
 func _get_gravity() -> float:
 	return motion_profile.gravity if motion_profile != null else gravity
+
+
+## flip_h 唯一出口（v2 §4）：素材原始朝左，RIGHT=反转、LEFT=原样；对全部动画帧统一生效
+func _apply_facing() -> void:
+	if _sprite != null:
+		_sprite.flip_h = (_facing == Facing.RIGHT)
+
+
+## walk/static 动画切换（v2 §6）：is_moving = |velocity.x| > 阈值；同动画不重复 play 防帧序号归零
+func _update_animation() -> void:
+	if _sprite == null:
+		return
+	var target: StringName = WALK_ANIM if absf(velocity.x) > MOVE_ANIM_THRESHOLD else STATIC_ANIM
+	if _sprite.animation != target or not _sprite.is_playing():
+		_sprite.play(target)
 
 
 var _debug_fall: bool = false
@@ -119,6 +159,8 @@ func _snap_to_floor() -> void:
 
 
 func _ready() -> void:
+	# 初始朝向 RIGHT：素材朝左 → 反转显示（flip_h 唯一出口）
+	_apply_facing()
 	_debug_fall = OS.get_cmdline_user_args().has("--debug-fall")
 	if _debug_fall:
 		print("[player] mask=%d layer=%d" % [collision_mask, collision_layer])

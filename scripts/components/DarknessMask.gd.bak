@@ -22,19 +22,10 @@ extends Node2D
 @export var radius_outer: float = 420.0
 
 ## 遮罩颜色（深色 + alpha）。
-@export var darkness_color: Color = Color(0.02, 0.03, 0.09, 0.55)  ## 昏暗透光（用户定案：非全黑）
+@export var darkness_color: Color = Color(0, 0, 0, 0.85)
 
 ## 边缘软度（0=硬边；放大 inner/outer 之间的过渡）。
 @export var softness: float = 0.5
-
-## 遮罩强度（0=透明，1=使用 darkness_color 的完整 alpha）。供缺氧平滑进出。
-@export_range(0.0, 1.0, 0.01) var intensity: float = 1.0
-
-## 右侧揭露模式：从屏幕某条竖线开始覆盖右侧；用于场景拆解时将已装配的区域留在遮罩后。
-@export var side_mask_enabled: bool = false
-@export_range(-0.25, 1.25, 0.001) var side_reveal_edge_uv: float = 1.25
-## 边缘羽化宽度（像素），防止遮罩边线像硬切镜头。
-@export var side_mask_softness_px: float = 56.0
 
 ## 总开关；false 时完全透明。
 @export var enabled: bool = true
@@ -48,7 +39,6 @@ var _player: Node2D = null
 var _layer: CanvasLayer = null
 var _rect: ColorRect = null
 var _mat: ShaderMaterial = null
-var _side_mask_source_world_x: float = INF
 
 
 func _ready() -> void:
@@ -97,50 +87,7 @@ func _apply_params() -> void:
 	_mat.set_shader_parameter("inner_radius", radius_inner / _viewport_span())
 	_mat.set_shader_parameter("outer_radius", radius_outer / _viewport_span())
 	_mat.set_shader_parameter("softness", softness)
-	_mat.set_shader_parameter("intensity", intensity)
 	_mat.set_shader_parameter("center_uv", _center_uv())
-	_mat.set_shader_parameter("side_mask_enabled", side_mask_enabled)
-	_mat.set_shader_parameter("side_reveal_edge_uv", side_reveal_edge_uv)
-	_mat.set_shader_parameter("side_mask_softness", side_mask_softness_px / _viewport_span())
-
-
-## 以世界坐标开启“右侧全遮罩”。左侧保持正常画面，右侧（即将显露的走廊）保持不可见。
-func begin_right_side_mask(world_x: float, softness_pixels: float = 0.0) -> void:
-	_side_mask_source_world_x = world_x
-	side_mask_enabled = true
-	if softness_pixels > 0.0:
-		side_mask_softness_px = softness_pixels
-	side_reveal_edge_uv = _world_to_uv(Vector2(world_x, 0.0)).x
-	enabled = true
-	intensity = 1.0
-
-
-## 演出推进时把遮罩边缘向右推，逐步露出已经存在的场景。
-func set_right_side_reveal_edge_uv(edge_uv: float) -> void:
-	side_reveal_edge_uv = clampf(edge_uv, -0.25, 1.25)
-
-
-func get_right_side_reveal_edge_uv() -> float:
-	return side_reveal_edge_uv
-
-
-func is_side_mask_active() -> bool:
-	return enabled and side_mask_enabled
-
-
-## 回归读回：初始遮罩是否从指定世界 x 开始盖住其右侧。
-func covers_right_side_from(world_x: float) -> bool:
-	return is_side_mask_active() and _side_mask_source_world_x <= world_x + 0.5
-
-
-## 演出结束必须完全解除侧向遮罩，避免影响之后随角色的缺氧挖孔。
-func clear_right_side_mask() -> void:
-	side_mask_enabled = false
-	side_reveal_edge_uv = 1.25
-	_side_mask_source_world_x = INF
-	follow_player = true
-	enabled = false
-	intensity = 0.0
 
 
 func _center_uv() -> Vector2:
@@ -155,16 +102,6 @@ func _center_uv() -> Vector2:
 	if view_size.x <= 0.0 or view_size.y <= 0.0:
 		return Vector2(0.5, 0.5)
 	return screen / view_size
-
-
-func _world_to_uv(world: Vector2) -> Vector2:
-	var vp := get_viewport()
-	if vp == null:
-		return Vector2(0.5, 0.5)
-	var view_size := vp.get_visible_rect().size
-	if view_size.x <= 0.0 or view_size.y <= 0.0:
-		return Vector2(0.5, 0.5)
-	return (vp.get_canvas_transform() * world) / view_size
 
 
 ## 视口短边长度用于归一化半径（保证不同分辨率下遮罩尺寸视觉一致）。

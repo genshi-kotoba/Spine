@@ -1,7 +1,7 @@
 class_name ItemMarkerDemo
 extends Node2D
-## ItemMarkerDemo — ItemMarker 高光演示驱动
-## --self-check：验证 ① 门控隐藏 ② 同房远处白色描边 ③ 进入交互距离变金色 ④ 异房隐藏。
+## ItemMarkerDemo — ItemMarker（需求⑥）演示驱动
+## --self-check：验证黄色星星 ① 按「交互可用（门控满足）」显示 ② 同房远程可见（不靠近，异房即隐藏）③ 独立于 E 提示靠近逻辑。
 
 @onready var _item: Item = $Item
 @onready var _marker: ItemMarker = $Item/ItemMarker
@@ -20,11 +20,6 @@ func _ready() -> void:
 	})
 	if "--self-check" in OS.get_cmdline_user_args():
 		_run_self_check()
-	else:
-		# Normal visual runs start in the same room but outside interaction range,
-		# so the white-to-gold transition can be observed by moving left.
-		GameState.set_process_flag(GATE, true)
-		_player.position = Vector2(2200, 948)
 
 
 func _run_self_check() -> void:
@@ -39,36 +34,26 @@ func _run_self_check() -> void:
 	await get_tree().process_frame
 	checks.append("hidden_unmet1" if not _marker.visible else "hidden_unmet_FAIL1")
 
-	# ② 门控满足 + 同房远处 -> 显示白色描边
+	# ② 门控满足 + 同房 -> 显示（远程，不靠近）
 	GameState.set_process_flag(GATE, true)
-	_player.position = Vector2(2200, 948)
-	await get_tree().process_frame
-	checks.append("shown_far1" if _marker.visible else "shown_far_FAIL1")
-	checks.append("far_white1" if _marker.get_current_outline_color().is_equal_approx(_marker.far_outline_color) else "far_white_FAIL1")
-
-	# ③ 进入 Item 的 Area2D 交互范围 -> 显示金色描边
 	_player.position = Vector2(1500, 948)
-	await get_tree().physics_frame
 	await get_tree().process_frame
-	checks.append("shown_near1" if _marker.visible else "shown_near_FAIL1")
-	checks.append("near_gold1" if _marker.is_in_interaction_range() and _marker.get_current_outline_color().is_equal_approx(_marker.near_outline_color) else "near_gold_FAIL1")
+	checks.append("shown_samer1" if _marker.visible else "shown_samer_FAIL1")
 
-	# ④ 门控满足 + 异房（room1）-> 隐藏
+	# ③ 门控满足 + 异房（room1）-> 隐藏
 	_player.position = Vector2(200, 948)
 	await get_tree().process_frame
 	checks.append("hidden_diffroom1" if not _marker.visible else "hidden_diffroom_FAIL1")
 
-	# ⑤ 门控满足 + 异房（room3）-> 隐藏
+	# ④ 门控满足 + 异房（room3）-> 隐藏
 	_player.position = Vector2(3000, 948)
 	await get_tree().process_frame
 	checks.append("hidden_diffroom2" if not _marker.visible else "hidden_diffroom_FAIL1")
 
-	# ⑥ 回同房远处 -> 白色描边再次显示
-	_player.position = Vector2(2200, 948)
-	await get_tree().physics_frame
+	# ⑤ 门控满足 + 回同房（room2）-> 显示（远程往返可见）
+	_player.position = Vector2(1500, 948)
 	await get_tree().process_frame
-	checks.append("shown_far2" if _marker.visible else "shown_far_FAIL2")
-	checks.append("far_white2" if _marker.get_current_outline_color().is_equal_approx(_marker.far_outline_color) else "far_white_FAIL2")
+	checks.append("shown_samer2" if _marker.visible else "shown_samer_FAIL2")
 
 	var failed := false
 	for c in checks:

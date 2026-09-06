@@ -106,12 +106,6 @@ func set_color(new_color: Color) -> void:
 		_mat.color = new_color
 
 
-## 世界坐标发射使移动中的发射器留下粒子轨迹，适合墙体沿揭露边缘逐段消散。
-func set_world_space_particles(world_space: bool) -> void:
-	if _particles != null:
-		_particles.local_coords = not world_space
-
-
 func _apply_material_params() -> void:
 	_particles.amount = amount
 	_particles.lifetime = lifetime

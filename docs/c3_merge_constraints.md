@@ -56,3 +56,11 @@
 - 附带修复：Corridor.gd 自检段 2 处 `:=` 推断 Variant（rocking_forwarded/pulse_ok）改显式 bool；DialogueManager 并行编辑竞态导致 start_lines 丢失，已补回并核验。
 - 未带入：`assets/sprites/computer screen.jpeg`（桌面素材，与 c3 无关）。
 - 验证：红线 0 命中；editor 扫描 0 错误；c3_level/c3_floor/c3_bedroom_room/floating_wall_text_demo/player_motion_test + 回归 c2_floor/c4_floor/computer_screen/dialogue_test/c2_bedroom 全 0 错误。
+
+## 追加：组件层合并（2026-09-06，运行时 set_rocking 报错引出）
+
+初批漏拷 components 层。盘点 6 个差异文件后按用户裁决落地：
+- 纯叠加直接带入：ScreenShake（sway/rocking/base_offset API，shake 语义保留）、ParticleBurst（set_world_space_particles）、InteractHint（_process 轮询 is_player_in_interaction_range + 碰撞锚点偏移）。
+- 裁决⑧ ItemMarker 用对方版（星星→Line2D 描边高光；仅 c3+demo 使用，demo 同步换对方版）。
+- 裁决⑨ DarknessMask 用对方新默认色 Color(0.02,0.03,0.09,0.55)（「用户定案：非全黑」）+ side_mask/intensity API + shader 侧向遮罩分支。
+- 验证：红线 0；c3_level/item_marker_demo/fx_demo/e_hint_demo/darkness_demo/c2/c4/computer_screen 全 0 错误（含 Nonexistent function 检查）。

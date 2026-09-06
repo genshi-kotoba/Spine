@@ -2,7 +2,7 @@ class_name TestItem
 extends "res://scripts/objects/item.gd"
 ## TestItem — item 基类的两状态测试子类
 ## 状态 0 = 初始位置（_ready 记录 initial_position）；状态 1 = 上移 lift_distance(200)px；
-## 切换用 Tween 0.3s。touched()（E 键经 Player.interact_pressed 触发）= 范围判定 + toggle 0↔1。
+## 切换用 Tween 0.3s。Item.touched()（E 键经 Player.interact_pressed 触发）= 范围判定 + toggle 0↔1。
 
 ## 上移距离（像素；Godot y 轴向下，上移为负 y）
 @export var lift_distance: float = 200.0
@@ -33,14 +33,16 @@ func apply_state(new_state: int) -> void:
 	_active_tween.tween_property(self, "position", target, tween_duration)
 
 
-## 交互触发（覆写）：范围判定成立 toggle 0↔1，不成立无动作
-func touched() -> void:
+## 实际触发：范围判定成立 toggle 0↔1；交互成功后的 SFX 由 Item.touched() 统一处理。
+func _try_touch() -> bool:
 	var player := _get_overlapping_player()
 	var in_range := player != null
 	print("[test_item] touched in_range=%s" % str(in_range))
-	if in_range:
-		var new_state: int = 1 if current_state == 0 else 0
-		set_state(new_state)
+	if not in_range:
+		return false
+	var new_state: int = 1 if current_state == 0 else 0
+	set_state(new_state)
+	return true
 
 
 ## 目标位置：状态 0 = 初始位置；状态 1 = 初始位置 + Vector2(0, -lift_distance)

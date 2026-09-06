@@ -19,30 +19,32 @@ var _overlapping: Array[InteractableObject] = []
 
 
 func _ready() -> void:
-	_camera.make_current()
+	# Some reusable floor scenes contain a preview Player for standalone editing. If an
+	# embedding scene disables that preview body, it must not claim the shared viewport camera.
+	if _camera != null and _player != null \
+		and _player.process_mode != Node.PROCESS_MODE_DISABLED \
+		and _player.visible:
+		_camera.make_current()
 	for object in find_children("*", "InteractableObject"):
 		object.body_entered.connect(_on_object_body_entered.bind(object))
 		object.body_exited.connect(_on_object_body_exited.bind(object))
 
 
 func _process(delta: float) -> void:
+	if _player == null or _camera == null \
+		or _player.process_mode == Node.PROCESS_MODE_DISABLED \
+		or not _player.visible:
+		return
 	_update_camera(delta)
 
 
 ## 摄像机水平跟随角色；继续跟随会导致视野超出地图边缘时停止移动。
 ## camera_smoothing>0 时对 clamp 后的目标位置做平滑插值（0=现立即跟随）。
-## 窄图保护：地图宽小于视口宽时（如 bedroom 960 < 1920）clamp 区间倒挂，固定居中地图中心。
 func _update_camera(delta: float) -> void:
 	var half_width := get_viewport_rect().size.x * 0.5 * _camera.zoom.x
 	var target_x := _player.position.x
-	var min_bound := map_min_x + half_width
-	var max_bound := map_max_x - half_width
-	var clamped_x: float
-	if min_bound > max_bound:
-		clamped_x = (map_min_x + map_max_x) * 0.5
-	else:
-		# clamp() 返回 Variant：用显式类型标注避免 "inferred from Variant" 警告被当作错误
-		clamped_x = clamp(target_x, min_bound, max_bound)
+	# clamp() 返回 Variant：用显式类型标注避免 "inferred from Variant" 警告被当作错误
+	var clamped_x: float = clamp(target_x, map_min_x + half_width, map_max_x - half_width)
 	if camera_smoothing > 0.0:
 		var alpha := 1.0 - exp(-camera_smoothing * delta)
 		_camera.global_position.x = lerpf(_camera.global_position.x, clamped_x, alpha)
@@ -54,7 +56,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if StoryMonitor.input_locked:
 		return
 	if event.is_action_pressed("interact") and not _overlapping.is_empty():
-		_overlapping.front().interact()
+		var object: InteractableObject = _overlapping.front() as InteractableObject
+		object.interact()
+		if object.has_method("request_interaction_sfx"):
+			object.request_interaction_sfx()
 		# TODO: UI 提示可选
 
 

@@ -24,7 +24,8 @@ func _ready() -> void:
 		2: {"color": Color(0.30, 0.30, 0.35, 1)},
 	}
 	super._ready()
-	_run_self_check()
+	if "--component-self-check" in OS.get_cmdline_user_args():
+		_run_self_check()
 
 
 ## 实际触发（gate/交互开关已由基类 touched 检查）：推进到下一状态；达上限发射 end_confirmed。
@@ -44,7 +45,7 @@ func is_confirmed() -> bool:
 
 
 func _run_self_check() -> void:
-	if not "--self-check" in OS.get_cmdline_user_args():
+	if not "--component-self-check" in OS.get_cmdline_user_args():
 		return
 	var checks: Array[String] = []
 	# 两段式：E1 → state1；E2 → state2 + end_confirmed；再 E → 封顶不推进。

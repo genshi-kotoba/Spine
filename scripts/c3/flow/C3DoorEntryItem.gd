@@ -23,6 +23,10 @@ func _resolve_flow() -> void:
 
 
 func _try_touch() -> bool:
+	# The hall door is a visible interaction preview before the light sequence,
+	# but must remain a no-op until the story explicitly opens the route.
+	if _flow != null and _flow.has_method("get_stage") and int(_flow.call("get_stage")) < 6:
+		return false
 	if _flow != null and _flow.has_method("on_enter_bedroom"):
 		_flow.on_enter_bedroom()
 	return true

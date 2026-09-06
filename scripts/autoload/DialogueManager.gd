@@ -44,11 +44,29 @@ func start_dialogue(file_path: String, mode: int) -> void:
 	_begin(file_path, mode)
 
 
+## 直接播放运行时提供的句子（merge 自 Spine_to_merge，c3 字幕用）；适合交互反馈等不需要独立文件的短字幕。
+func start_lines(lines: Array, mode: int = MODE_INTERACTIVE) -> void:
+	var clean_lines: Array = []
+	for line in lines:
+		var clean := str(line).strip_edges()
+		if not clean.is_empty():
+			clean_lines.append(clean)
+	if clean_lines.is_empty():
+		return
+	if _active:
+		_queue.append({"lines": clean_lines, "mode": mode})
+		return
+	_begin_lines(clean_lines, mode)
+
+
 func _begin(file_path: String, mode: int) -> void:
-	var lines := _load_lines(file_path)
+	_begin_lines(_load_lines(file_path), mode)
+
+
+func _begin_lines(lines: Array, mode: int) -> void:
 	_active = true
 	dialogue_started.emit()
-	print("[dialogue_manager] begin mode=%d file=%s" % [mode, file_path])
+	print("[dialogue_manager] begin mode=%d lines=%d" % [mode, lines.size()])
 	if mode == MODE_GLITCH:
 		_glitch_box.show_dialogue(lines)
 	else:
@@ -77,4 +95,7 @@ func _on_box_finished() -> void:
 	dialogue_finished.emit()
 	if not _queue.is_empty():
 		var next: Dictionary = _queue.pop_front()
-		_begin(next["file_path"], next["mode"])
+		if next.has("lines"):
+			_begin_lines(next["lines"], next["mode"])
+		else:
+			_begin(next["file_path"], next["mode"])

@@ -82,9 +82,10 @@ func _set_blocking(blocking: bool) -> void:
 
 
 func _animate_to(opening: bool) -> void:
+	# 用户定案 2026-09-05：同一扇门做开合（20×280 侧板，水平收边开/归位关），无正视门、无虚影。
 	if _tween != null:
 		_tween.kill()
-	var target_scale := Vector2(_base_scale.x, _base_scale.y * 0.05) if opening else _base_scale
+	var target_scale := Vector2(0.06, 1.0) if opening else Vector2(1.0, 1.0)
 	_tween = create_tween()
 	_tween.tween_property(_door_visual, "scale", target_scale, open_duration) \
 		.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)

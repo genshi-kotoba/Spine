@@ -33,44 +33,42 @@ const FLAG_END_WHITE := "end_white"
 var current_stage: int = STAGE_STUDY
 var _study_papers_collected: int = 0
 
-# ─── LIGHT 分步子步骤（§7.2 A-E；t32 重做为分步时序：A 书房外全黑→B 出门黑屏重显+重置→C 二次靠门触发消散+震动+粒子→D 微压暗→E 解锁屏息）───
-const LIGHT_NONE := 0
-const LIGHT_A := 1
-const LIGHT_B := 2
-const LIGHT_C := 3
-const LIGHT_D := 4
-const LIGHT_E := 5
-
-## LIGHT 时序常量（s）。
-const LIGHT_C_DUR := 1.8
-const LIGHT_D_DUR := 1.5
-const LIGHT_PARTICLE_DUR := 2.5
+# ─── 光影演出（书房右侧遮罩揭露：四试卷后等角色走到右侧靠近房门时触发）───
+## 触发判定：角色 x 越过该阈值（靠近书房右侧门）即触发震撼。
+const LIGHT_TRIGGER_X := 1100.0
 const LIGHT_SHAKE_DUR := 5.0
-const LIGHT_B_REVEAL := 1.2
-## 主相机竖向取景偏移（参照 c3_floor camera_position_offset=(0,-336.5) 口径；视口 1920x1240）：
+const LIGHT_PARTICLE_DUR := 4.6
+const LIGHT_REVEAL_DELAY := 0.18
+const LIGHT_REVEAL_DUR := 4.45
+const LIGHT_REVEAL_END_UV := 1.10
+const LIGHT_MASK_SOFTNESS_PX := 56.0
+const LIGHT_MASK_COLOR := Color(0.0, 0.0, 0.0, 0.96)
+## 主相机竖向取景偏移（参照 c3_floor camera_position_offset=(0,-336.5) 口径；2.35:1 内部视口 1920x817）：
 ## 让角色视觉站画幅地面位置而非竖正中（t34 gap ①，不改 player.tscn）。
 const CAMERA_FRAME_OFFSET := Vector2(0, -336.5)
 
-## LIGHT 遮罩参数（白模：亮区=书房/跟随玩家，四周全黑；C 后亮区扩大；D 微压暗氛围）。
-const LIGHT_A_INNER := 500.0
-const LIGHT_A_OUTER := 900.0
-const LIGHT_A_COLOR := Color(0.01, 0.01, 0.02, 1)
-const LIGHT_BLACK := Color(0.0, 0.0, 0.0, 1.0)
-const LIGHT_EXPAND_INNER := 900.0
-const LIGHT_EXPAND_OUTER := 1350.0
-const LIGHT_DIM_COLOR := Color(0.05, 0.05, 0.07, 0.30)
-const LIGHT_DIM_INNER := 150.0
-const LIGHT_DIM_OUTER := 360.0
-## LIGHT-A 亮区固定中心（书房中心 x=640；t34 gap ③：A 以书房为亮区，play follow_player=false）。
-const LIGHT_STUDY_CENTER := Vector2(640, 594)
+## C3 开场：字幕结束后显示三段角色右上方提示，最后一段结束才解除冻结。
+const INTRO_DIALOGUE_PATH := "res://dialogues/c3_intro.txt"
+const INTRO_FIRST_TEXT := "尝试按下空格深呼吸"
+const INTRO_SECOND_TEXT := "身边的气泡标识当前氧气剩余\n氧气不足时，气泡破裂，你会陷入缺氧"
+const INTRO_THIRD_TEXT := "当然，对于我们\n缺氧或许也并不会怎样……"
+const INTRO_TEXT_DURATION := 4.0
+const INTRO_BREATH_RATE := 2.0
 
-## LIGHT 分步运行状态（t32）。
-var _light_step: int = LIGHT_NONE
-var _light_b_reset_done: bool = false
-var _light_c_t: float = 0.0
-var _light_d_t: float = 0.0
+## 客厅（第二间 room）电视柜绑定在房间左侧，避免误落到右侧门附近。
+const LIVING_TV_X := 1480.0
+const FLOW_ROOM_RIGHT_X := 2460.0
+const KITCHEN_PAPER_X := 3184.0
+
+## 光影演出运行状态。走廊先组装，再由右侧遮罩随粒子向右揭露。
+var _light_triggered: bool = false
+var _light_show_t: float = 0.0
+var _light_mask_start_uv: float = 1.0
+var _light_side_mask_active: bool = false
 
 signal stage_changed(new_stage: int)
+## 第四张试卷后的异常提示音占位；后续音频资产接入只需监听此信号。
+signal story_sfx_requested(cue: String)
 
 ## ─── 场景编排引用（t16 接线）───
 @export var player_path: NodePath
@@ -78,6 +76,8 @@ signal stage_changed(new_stage: int)
 @export var bedroom_path: NodePath
 @export var breath_path: NodePath
 @export var darkness_mask_path: NodePath
+@export var black_screen_path: NodePath
+@export var white_screen_path: NodePath
 @export var screen_shake_path: NodePath
 @export var particle_burst_path: NodePath
 @export var corridor_end_item_path: NodePath
@@ -85,19 +85,45 @@ signal stage_changed(new_stage: int)
 @export var room_table_path: NodePath
 @export var items_root_path: NodePath
 @export var bedroom_items_path: NodePath
-@export var parallax_path: NodePath
 @export var ok_popup_path: NodePath
 @export var camera_path: NodePath
+@export var corridor_assembly_path: NodePath
+## 独立卧室阶段需要隐藏的走廊边界视觉；碰撞保留，避免流程切回走廊时重建物理体。
+@export var corridor_floor_path: NodePath
+@export var corridor_end_wall_path: NodePath
+## 白模三房右边界碰撞。走廊从书房门向右延伸时必须停用，回到客厅再恢复。
+## 仅绑定 WallRight/CollisionShape2D，不影响白模地板或天花板碰撞。
+@export var room_right_wall_collision_path: NodePath
 @export var door_study_living_path: NodePath
 @export var door_living_dining_path: NodePath
 @export var study_spawn: Vector2 = Vector2(320, 948)
 @export var study_right_x: float = 1280.0
+## t14 锁门余量：玩家完全出书房（过门洞+门板，x ≥ study_lock_x）才锁门+启用 blocker（防门洞夹人）。
+@export var study_lock_x: float = 1320.0
+## t14 兜底轮询区间（STAGE_STUDY）：玩家 x 进入该区间且书房-客厅左门未开 → 直接 open()（每帧，幂等）。
+@export var door_fallback_min_x: float = 1220.0
+@export var door_fallback_max_x: float = 1292.0
 ## LIGHT-C 需隐藏的门/墙（NodePath；如 书房-客厅墙、auto_door、最右侧墙）。
 @export var wall_hide_paths: Array[NodePath] = []
+## 卧室白模环境（RoomBase 程序化地板/墙/自动门）。走廊阶段整体禁碰撞，避免卧室门
+## （全局 x≈5460）挡在第一、第二特异点之间；进入卧室阶段再恢复。
+@export var bedroom_left_wall_path: NodePath
+## 独立卧室构图范围。主白模三房宽 3840，因此单间宽为 1280；镜头锁在中点，四周清屏为黑。
+@export var bedroom_frame_left: float = 4500.0
+@export var bedroom_frame_right: float = 5780.0
+## 返回客厅后恢复主地图的相机范围。
+@export var world_camera_left: float = 0.0
+@export var world_camera_right: float = 11520.0
+## 光影后超限走廊直接从书房门接出，镜头边界只覆盖该短走廊。
+@export var corridor_camera_left: float = 0.0
+@export var corridor_camera_right: float = 11520.0
+@export var intro_floating_text_path: NodePath
+@export var flow_floating_text_path: NodePath
 
 var _player: Node2D = null
 var _left_study: bool = false
 var _corridor: Node = null
+var _corridor_assembly: Node = null
 var _door_study_living: Node = null
 var _door_living_dining: Node = null
 var _bedroom: Node = null
@@ -106,6 +132,26 @@ var _mask: Node = null
 var _screen_shake: Node = null
 var _particle_burst: Node = null
 var _phase_debug_loaded: bool = false
+var _intro_active: bool = false
+var _intro_waiting_breath: bool = false
+var _intro_breathed: bool = false
+var _intro_text_stage: int = 0
+var _intro_text_elapsed: float = 0.0
+var _intro_floating_text: Node = null
+var _flow_floating_text: Node = null
+var _flow_text_clear_x: float = INF
+var _flow_text_world_anchor := Vector2.ZERO
+var _flow_text_follow_player := false
+var _flow_dialogue_action: String = ""
+var _tv_subtitle_shown: bool = false
+var _hall_door_subtitle_shown: bool = false
+var _end_item_subtitle_shown: bool = false
+var _final_study_dialogue_started: bool = false
+var _corridor_end_hint_shown: bool = false
+var _bedroom_arrival_dialogue_shown: bool = false
+var _bedroom_phone_dialogue_started: bool = false
+var _bedroom_exit_dialogue_shown: bool = false
+var _bedroom_return_end_dialogue_shown: bool = false
 
 
 func _ready() -> void:
@@ -149,10 +195,13 @@ func _reset_flags() -> void:
 	GameState.set_process_flag(FLAG_END_WHITE, false)
 	current_stage = STAGE_STUDY
 	_study_papers_collected = 0
-	_light_step = LIGHT_NONE
-	_light_b_reset_done = false
-	_light_c_t = 0.0
-	_light_d_t = 0.0
+	_light_triggered = false
+	_light_show_t = 0.0
+	_corridor_end_hint_shown = false
+	_bedroom_arrival_dialogue_shown = false
+	_bedroom_phone_dialogue_started = false
+	_bedroom_exit_dialogue_shown = false
+	_bedroom_return_end_dialogue_shown = false
 
 
 ## 设置阶段；进入关键阶段时应用旗标/序列。
@@ -168,18 +217,28 @@ func _apply_stage_effects(s: int) -> void:
 		GameState.set_process_flag(FLAG_LIGHT_PHASE_DONE, true)
 	if s >= STAGE_CORRIDOR:
 		GameState.set_process_flag(FLAG_CORRIDOR_ENTERED, true)
+		# 屏息解锁与走廊阶段同生（与 _finish_light_show 一致；--phase 调试入口直接可用）
+		GameState.set_process_flag(FLAG_HOLD_BREATH_UNLOCKED, true)
 	if s == STAGE_CORRIDOR_END:
 		GameState.set_process_flag(FLAG_CORRIDOR_END, true)
-	if s >= STAGE_BEDROOM:
-		GameState.set_process_flag(FLAG_BEDROOM_UNLOCKED, true)
-		GameState.set_process_flag(FLAG_BEDROOM_INTERACTIONS_DONE, true)
-	if _corridor != null:
-		if _corridor.has_method("set_enabled"):
-			(_corridor as Node).set_enabled(s >= STAGE_CORRIDOR)
-		else:
-			_corridor.set("enabled", s >= STAGE_CORRIDOR)
-	if s == STAGE_LIGHT:
-		_start_light_a()
+	# t3/t37 修复：走廊阶段禁用卧室白模环境碰撞（含运行时生成的自动门），进卧室后再启用。
+	if s >= STAGE_CORRIDOR and s < STAGE_BEDROOM:
+		_set_bedroom_environment_collision(false)
+		_set_room_right_wall_collision(false)
+	elif s >= STAGE_BEDROOM:
+		_set_bedroom_environment_collision(true)
+		_set_room_right_wall_collision(false)
+	else:
+		_set_room_right_wall_collision(true)
+	_set_bedroom_active(s == STAGE_BEDROOM)
+	_set_corridor_active(s >= STAGE_CORRIDOR and s < STAGE_BEDROOM)
+	_set_story_item_stage(s)
+	if s >= STAGE_CORRIDOR and s < STAGE_BEDROOM:
+		var corridor_camera := get_node_or_null(camera_path)
+		if corridor_camera is CorridorCamera:
+			(corridor_camera as CorridorCamera).set_map_bounds(corridor_camera_left, corridor_camera_right)
+	if s == STAGE_BEDROOM:
+		_lock_bedroom_frame()
 
 
 # ─── 事件钩子（场景/t16 接线调用）───
@@ -189,6 +248,7 @@ func on_player_left_study() -> void:
 	_left_study = true
 	GameState.set_process_flag(FLAG_STUDY_GATE_OPEN, false)
 	_apply_gate_blocker()
+	_sync_study_door_lock()
 	if current_stage == STAGE_STUDY:
 		set_stage(STAGE_LEAVE_STUDY)
 
@@ -201,6 +261,29 @@ func on_paper_collected(paper_id: String, score: int) -> void:
 		GameState.set_process_flag(FLAG_PAPER_KITCHEN, true)
 	elif paper_id == "study_a" or paper_id == "study_b":
 		_collect_study_paper()
+	if paper_id == "paper_living":
+		_show_flow_subtitle([
+			"这里散落了一张考了100分的试卷",
+			"应该是客户的考试成绩",
+		], "")
+	elif paper_id == "paper_kitchen":
+		_show_flow_subtitle([
+			"这里也有一张考了100分的试卷",
+			"可是，这才两张",
+			"书房没有找过，要不去书房看看？",
+		], "")
+	elif paper_id == "study_a" or paper_id == "study_b":
+		# 文本按玩家实际拾取顺序决定，不按场景中纸张的资源 ID 决定。
+		if _study_papers_collected <= 1:
+			_show_flow_subtitle([
+				"一张考了100分的试卷",
+				"嗯？旁边这张纸是什么",
+			], "")
+		else:
+			_show_flow_subtitle([
+				"这里也有一张试卷",
+				"但是不是100分，是……99？",
+			], "study_b_sound")
 	_refresh_study_state()
 
 
@@ -215,11 +298,88 @@ func _refresh_study_state() -> void:
 		GameState.set_process_flag(FLAG_STUDY_GATE_OPEN, true)
 		GameState.set_process_flag(FLAG_STUDY_ITEMS_UNLOCKED, true)
 		_apply_gate_blocker()
+		_sync_study_door_lock()
 		if current_stage < STAGE_RETURN_STUDY:
 			set_stage(STAGE_RETURN_STUDY)
 	if _study_papers_collected >= 2 and not GameState.get_process_flag(FLAG_LIGHT_PHASE_DONE):
 		GameState.set_process_flag(FLAG_LIGHT_PHASE_DONE, true)
+		on_bedroom_door_named()
 		set_stage(STAGE_LIGHT)
+
+
+func _show_flow_subtitle(lines: Array, action: String = "") -> void:
+	if lines.is_empty():
+		return
+	_flow_dialogue_action = action
+	if not DialogueManager.dialogue_finished.is_connected(_on_flow_dialogue_finished):
+		DialogueManager.dialogue_finished.connect(_on_flow_dialogue_finished)
+	DialogueManager.start_lines(lines, DialogueManager.MODE_INTERACTIVE)
+
+
+func _on_flow_dialogue_finished() -> void:
+	var action := _flow_dialogue_action
+	_flow_dialogue_action = ""
+	match action:
+		"hall_door":
+			_show_flow_floating("厨房好像也有试卷", Vector2(FLOW_ROOM_RIGHT_X, 650.0), FLOW_ROOM_RIGHT_X)
+		"study_b_sound":
+			story_sfx_requested.emit("study_paper_anomaly")
+			# 异响属于第一间 room 的环境文本，固定在世界右侧；玩家经过后淡出。
+			_show_flow_floating("外面什么声音，怎么回事?", Vector2(1080.0, 640.0), 1200.0, false)
+			_final_study_dialogue_started = true
+			call_deferred("_trigger_light_show")
+		"bedroom_arrival":
+			# Arrival text is intentionally terminal; wall interactions remain available afterwards.
+			pass
+		"bedroom_wall_step":
+			pass
+		"bedroom_wall_final":
+			if not _bedroom_phone_dialogue_started:
+				_bedroom_phone_dialogue_started = true
+				story_sfx_requested.emit("bedroom_phone_ring")
+				_show_flow_subtitle(["有电话？！", "奇怪，呼吸突然顺畅多了"], "bedroom_phone")
+		"bedroom_phone":
+			_show_flow_floating("卧室外面响起电话声", Vector2(5140.0, 650.0), INF, false)
+		"bedroom_exit":
+			pass
+
+
+func _show_flow_floating(value: String, world_anchor: Vector2, clear_x: float = INF, follow_player: bool = false) -> void:
+	if _flow_floating_text == null or not is_instance_valid(_flow_floating_text):
+		return
+	if _flow_floating_text.has_method("set_phrases"):
+		_flow_floating_text.call("set_phrases", PackedStringArray([value]))
+	_flow_text_world_anchor = world_anchor
+	_flow_text_follow_player = follow_player
+	_update_flow_floating_position()
+	_flow_floating_text.visible = true
+	if _flow_floating_text.has_method("set_revealed"):
+		_flow_floating_text.call("set_revealed", true, 0.2)
+	_flow_text_clear_x = clear_x
+
+
+func _hide_flow_floating() -> void:
+	if _flow_floating_text == null or not is_instance_valid(_flow_floating_text):
+		return
+	if _flow_floating_text.has_method("set_revealed"):
+		_flow_floating_text.call("set_revealed", false, 0.25)
+	else:
+		_flow_floating_text.visible = false
+	_flow_text_clear_x = INF
+	_flow_text_follow_player = false
+
+
+func _update_flow_floating_position() -> void:
+	if _flow_floating_text == null or not is_instance_valid(_flow_floating_text):
+		return
+	var anchor := _flow_text_world_anchor
+	if _flow_text_follow_player and _player != null:
+		anchor = _player.global_position + _flow_text_world_anchor
+	var parent := _flow_floating_text.get_parent()
+	if parent is CanvasLayer:
+		_flow_floating_text.position = get_viewport().get_canvas_transform() * anchor
+	else:
+		_flow_floating_text.global_position = anchor
 
 
 # ─── 卧室门三态（§5.2）───
@@ -233,101 +393,32 @@ func on_enter_bedroom() -> void:
 	_fade_black_and_begin_bedroom()
 
 
-# ─── LIGHT 序列（§7.2 A-E 分步时序；t32 重做）───
-## 进入 STAGE_LIGHT 只起步 A（书房外全黑，亮区跟随玩家）；B/C/D/E 由 _process_light 依玩家事件 / 计时推进。
+# ─── 光影演出（右侧遮罩揭露；四试卷后等角色走到书房右侧触发）───
 
-## A 步：遮罩全黑（除书房=跟随玩家的亮区），等待玩家出门。
-func _start_light_a() -> void:
-	if _light_step != LIGHT_NONE:
+## 触发震撼演出：先把走廊组装在书房右侧遮罩后，再消散隔墙并沿遮罩边缘发射粒子。
+## 演出期间锁输入；5 秒内遮罩向右展开，露出走廊后才解锁进入走廊阶段。
+func _trigger_light_show() -> void:
+	if _light_triggered:
 		return
-	_light_step = LIGHT_A
-	_light_b_reset_done = false
-	_light_c_t = 0.0
-	_light_d_t = 0.0
-	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR, false, LIGHT_STUDY_CENTER)
-
-
-## B 步：玩家出门 → 黑屏渐变 → 重置书房初始位 → 重显（亮区回 A 态），随后等待二次靠门。
-func _enter_light_b() -> void:
-	if _light_step != LIGHT_A and _light_step != LIGHT_B:
-		return
-	_light_step = LIGHT_B
-	_light_b_reset_done = false
-	if _mask == null:
-		_light_b_reset_done = true
-		_reset_player_to_study()
-		return
-	_mask.enabled = true
-	# t34 gap ③：B 保持固定书房亮区（follow_player=false），重显回 A 态（书房为亮区）
-	_mask.follow_player = false
-	_mask.center_global = LIGHT_STUDY_CENTER
-	var tw := create_tween()
-	# 黑屏渐变（A 态 → 全黑）
-	tw.tween_property(_mask, "darkness_color", LIGHT_BLACK, 0.5)
-	tw.tween_property(_mask, "radius_inner", 12.0, 0.5)
-	tw.tween_property(_mask, "radius_outer", 24.0, 0.5)
-	# 黑屏中点重置玩家 → 重显回 A 态（亮区）
-	tw.tween_callback(Callable(self, "_reset_player_to_study"))
-	tw.tween_property(_mask, "darkness_color", LIGHT_A_COLOR, LIGHT_B_REVEAL)
-	tw.tween_property(_mask, "radius_inner", LIGHT_A_INNER, LIGHT_B_REVEAL)
-	tw.tween_property(_mask, "radius_outer", LIGHT_A_OUTER, LIGHT_B_REVEAL)
-	tw.tween_callback(Callable(self, "_mark_light_b_reset_done"))
-
-
-## C 步：二次靠门 → 房间间隔门/墙全部消散 + 震动 5 秒 + 粒子震撼沿边沿衔接 + 遮罩亮区缓缓展开。
-func _enter_light_c() -> void:
-	if _light_step != LIGHT_B:
-		return
-	_light_step = LIGHT_C
-	_light_c_t = 0.0
+	_light_triggered = true
+	_light_show_t = 0.0
+	StoryMonitor.lock_input()
+	# 走廊真实存在、碰撞和玩家输入仍受锁；侧向遮罩先盖住书房右侧，避免墙体消失时提前穿帮。
+	_set_corridor_active(true)
+	_begin_light_side_mask()
 	_hide_room_structures()
 	_run_light_shake()
 	_run_light_particles()
-	if _mask != null and _mask.enabled:
-		# t34 gap ④：亮区随角色向走廊走、缓缓展开（follow_player=true + 1.5-2s Tween 扩向走廊）
-		_mask.follow_player = true
-		_tween_mask_to(LIGHT_A_COLOR, LIGHT_EXPAND_INNER, LIGHT_EXPAND_OUTER, LIGHT_C_DUR)
 
 
-## D 步：环境微压暗（只渲染氛围，亮区四周轻微暗角）。
-func _enter_light_d() -> void:
-	if _light_step != LIGHT_C:
-		return
-	_light_step = LIGHT_D
-	_light_d_t = 0.0
-	if _mask != null and _mask.enabled:
-		_tween_mask_to(LIGHT_DIM_COLOR, LIGHT_DIM_INNER, LIGHT_DIM_OUTER, LIGHT_D_DUR)
-
-
-## E 步：解锁长按屏息 + 进入走廊阶段（启动无限走廊）。
-func _finish_light_e() -> void:
-	if _light_step != LIGHT_D and _light_step != LIGHT_E:
-		return
-	if _light_step == LIGHT_E:
-		return
-	_light_step = LIGHT_E
+## 震撼演出结束（5s）：解锁输入 + 解锁屏息 + 进入走廊阶段。
+func _finish_light_show() -> void:
+	_clear_light_side_mask()
 	GameState.set_process_flag(FLAG_HOLD_BREATH_UNLOCKED, true)
 	GameState.set_process_flag(FLAG_LIGHT_PHASE_DONE, true)
+	StoryMonitor.unlock_input()
 	if current_stage < STAGE_CORRIDOR:
 		set_stage(STAGE_CORRIDOR)
-
-
-func _mark_light_b_reset_done() -> void:
-	_light_b_reset_done = true
-
-
-## 配置遮罩到指定亮区参数（即时态；供各 LIGHT 步设置及自检强制态）。
-## follow=false 时以 center 为固定亮区中心（t34 gap ③：A 固定书房亮区，B 保持固定）。
-func _mask_config(inner: float, outer: float, col: Color, follow: bool = true, center: Vector2 = Vector2.ZERO) -> void:
-	if _mask == null:
-		return
-	_mask.enabled = true
-	_mask.follow_player = follow
-	_mask.darkness_color = col
-	_mask.radius_inner = inner
-	_mask.radius_outer = outer
-	if not follow:
-		_mask.center_global = center
 
 
 func _reset_player_to_study() -> void:
@@ -343,6 +434,165 @@ func _hide_room_structures() -> void:
 			continue
 		n.visible = false
 		_disable_collisions_recursive(n)
+
+
+## 从独立卧室回到客厅时复原主场景的门墙视觉与物理体。
+## 这只恢复白模结构；试卷等可收集物仍由各自的 GameState 旗标保持已收集状态。
+func _restore_room_structures() -> void:
+	for wp in wall_hide_paths:
+		var n := get_node_or_null(wp)
+		if n == null:
+			continue
+		n.visible = true
+		_set_collision_enabled_recursive(n, true)
+
+
+func _set_bedroom_environment_collision(active: bool) -> void:
+	if bedroom_left_wall_path == NodePath():
+		return
+	var wall := get_node_or_null(bedroom_left_wall_path)
+	if wall == null:
+		return
+	var environment := wall.get_parent()
+	if environment == null:
+		return
+	_set_collision_enabled_recursive(environment, active)
+
+
+func _set_room_right_wall_collision(active: bool) -> void:
+	if room_right_wall_collision_path == NodePath():
+		return
+	var collision := get_node_or_null(room_right_wall_collision_path)
+	if collision is CollisionShape2D:
+		(collision as CollisionShape2D).set_deferred("disabled", not active)
+
+
+## 卧室是结局专用的独立场景。走廊及此前阶段必须整体隐藏，避免墙纸或门落入走廊画面。
+func _set_bedroom_active(active: bool) -> void:
+	if _bedroom == null:
+		return
+	var room := _bedroom.get_parent()
+	if room is CanvasItem:
+		(room as CanvasItem).visible = active
+	_set_collision_enabled_recursive(room, active)
+
+
+## 卧室是独立房间：进入后隐藏走廊视觉并停止其判定，避免走廊下一帧覆盖白模。
+func _set_corridor_active(active: bool) -> void:
+	if _corridor != null:
+		if _corridor.has_method("set_enabled"):
+			(_corridor as Node).set_enabled(active)
+		else:
+			_corridor.set("enabled", active)
+		if _corridor is CanvasItem:
+			(_corridor as CanvasItem).visible = active
+	if _corridor_assembly != null:
+		_corridor_assembly.set_process(active)
+	_set_corridor_boundary_visuals(active)
+
+
+## 光影演出后，主场景的卧室入口与结局点不能残留在走廊里。
+## 终局点开局保留 state=0 的视觉占位，但仅在卧室完成、回到客厅后开放最终白屏交互。
+func _set_story_item_stage(stage: int) -> void:
+	var post_bedroom_living := stage == STAGE_LIVING \
+		and GameState.get_process_flag(FLAG_BEDROOM_INTERACTIONS_DONE)
+	# The hall door is a visible no-op before the corridor transition: E appears in range but
+	# its gate rejects the action until the post-bedroom return route. Once LIGHT starts, it
+	# must disappear with the old room geometry so it cannot leak into the corridor.
+	var hall_door_visible := stage < STAGE_LIGHT or post_bedroom_living
+	var hall_door := get_node_or_null("Items/BedroomHallDoor") as Item
+	if hall_door != null and stage < STAGE_LIGHT:
+		hall_door.gate_flag = ""
+	_set_story_item_state(hall_door, hall_door_visible, hall_door_visible)
+	var end_placeholder_visible := stage < STAGE_LIGHT or post_bedroom_living
+	var end_item := get_node_or_null("Items/EndItem") as Item
+	if end_item != null:
+		end_item.gate_flag = ""
+	_set_story_item_state(end_item, end_placeholder_visible, post_bedroom_living or stage >= STAGE_KITCHEN and stage < STAGE_LIGHT)
+	var corridor_end_active := stage == STAGE_CORRIDOR_END
+	_set_story_item_state(get_node_or_null(corridor_end_item_path), corridor_end_active, corridor_end_active)
+
+
+func _set_story_item_state(node: Node, visible: bool, interaction_enabled: bool) -> void:
+	if not node is Item:
+		return
+	var item := node as Item
+	item.visible = visible
+	item.set_interaction_enabled(interaction_enabled)
+	_set_collision_enabled_recursive(item, interaction_enabled)
+
+
+## 走廊地板是独立 StaticBody2D，未挂在 Corridor 节点下；只在走廊阶段显示。
+## 进入独立卧室时隐藏它，确保房间盒子之外保持纯黑。
+func _set_corridor_boundary_visuals(active: bool) -> void:
+	for path in [corridor_floor_path, corridor_end_wall_path]:
+		if path == NodePath():
+			continue
+		var boundary := get_node_or_null(path)
+		if boundary is CanvasItem:
+			(boundary as CanvasItem).visible = active
+		# The end wall falls inside the separate bedroom's world range. Keeping its hidden
+		# collider active would leave an invisible barrier roughly 100px into that room.
+		# The floor deliberately remains solid while hidden because it overlaps the bedroom
+		# floor and continues to provide a stable standing surface during transitions.
+		if path == corridor_end_wall_path:
+			_set_collision_enabled_recursive(boundary, active)
+
+
+## 独立卧室：镜头锁在单间中点，1280px 房间置于 1920px 画幅中央，左右自然保留黑边。
+func _lock_bedroom_frame() -> void:
+	var camera := get_node_or_null(camera_path)
+	if camera is CorridorCamera:
+		(camera as CorridorCamera).lock_frame_center_x((bedroom_frame_left + bedroom_frame_right) * 0.5)
+
+
+## 卧室门 E 回客厅：恢复客厅的运行时场景层和正常地图跟随；玩家搬运由 BedroomEnding 负责。
+func _on_bedroom_return_to_living_room() -> void:
+	# Do not reset progression here: collected papers stay collected, while the returned living room regains its walls.
+	_restore_room_structures()
+	set_stage(STAGE_LIVING)
+	var camera := get_node_or_null(camera_path)
+	if camera is CorridorCamera:
+		(camera as CorridorCamera).set_map_bounds(world_camera_left, world_camera_right)
+		(camera as CorridorCamera).set_mode(CorridorCamera.Mode.FOLLOW_CLAMPED)
+	_hide_flow_floating()
+	if not _bedroom_exit_dialogue_shown:
+		_bedroom_exit_dialogue_shown = true
+		call_deferred("_show_bedroom_exit_dialogue")
+
+
+func _show_bedroom_exit_dialogue() -> void:
+	_show_flow_subtitle([
+		"咦……电话声音消失了",
+		"谁？",
+		"把盒子扔到地上，里面的望远镜都掉出来了",
+	], "bedroom_exit")
+
+
+func _on_bedroom_wall_updated(state: int) -> void:
+	# 每次撕墙纸都复用同一个屏幕震动与粒子实例。
+	if _screen_shake != null and _screen_shake.has_method("shake"):
+		(_screen_shake as Node).shake(20.0, 0.5)
+	if _particle_burst != null and _particle_burst.has_method("set_world_space_particles"):
+		_particle_burst.call("set_world_space_particles", true)
+	if _particle_burst != null and _particle_burst.has_method("burst"):
+		var wall := get_node_or_null("Rooms/Bedroom/WallItem")
+		if wall is Node2D:
+			(_particle_burst as Node2D).global_position = (wall as Node2D).global_position
+		_particle_burst.call("burst")
+	if state == 2 and not DialogueManager.is_dialogue_active():
+		_show_flow_subtitle(["揭开了！还有一截……"], "bedroom_wall_step")
+	elif state >= 3 and not _bedroom_phone_dialogue_started and not DialogueManager.is_dialogue_active():
+		_show_flow_subtitle(["呼……是一张星空的海报……？"], "bedroom_wall_final")
+
+
+func _set_collision_enabled_recursive(n: Node, active: bool) -> void:
+	if n == null:
+		return
+	for child in n.get_children():
+		if child is CollisionShape2D:
+			(child as CollisionShape2D).set_deferred("disabled", not active)
+		_set_collision_enabled_recursive(child, active)
 
 
 func _disable_collisions_recursive(n: Node) -> void:
@@ -362,17 +612,77 @@ func _run_light_shake() -> void:
 
 ## LIGHT-C 粒子震撼（沿边缘/边界衔接新场景）；t34 gap ④：持续发射震撼粒子。
 func _run_light_particles() -> void:
+	_move_light_particles_to_reveal_edge(_light_mask_start_uv)
+	if _particle_burst != null and _particle_burst.has_method("set_world_space_particles"):
+		(_particle_burst as Node).set_world_space_particles(true)
 	if _particle_burst != null and _particle_burst.has_method("start_continuous"):
 		(_particle_burst as Node).start_continuous(LIGHT_PARTICLE_DUR)
 	elif _particle_burst != null and _particle_burst.has_method("burst"):
 		(_particle_burst as Node).burst()
 
 
+## 开始书房右侧遮罩。DarknessMask 保留自己的缺氧圆孔模式；这里仅暂时切换为方向遮罩。
+func _begin_light_side_mask() -> void:
+	_light_side_mask_active = false
+	if _mask == null or not _mask.has_method("begin_right_side_mask"):
+		return
+	_mask.set("darkness_color", LIGHT_MASK_COLOR)
+	_mask.call("begin_right_side_mask", study_right_x, LIGHT_MASK_SOFTNESS_PX)
+	if _mask.has_method("get_right_side_reveal_edge_uv"):
+		_light_mask_start_uv = float(_mask.call("get_right_side_reveal_edge_uv"))
+	else:
+		_light_mask_start_uv = 1.0
+	_light_side_mask_active = true
+
+
+## 粒子始终贴在遮罩揭露边上：墙体看起来由爆裂粒子逐段消散，而非被硬切隐藏。
+func _update_light_side_reveal() -> void:
+	if not _light_side_mask_active or _mask == null:
+		return
+	var raw_progress := clampf((_light_show_t - LIGHT_REVEAL_DELAY) / LIGHT_REVEAL_DUR, 0.0, 1.0)
+	var eased_progress := raw_progress * raw_progress * (3.0 - 2.0 * raw_progress)
+	var edge_uv := lerpf(_light_mask_start_uv, LIGHT_REVEAL_END_UV, eased_progress)
+	if _mask.has_method("set_right_side_reveal_edge_uv"):
+		_mask.call("set_right_side_reveal_edge_uv", edge_uv)
+	_move_light_particles_to_reveal_edge(edge_uv)
+
+
+func _clear_light_side_mask() -> void:
+	_light_side_mask_active = false
+	if _mask != null and _mask.has_method("clear_right_side_mask"):
+		_mask.call("clear_right_side_mask")
+
+
+func _move_light_particles_to_reveal_edge(edge_uv: float) -> void:
+	if not (_particle_burst is Node2D):
+		return
+	var vp := get_viewport()
+	if vp == null:
+		return
+	var view_size := vp.get_visible_rect().size
+	if view_size.x <= 0.0 or view_size.y <= 0.0:
+		return
+	var screen_point := Vector2(edge_uv * view_size.x, view_size.y * 0.66)
+	(_particle_burst as Node2D).global_position = vp.get_canvas_transform().affine_inverse() * screen_point
+
+
 # ─── 信号响应（f5）───
 
 ## CorridorEndItem end_confirmed → 黑屏 → 进入卧室 begin()。
-func on_corridor_end_confirmed() -> void:
+## 信号 end_confirmed(state: int) 带 1 参——Godot 4 连接要求形参一致（t6 联调实测：0 参处理器在
+## emit 时报 "Method expected 0 argument(s), but called with 1" 且调用被拒）。
+func on_corridor_end_confirmed(_state: int) -> void:
 	_fade_black_and_begin_bedroom()
+
+
+## 走廊尽头第一次交互只展示剪刀/墙纸提示，第二次才进入卧室。
+func on_corridor_end_interaction(state: int) -> void:
+	if state == 1 and not DialogueManager.is_dialogue_active():
+		_show_flow_subtitle([
+			"地上有一把锈迹斑斑的剪刀",
+			"墙边……墙纸裂开了一个口",
+			"撕开看看吧",
+		], "")
 
 
 ## BreathSystem breath_disable_requested → 关闭呼吸机制。
@@ -381,35 +691,53 @@ func on_breath_disable() -> void:
 		(_breath as Node).set_enabled(false)
 
 
-## BedroomEndItem white_screen_end_requested → 全屏白渐变结束。
+## BedroomEndItem white_screen_end_requested → 全屏白屏（ColorRect 节点，无遮罩）。
 func on_white_screen_end() -> void:
-	if _mask != null:
-		_mask.enabled = true
-		_tween_mask_to(Color(1, 1, 1, 1), 4000.0, 4500.0, 0.8)
+	_show_screen_overlay("white")
 	GameState.set_process_flag(FLAG_END_WHITE, true)
 
 
-## 黑屏渐变 + 进入卧室 begin()。
+## 黑屏 + 进入卧室 begin()（全屏黑 ColorRect，无遮罩）。
 func _fade_black_and_begin_bedroom() -> void:
-	if _mask != null:
-		_mask.enabled = true
-		_tween_mask_to(Color(0, 0, 0, 1), 4000.0, 4500.0, 0.8)
+	_show_screen_overlay("black")
+	_set_corridor_active(false)
+	StoryMonitor.lock_input()
 	if _bedroom != null and _bedroom.has_method("begin"):
 		(_bedroom as Node).begin()
+	if _bedroom != null and _bedroom.has_method("prime_arrival_reveal"):
+		(_bedroom as Node).prime_arrival_reveal()
 	set_stage(STAGE_BEDROOM)
+	if _screen_shake != null and _screen_shake.has_method("shake"):
+		(_screen_shake as Node).shake(22.0, 0.7)
+	# 黑屏短暂停留后隐藏（进卧室重显）
+	await get_tree().create_timer(0.8).timeout
+	_hide_screen_overlay()
+	await get_tree().create_timer(0.2).timeout
+	if not _bedroom_arrival_dialogue_shown:
+		_bedroom_arrival_dialogue_shown = true
+		_show_flow_subtitle([
+			"怎么回事，我到哪了？",
+			"我应当撕开一半墙纸才是",
+			"周围环境……这是进到卧室里了？",
+			"墙纸里露出半截被埋没的海报",
+			"看一下要不要继续撕开吧",
+		], "bedroom_arrival")
 
 
-## 用 Tween 渐变遮罩颜色/半径（f7；DarknessMask._process 读导出属性，故 tween 属性可生效）。
-func _tween_mask_to(col: Color, ri: float, ro: float, dur: float) -> void:
-	if _mask == null:
-		return
-	var m := _mask
-	var tw := create_tween()
-	# 颜色/两个半径同步渐变（t32：LIGHT 展开需在 LIGHT_C_DUR 内整体过渡，避免顺序 tween 与计时错位）
-	tw.set_parallel(true)
-	tw.tween_property(m, "darkness_color", col, dur)
-	tw.tween_property(m, "radius_inner", ri, dur)
-	tw.tween_property(m, "radius_outer", ro, dur)
+## 全屏黑/白 ColorRect 覆盖层控制（无圆形遮罩；黑屏/白屏为流程转场）。
+func _show_screen_overlay(kind: String) -> void:
+	var n := get_node_or_null(black_screen_path)
+	if kind == "white":
+		n = get_node_or_null(white_screen_path)
+	if n is CanvasItem:
+		(n as CanvasItem).visible = true
+
+
+func _hide_screen_overlay() -> void:
+	for p in [black_screen_path, white_screen_path]:
+		var n := get_node_or_null(p)
+		if n is CanvasItem:
+			(n as CanvasItem).visible = false
 
 
 # ─── 自检（场景级协调：单一 quit 出口，汇总各子系统）───
@@ -442,22 +770,10 @@ func _call_bool_selftest(n: Node) -> bool:
 	return res is bool and (res as bool)
 
 
-## 同步强制推进 LIGHT A→E（仅自检/校验用，跳过动画 Tween）：设终态 + 校验用状态。
-func _force_light_to_e() -> void:
-	_light_step = LIGHT_A
-	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR, false, LIGHT_STUDY_CENTER)
-	_light_step = LIGHT_B
-	_light_b_reset_done = true
-	_reset_player_to_study()
-	_mask_config(LIGHT_A_INNER, LIGHT_A_OUTER, LIGHT_A_COLOR, false, LIGHT_STUDY_CENTER)
-	_light_step = LIGHT_C
-	_hide_room_structures()
-	_run_light_shake()
-	_run_light_particles()
-	_mask_config(LIGHT_EXPAND_INNER, LIGHT_EXPAND_OUTER, LIGHT_A_COLOR, true)
-	_light_step = LIGHT_D
-	_mask_config(LIGHT_DIM_INNER, LIGHT_DIM_OUTER, LIGHT_DIM_COLOR)
-	_finish_light_e()
+## 同步强制完成光影演出（仅自检/校验用，跳过计时）：触发 + 立即结束。
+func _force_light_show() -> void:
+	_trigger_light_show()
+	_finish_light_show()
 
 
 ## 全部房间间隔结构（wall_hide_paths）是否隐藏。
@@ -473,6 +789,43 @@ func _light_structures_hidden() -> bool:
 
 func _run_flow_checks(checks: Array[String]) -> void:
 	_reset_flags()
+	set_stage(STAGE_STUDY)
+	var camera_frame_ok := _screen_shake != null and _screen_shake.has_method("get_base_offset") \
+		and (_screen_shake.call("get_base_offset") as Vector2).distance_to(CAMERA_FRAME_OFFSET) <= 0.01
+	checks.append("s0_camera_frame" if camera_frame_ok else "s0_camera_frame_FAIL")
+	var gameplay_camera := get_node_or_null(camera_path) as Camera2D
+	checks.append("s0_camera_rotation_rendered" if gameplay_camera != null and not gameplay_camera.ignore_rotation else "s0_camera_rotation_rendered_FAIL")
+	var initial_camera_bounds := gameplay_camera is CorridorCamera \
+		and is_equal_approx((gameplay_camera as CorridorCamera).map_left, world_camera_left) \
+		and is_equal_approx((gameplay_camera as CorridorCamera).map_right, world_camera_right)
+	checks.append("s0_camera_bounds" if initial_camera_bounds else "s0_camera_bounds_FAIL")
+	# The white-model floor inherits a template Player for standalone floor previews. C3 has its
+	# own gameplay Player, so the inherited preview body must stay fully inert and never own a camera.
+	var white_model_player := get_node_or_null("WhiteModel/Player") as Player
+	var white_model_shape := get_node_or_null("WhiteModel/Player/CollisionShape2D") as CollisionShape2D
+	var white_model_camera := get_node_or_null("WhiteModel/Player/Camera2D") as Camera2D
+	var duplicate_player_disabled := white_model_player != null \
+		and white_model_player.process_mode == Node.PROCESS_MODE_DISABLED \
+		and not white_model_player.visible \
+		and white_model_shape != null and white_model_shape.disabled \
+		and white_model_camera != null and not white_model_camera.enabled
+	checks.append("s0_white_model_player_disabled" if duplicate_player_disabled else "s0_white_model_player_disabled_FAIL")
+	var aspect_keep := str(ProjectSettings.get_setting("display/window/stretch/aspect", "keep")) == "keep"
+	checks.append("s0_aspect_keep" if aspect_keep else "s0_aspect_keep_FAIL")
+	# The living-room bedroom door is intentionally a proximity-visible no-op before the
+	# corridor; its gate stays closed so an early E press cannot enter the bedroom.
+	var initial_hall_door := get_node_or_null("Items/BedroomHallDoor") as C3DoorEntryItem
+	var initial_hall_door_state := initial_hall_door.current_state if initial_hall_door != null else -1
+	if initial_hall_door != null:
+		initial_hall_door.touched()
+	var initial_hall_door_noop := initial_hall_door != null and initial_hall_door.visible \
+		and initial_hall_door.current_state == initial_hall_door_state and current_stage == STAGE_STUDY
+	checks.append("s0_hall_door_noop" if initial_hall_door_noop else "s0_hall_door_noop_FAIL")
+	# 客厅右侧的终局点在开局就作为未触发占位存在；未完成卧室前不得触发白屏。
+	var initial_end_item := get_node_or_null("Items/EndItem") as BedroomEndItem
+	var initial_end_placeholder := initial_end_item != null and initial_end_item.visible \
+		and initial_end_item.current_state == 0 and not initial_end_item.is_interaction_available()
+	checks.append("s0_initial_end_placeholder" if initial_end_placeholder else "s0_initial_end_placeholder_FAIL")
 	checks.append("s1_study_locked" if (not GameState.get_process_flag(FLAG_STUDY_ITEMS_UNLOCKED) and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN) and current_stage == STAGE_STUDY) else "s1_study_locked_FAIL")
 	on_player_left_study()
 	checks.append("s2_leave_study" if (current_stage == STAGE_LEAVE_STUDY and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN)) else "s2_leave_study_FAIL")
@@ -482,24 +835,73 @@ func _run_flow_checks(checks: Array[String]) -> void:
 	on_paper_collected("study_b", 99)
 	checks.append("s5_study_b" if not GameState.get_process_flag(FLAG_LIGHT_PHASE_DONE) else "s5_study_b_FAIL")
 	on_paper_collected("study_a", 100)
-	checks.append("s6_light" if (GameState.get_process_flag(FLAG_LIGHT_PHASE_DONE) and current_stage == STAGE_LIGHT and _light_step == LIGHT_A) else "s6_light_FAIL")
-	# t32：驱动 LIGHT A→E，校验 hold_breath_unlocked + 房间结构消散 + 震动 5s
-	_force_light_to_e()
+	checks.append("s6_light" if (GameState.get_process_flag(FLAG_LIGHT_PHASE_DONE) and current_stage == STAGE_LIGHT) else "s6_light_FAIL")
+	# LIGHT-C 回归：触发时遮罩必须从书房右侧开始连续覆盖视口右端；结束时再关闭。
+	# 这避免走廊虽已组装却在门墙消失的一帧提前显露。
+	if _player != null:
+		_player.global_position.x = LIGHT_TRIGGER_X
+	_trigger_light_show()
+	var light_mask_started := _mask != null \
+		and _mask.has_method("is_side_mask_active") \
+		and bool(_mask.call("is_side_mask_active")) \
+		and _mask.has_method("covers_right_side_from") \
+		and bool(_mask.call("covers_right_side_from", study_right_x))
+	checks.append("s6_mask_initial_right_cover" if light_mask_started else "s6_mask_initial_right_cover_FAIL")
+	checks.append("s6_input_locked" if StoryMonitor.input_locked else "s6_input_locked_FAIL")
+	_finish_light_show()
+	var light_mask_finished := _mask != null \
+		and _mask.has_method("is_side_mask_active") \
+		and not bool(_mask.call("is_side_mask_active"))
+	checks.append("s6_mask_finished_off" if light_mask_finished else "s6_mask_finished_off_FAIL")
+	checks.append("s6_input_unlocked" if not StoryMonitor.input_locked else "s6_input_unlocked_FAIL")
 	checks.append("s6_breath" if GameState.get_process_flag(FLAG_HOLD_BREATH_UNLOCKED) else "s6_breath_FAIL")
 	checks.append("s6_hide" if _light_structures_hidden() else "s6_hide_FAIL")
 	var sd: float = float(_screen_shake.get("duration")) if _screen_shake != null else 0.0
 	checks.append("s6_shake" if sd >= 4.9 else "s6_shake_FAIL(%.1f)" % sd)
+	# 光影后走廊必须从书房门直接接出，且三个特异点与尽头的每段距离都不超过一屏内的 1000px。
+	var direct_corridor := false
+	if _corridor != null:
+		var start_x := float(_corridor.get("corridor_start_x"))
+		var end_x := float(_corridor.get("end_wall_x"))
+		var specials := _corridor.get("special_x") as Array
+		if specials.size() == 3:
+			var first_x := float(specials[0])
+			var second_x := float(specials[1])
+			var third_x := float(specials[2])
+			direct_corridor = is_equal_approx(start_x, study_right_x) \
+				and first_x - study_right_x >= 0.0 and first_x - study_right_x <= 1000.0 \
+				and second_x - first_x > 0.0 and second_x - first_x <= 1000.0 \
+				and third_x - second_x > 0.0 and third_x - second_x <= 1000.0 \
+				and end_x - third_x > 0.0 and end_x - third_x <= 1000.0
+	checks.append("s7_direct_corridor_short_segments" if direct_corridor else "s7_direct_corridor_short_segments_FAIL")
+	# 光影进入走廊后，主场景的卧室入口与结局交互点不得残留在过场路径上。
+	var hall_door := get_node_or_null("Items/BedroomHallDoor") as C3DoorEntryItem
+	var living_end_item := get_node_or_null("Items/EndItem") as BedroomEndItem
+	var corridor_items_hidden := hall_door != null and living_end_item != null \
+		and not hall_door.visible and not hall_door.is_interaction_available() \
+		and not living_end_item.visible and not living_end_item.is_interaction_available()
+	checks.append("s7_corridor_story_items_hidden" if corridor_items_hidden else "s7_corridor_story_items_hidden_FAIL")
+	# 走廊尽头 item 位于独立卧室左墙外侧；进入卧室后必须完全隐藏且不可交互。
+	set_stage(STAGE_BEDROOM)
+	var corridor_end_item := get_node_or_null(corridor_end_item_path) as Item
+	var corridor_end_hidden_in_bedroom := corridor_end_item != null \
+		and not corridor_end_item.visible and not corridor_end_item.is_interaction_available()
+	checks.append("s8_bedroom_corridor_end_hidden" if corridor_end_hidden_in_bedroom else "s8_bedroom_corridor_end_hidden_FAIL")
+	set_stage(STAGE_STUDY)
 	_reset_flags()
 	on_bedroom_door_named()
 	checks.append("s8_bedroom_named" if GameState.get_process_flag(FLAG_BEDROOM_DOOR_ACTIVE) else "s8_bedroom_named_FAIL")
 
 
 ## 物理运行断言（本轮验证升级：headless EXIT=0 不足以发现坠穿等致命缺陷）——
-## 等物理帧稳定后读回：①玩家站立 y≈948 不坠穿 ②卧室 begin 后玩家 x≈4820 ③LIGHT-C 后 WallRight.visible=false ④StudyGateBlocker 初始 disabled。
+## 等物理帧稳定后读回：①玩家站立 y≈948 不坠穿 ②卧室 begin 后落在配置的左侧出生点、房间尺寸/中轴门/固定构图正确 ③LIGHT-C 后 WallRight.visible=false ④StudyGateBlocker 初始 disabled。
 func _physical_assertions() -> bool:
 	# 等物理帧稳定（~1s，让玩家落到地面）
 	await get_tree().create_timer(1.0).timeout
 	var checks: Array[String] = []
+	# 卧室是末段专用的独立房间，不得在书房/客厅/走廊阶段提前渲染。
+	var bedroom_room := get_node_or_null("Rooms/Bedroom") as CanvasItem
+	checks.append("bedroom_hidden_before_entry" if bedroom_room != null and not bedroom_room.visible else "bedroom_hidden_before_entry_FAIL")
 	# ①StudyGateBlocker 初始 disabled（出生前不阻挡；_left_study=false 时 blocked=false）
 	if gate_blocker_path != NodePath():
 		var blocker := get_node_or_null(gate_blocker_path)
@@ -512,31 +914,113 @@ func _physical_assertions() -> bool:
 	if _player != null:
 		var py: float = _player.global_position.y
 		checks.append("stand_y" if (py > 900.0 and py < 1000.0) else "stand_y_FAIL(%.1f)" % py)
-	# ③卧室 begin → 玩家全局 x≈4820
+	# ③卧室 begin → 落在配置的单房间左侧出生点；门位于中轴、镜头锁住完整房间构图。
+	set_stage(STAGE_BEDROOM)
 	if _bedroom != null and _bedroom.has_method("begin"):
 		(_bedroom as Node).begin()
-		await get_tree().process_frame
+		# Camera2D updates after the scene's ready chain; assert the stable composition, not its pre-frame value.
+		await get_tree().create_timer(0.05).timeout
+		var bedroom_root := (_bedroom as Node).get_parent() as Node2D
+		var bedroom_spawn: Vector2 = _bedroom.get("bedroom_spawn") as Vector2
+		var expected_bedroom_pos := bedroom_root.to_global(bedroom_spawn) if bedroom_root != null else bedroom_spawn
 		if _player != null:
-			var bx: float = _player.global_position.x
-			checks.append("bedroom_x" if (absf(bx - 4820.0) < 5.0) else "bedroom_x_FAIL(%.1f)" % bx)
-	# ④LIGHT A→E → 房间结构消散 + 震动 5s + hold_breath_unlocked + 玩家齐位
-	_force_light_to_e()
+			checks.append("bedroom_spawn" if _player.global_position.distance_to(expected_bedroom_pos) < 5.0 else "bedroom_spawn_FAIL(%s)" % str(_player.global_position))
+		if bedroom_root != null:
+			checks.append("bedroom_width1280" if is_equal_approx(float(bedroom_root.get("room_width")), 1280.0) else "bedroom_width_FAIL(%.1f)" % float(bedroom_root.get("room_width")))
+			checks.append("bedroom_player_front" if _player != null and _player.z_index > bedroom_root.z_index else "bedroom_player_front_FAIL")
+			var bedroom_door := get_node_or_null("Rooms/Bedroom/DoorItem") as Node2D
+			checks.append("bedroom_door_center" if bedroom_door != null and is_equal_approx(bedroom_door.position.x, float(bedroom_root.get("room_width")) * 0.5) else "bedroom_door_center_FAIL")
+			var bedroom_camera := get_node_or_null(camera_path) as CorridorCamera
+			var configured_frame_x := float(bedroom_camera.get("_frame_center_x")) if bedroom_camera != null else -1.0
+			checks.append("bedroom_frame_locked" if bedroom_camera != null and bedroom_camera.get_mode() == CorridorCamera.Mode.FRAME_LOCKED and is_equal_approx(configured_frame_x, (bedroom_frame_left + bedroom_frame_right) * 0.5) else "bedroom_frame_locked_FAIL")
+			var displayed_center := bedroom_camera.get_screen_center_position().x if bedroom_camera != null else -1.0
+			checks.append("bedroom_frame_visible" if absf(displayed_center - (bedroom_frame_left + bedroom_frame_right) * 0.5) <= 20.0 else "bedroom_frame_visible_FAIL(%.1f)" % displayed_center)
+		var corridor_end_wall := get_node_or_null(corridor_end_wall_path)
+		var corridor_end_wall_collision := corridor_end_wall.get_node_or_null("CollisionShape2D") as CollisionShape2D if corridor_end_wall != null else null
+		checks.append("bedroom_corridor_wall_disabled" if corridor_end_wall_collision != null and corridor_end_wall_collision.disabled else "bedroom_corridor_wall_disabled_FAIL")
+	var wall := get_node_or_null("Rooms/Bedroom/WallItem") as BedroomWallItem
+	var hall_door := get_node_or_null("Items/BedroomHallDoor") as C3DoorEntryItem
+	var living_paper := get_node_or_null("Items/PaperLiving") as C3PaperItem
+	var kitchen_paper := get_node_or_null("Items/PaperKitchen") as C3PaperItem
+	if wall != null:
+		for i in range(3):
+			wall.touched()
+			await get_tree().process_frame
+			var state := i + 1
+			var visual := wall.get_node_or_null("Visual") as Polygon2D
+			checks.append("bedroom_wall_step%d" % state if wall.current_state == state and visual != null and visual.color == wall.color_for_state(state) else "bedroom_wall_step%d_FAIL" % state)
+		checks.append("bedroom_wall_unlock" if GameState.get_process_flag(FLAG_BEDROOM_UNLOCKED) and GameState.get_process_flag(FLAG_BEDROOM_INTERACTIONS_DONE) else "bedroom_wall_unlock_FAIL")
+		checks.append("bedroom_breath_disabled" if _breath != null and not bool(_breath.get("_enabled")) else "bedroom_breath_disabled_FAIL")
+	if living_paper != null:
+		living_paper.touched()
+	if kitchen_paper != null:
+		kitchen_paper.touched()
+	var papers_collected := GameState.get_process_flag(FLAG_PAPER_LIVING) and GameState.get_process_flag(FLAG_PAPER_KITCHEN)
+	# Returning from the isolated bedroom restores the living-room walls, while paper collection stays persistent.
+	_force_light_show()
+	var bedroom_door := get_node_or_null("Rooms/Bedroom/DoorItem") as BedroomDoorItem
+	if bedroom_door != null:
+		bedroom_door.touched()
+		await get_tree().process_frame
+		checks.append("bedroom_door_return" if _player != null and _player.global_position.distance_to(Vector2(1850, 948)) < 5.0 else "bedroom_door_return_FAIL(%s)" % str(_player.global_position))
+		var returned_camera := get_node_or_null(camera_path) as CorridorCamera
+		checks.append("bedroom_camera_restore" if returned_camera != null and returned_camera.get_mode() == CorridorCamera.Mode.FOLLOW_CLAMPED else "bedroom_camera_restore_FAIL")
+	checks.append("bedroom_return_stage_living" if current_stage == STAGE_LIVING else "bedroom_return_stage_living_FAIL")
+	checks.append("bedroom_return_room_hidden" if bedroom_room != null and not bedroom_room.visible else "bedroom_return_room_hidden_FAIL")
+	checks.append("bedroom_return_hall_door_visible" if hall_door != null and hall_door.visible else "bedroom_return_hall_door_visible_FAIL")
+	checks.append("bedroom_return_hall_door_usable" if hall_door != null and hall_door.is_interaction_available() else "bedroom_return_hall_door_usable_FAIL")
+	checks.append("bedroom_return_papers_retained" if papers_collected and GameState.get_process_flag(FLAG_PAPER_LIVING) and GameState.get_process_flag(FLAG_PAPER_KITCHEN) else "bedroom_return_papers_retained_FAIL")
+	checks.append("bedroom_return_structures_restored" if not _light_structures_hidden() else "bedroom_return_structures_restored_FAIL")
+	if _corridor is CanvasItem:
+		checks.append("bedroom_return_corridor_hidden" if not (_corridor as CanvasItem).visible else "bedroom_return_corridor_hidden_FAIL")
+	if corridor_floor_path != NodePath():
+		var corridor_floor := get_node_or_null(corridor_floor_path)
+		checks.append("bedroom_return_floor_hidden" if corridor_floor is CanvasItem and not (corridor_floor as CanvasItem).visible else "bedroom_return_floor_hidden_FAIL")
+	# A completed bedroom must support repeated living-room door round trips without resetting collected state.
+	if hall_door != null:
+		hall_door.touched()
+		await get_tree().process_frame
+	checks.append("bedroom_reentry_stage" if current_stage == STAGE_BEDROOM else "bedroom_reentry_stage_FAIL")
+	var resumed_door := get_node_or_null("Rooms/Bedroom/DoorItem") as BedroomDoorItem
+	checks.append("bedroom_return_door_retained" if resumed_door != null and resumed_door.is_interaction_available() else "bedroom_return_door_retained_FAIL")
+	checks.append("bedroom_living_papers_retained" if papers_collected and GameState.get_process_flag(FLAG_PAPER_LIVING) and GameState.get_process_flag(FLAG_PAPER_KITCHEN) else "bedroom_living_papers_retained_FAIL")
+	if resumed_door != null:
+		resumed_door.touched()
+		await get_tree().process_frame
+	checks.append("bedroom_second_return" if _player != null and _player.global_position.distance_to(Vector2(1850, 948)) < 5.0 else "bedroom_second_return_FAIL")
+	checks.append("bedroom_second_return_living" if current_stage == STAGE_LIVING else "bedroom_second_return_living_FAIL")
+	checks.append("bedroom_second_return_room_hidden" if bedroom_room != null and not bedroom_room.visible else "bedroom_second_return_room_hidden_FAIL")
+	checks.append("bedroom_second_return_structures_restored" if not _light_structures_hidden() else "bedroom_second_return_structures_restored_FAIL")
+	if room_right_wall_collision_path != NodePath():
+		var restored_right_wall := get_node_or_null(room_right_wall_collision_path)
+		checks.append("bedroom_return_right_wall_enabled" if restored_right_wall is CollisionShape2D and not (restored_right_wall as CollisionShape2D).disabled else "bedroom_return_right_wall_enabled_FAIL")
+	# ④重新验证光影隐藏本身：上面已验证从卧室返回会恢复墙体，因此这里直接重放结构隐藏。
+	# _trigger_light_show() 只允许正常流程触发一次，不能用于这次自检重放。
+	_hide_room_structures()
 	await get_tree().process_frame
 	checks.append("light_hide" if _light_structures_hidden() else "light_hide_FAIL")
 	if _screen_shake != null:
 		var sdu: float = float(_screen_shake.get("duration"))
 		checks.append("light_shake5" if sdu >= 4.9 else "light_shake5_FAIL(%.1f)" % sdu)
 	checks.append("light_breath" if GameState.get_process_flag(FLAG_HOLD_BREATH_UNLOCKED) else "light_breath_FAIL")
-	# ⑤走廊地板：传送玩家到走廊中心（stop_center_x=4480），物理稳定 ≥2s 后不坠穿（y≈948 站立）+ 地板左边界覆盖玩家 x（t36）
+	# ⑥走廊地板：传送玩家到走廊中心（stop_center_x=4480），物理稳定 ≥2s 后不坠穿（y≈948 站立）+ 地板左边界覆盖玩家 x（t36）
+	# 前面的回程断言会把阶段恢复到客厅；切回走廊后再验证右墙已解除碰撞。
+	set_stage(STAGE_CORRIDOR)
 	if _player != null:
 		_player.global_position = Vector2(4480.0, 940.0)
 		await get_tree().create_timer(2.0).timeout
 		var cy: float = _player.global_position.y
 		checks.append("corridor_stand" if (cy > 900.0 and cy < 1000.0) else "corridor_stand_FAIL(%.1f)" % cy)
-		# 地板左边界（静态根 CorridorFloor 全局 x - 半宽 1500）须 ≤ 玩家 x（玩家在地板上；t36 体感取舍：移动感由墙/特异点承担）
+		if room_right_wall_collision_path != NodePath():
+			var right_wall_collision := get_node_or_null(room_right_wall_collision_path)
+			checks.append("corridor_right_wall_disabled" if right_wall_collision is CollisionShape2D and (right_wall_collision as CollisionShape2D).disabled else "corridor_right_wall_disabled_FAIL")
+		# 地板左边界须 ≤ 玩家 x；从实际碰撞形状读取宽度，避免白模尺寸改版后误报。
 		var cf_node: Node = get_node_or_null("CorridorFloor")
 		if cf_node != null:
-			var floor_left: float = cf_node.global_position.x - 1500.0
+			var floor_left: float = cf_node.global_position.x
+			var floor_shape := cf_node.get_node_or_null("CollisionShape2D")
+			if floor_shape is CollisionShape2D and floor_shape.shape is RectangleShape2D:
+				floor_left -= (floor_shape.shape as RectangleShape2D).size.x * 0.5
 			checks.append("floor_covers_x" if floor_left <= _player.global_position.x else "floor_covers_x_FAIL(%.1f)" % floor_left)
 	var failed := false
 	for c in checks:
@@ -551,12 +1035,119 @@ func _physical_assertions() -> bool:
 
 func _ready_extra() -> void:
 	_resolve_scene_refs()
+	_flow_floating_text = get_node_or_null(flow_floating_text_path)
 	_activate_camera()
 	_setup_room_table()
-	_setup_parallax()
 	_bind_doors()
+	_sync_study_door_lock()
+	_refresh_entry_door_flow_refs()
 	_connect_scene_signals()
+	set_stage(current_stage)
 	_apply_phase_arg()
+	if not _phase_debug_loaded \
+		and "--self-check" not in OS.get_cmdline_user_args() \
+		and "--physical" not in OS.get_cmdline_user_args():
+		call_deferred("_begin_intro_sequence")
+
+
+func _begin_intro_sequence() -> void:
+	if _intro_active or _phase_debug_loaded:
+		return
+	_intro_active = true
+	_intro_waiting_breath = false
+	_intro_breathed = false
+	_intro_text_stage = 0
+	_intro_text_elapsed = 0.0
+	_intro_floating_text = get_node_or_null(intro_floating_text_path)
+	StoryMonitor.lock_input()
+	if _breath != null and _breath.has_method("set_countdown_rate"):
+		_breath.call("set_countdown_rate", INTRO_BREATH_RATE, true)
+	if not DialogueManager.dialogue_finished.is_connected(_on_intro_dialogue_finished):
+		DialogueManager.dialogue_finished.connect(_on_intro_dialogue_finished)
+	DialogueManager.start_dialogue(INTRO_DIALOGUE_PATH, DialogueManager.MODE_INTERACTIVE)
+
+
+func _on_intro_dialogue_finished() -> void:
+	if not _intro_active or _intro_text_stage != 0:
+		return
+	# DialogueBox unlocks on completion; retain the intro freeze until its final hint ends.
+	StoryMonitor.lock_input()
+	_intro_waiting_breath = true
+	_intro_text_stage = 1
+	_intro_text_elapsed = 0.0
+	_set_intro_text(INTRO_FIRST_TEXT)
+
+
+func _set_intro_text(value: String) -> void:
+	if _intro_floating_text == null or not is_instance_valid(_intro_floating_text):
+		return
+	if _intro_floating_text.has_method("set_phrases"):
+		_intro_floating_text.call("set_phrases", PackedStringArray([value]))
+	var floating_canvas := _intro_floating_text as CanvasItem
+	if floating_canvas != null:
+		floating_canvas.visible = true
+		floating_canvas.modulate.a = 0.0
+	if _intro_floating_text.has_method("set_revealed"):
+		_intro_floating_text.call("set_revealed", true, 0.2)
+
+
+func _hide_intro_text() -> void:
+	if _intro_floating_text == null or not is_instance_valid(_intro_floating_text):
+		return
+	if _intro_floating_text.has_method("set_revealed"):
+		_intro_floating_text.call("set_revealed", false, 0.2)
+	var floating_canvas := _intro_floating_text as CanvasItem
+	if floating_canvas != null:
+		floating_canvas.visible = false
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _intro_active or not _intro_waiting_breath or _intro_breathed:
+		return
+	if event is InputEventKey and event.pressed and not event.echo \
+		and (event.keycode == KEY_SPACE or event.physical_keycode == KEY_SPACE):
+		get_viewport().set_input_as_handled()
+		_intro_breathed = true
+		_intro_waiting_breath = false
+		_intro_text_stage = 2
+		_intro_text_elapsed = 0.0
+		if _breath != null and _breath.has_method("breathe"):
+			_breath.call("breathe", true)
+			if _breath.has_method("set_countdown_rate"):
+				_breath.call("set_countdown_rate", 1.0, false)
+		_set_intro_text(INTRO_SECOND_TEXT)
+
+
+func _update_intro(delta: float) -> void:
+	if not _intro_active:
+		return
+	if _intro_floating_text != null and is_instance_valid(_intro_floating_text) and _player != null:
+		var target_world := _player.global_position + Vector2(260.0, -300.0)
+		# IntroFloatingText is rendered above DarknessMask in a dedicated CanvasLayer,
+		# so convert its world anchor into viewport coordinates instead of using camera space directly.
+		var floating_parent := _intro_floating_text.get_parent()
+		if floating_parent is CanvasLayer:
+			var viewport := get_viewport()
+			_intro_floating_text.position = viewport.get_canvas_transform() * target_world
+		else:
+			_intro_floating_text.global_position = target_world
+	if _intro_text_stage < 2:
+		return
+	_intro_text_elapsed += delta
+	if _intro_text_stage == 2 and _intro_text_elapsed >= INTRO_TEXT_DURATION:
+		_intro_text_stage = 3
+		_intro_text_elapsed = 0.0
+		_set_intro_text(INTRO_THIRD_TEXT)
+		_show_flow_floating("总之，先进里面看看吧\n得时刻注意呼吸", Vector2(1080.0, 640.0), 1200.0)
+		# The third hint marks the end of the mandatory opening freeze.
+		_intro_waiting_breath = false
+		StoryMonitor.unlock_input()
+	elif _intro_text_stage == 3 and _intro_text_elapsed >= INTRO_TEXT_DURATION:
+		_hide_intro_text()
+		_intro_text_stage = 4
+		_intro_active = false
+		if _breath != null and _breath.has_method("set_countdown_rate"):
+			_breath.call("set_countdown_rate", 1.0, false)
 
 
 ## 绑定主 Player 到两个自动门（左门按流程锁定/解锁，右门常开）。
@@ -576,6 +1167,14 @@ func _bind_doors() -> void:
 			(d2 as Area2D).body_exited.connect(_on_door_body_exited.bind(d2))
 
 
+## Child items become ready before this root enters the c3flow group. Re-resolve the hall entry after
+## registration so a completed-bedroom return can use its existing door without recreating the scene.
+func _refresh_entry_door_flow_refs() -> void:
+	for item in _find_items():
+		if item is C3DoorEntryItem and item.has_method("_resolve_flow"):
+			item.call("_resolve_flow")
+
+
 ## 玩家进入门检测区：右门常开；左门按锁定(已出书房且 study_gate_open=false)禁开+强制关。
 func _on_door_body_entered(body: Node2D, door: Node) -> void:
 	if body == null or body is Player == false:
@@ -585,8 +1184,7 @@ func _on_door_body_entered(body: Node2D, door: Node) -> void:
 	if door == _door_study_living:
 		# 左门锁定：不 open 且强制 close（blocker 物理兜底）
 		if _left_study and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN):
-			if door.has_method("close"):
-				door.close()
+			_sync_study_door_lock()
 			return
 	if door.has_method("open"):
 		door.open()
@@ -614,17 +1212,13 @@ func _activate_camera() -> void:
 				break
 	if cam != null:
 		cam.make_current()
+		# ScreenShake 的跷跷板靠 Camera2D.rotation 渲染；默认 ignore_rotation 会让成品静止。
+		cam.ignore_rotation = false
 		# t34 gap ①：帧取景偏移——角色站画幅地面（视口中心上移，玩家位于下三分一带）
 		cam.offset = CAMERA_FRAME_OFFSET
-
-
-## 景深目标重定向：让 DepthParallax 跟随游戏主 Player（白模内置 Player 已禁用）。
-func _setup_parallax() -> void:
-	if parallax_path == NodePath() or _player == null:
-		return
-	var plx := get_node_or_null(parallax_path)
-	if plx != null and plx.has_method("set") and plx.get("target") != null:
-		plx.set("target", _player)
+		# 将固定构图作为 ScreenShake 的明确基准，持续特效不能再从瞬时 offset 猜测它。
+		if _screen_shake != null and _screen_shake.has_method("set_base_offset"):
+			(_screen_shake as Node).call("set_base_offset", CAMERA_FRAME_OFFSET)
 
 
 ## 配置 RoomTable 房间区间（§3.4：书房[0,1280]/客厅[1280,2560]/厨房[餐厅位,2560,3840]）。
@@ -636,7 +1230,8 @@ func _setup_room_table() -> void:
 		rt.set_rooms({
 			"room1": {"x_min": 0.0, "x_max": 1280.0},
 			"room2": {"x_min": 1280.0, "x_max": 2560.0},
-			"room3": {"x_min": 2560.0, "x_max": 3840.0}
+			"room3": {"x_min": 2560.0, "x_max": 3840.0},
+			"corridor": {"x_min": 3840.0, "x_max": 12000.0}
 		})
 
 
@@ -654,21 +1249,78 @@ func _connect_scene_signals() -> void:
 			_bedroom.connect("breath_disable_requested", Callable(self, "on_breath_disable"))
 		if _bedroom.has_signal("white_screen_end_requested"):
 			_bedroom.connect("white_screen_end_requested", Callable(self, "on_white_screen_end"))
+		if _bedroom.has_signal("return_to_living_room_requested"):
+			_bedroom.connect("return_to_living_room_requested", Callable(self, "_on_bedroom_return_to_living_room"))
+	var bedroom_wall := get_node_or_null("Rooms/Bedroom/WallItem")
+	if bedroom_wall != null and bedroom_wall.has_signal("wall_updated"):
+		bedroom_wall.connect("wall_updated", Callable(self, "_on_bedroom_wall_updated"))
 	if _corridor != null:
 		if _corridor.has_signal("corridor_entered"):
 			_corridor.connect("corridor_entered", Callable(self, "_on_corridor_entered"))
+		if _corridor.has_signal("corridor_finite"):
+			_corridor.connect("corridor_finite", Callable(self, "_on_corridor_finite"))
+		if _corridor.has_signal("special_point_passed"):
+			_corridor.connect("special_point_passed", Callable(self, "_on_corridor_special_point_passed"))
+		if _corridor.has_signal("breath_hint_requested"):
+			_corridor.connect("breath_hint_requested", Callable(self, "_on_special_breath_hint_requested"))
+		if _corridor.has_signal("special_breath_hint_cleared"):
+			_corridor.connect("special_breath_hint_cleared", Callable(self, "_on_special_breath_hint_cleared"))
+		if _corridor.has_signal("corridor_input_freeze_changed"):
+			_corridor.connect("corridor_input_freeze_changed", Callable(self, "_on_corridor_input_freeze_changed"))
 	if corridor_end_item_path != NodePath():
 		var ce := get_node_or_null(corridor_end_item_path)
 		if ce != null and ce.has_signal("end_confirmed"):
 			ce.connect("end_confirmed", Callable(self, "on_corridor_end_confirmed"))
+		if ce != null and ce.has_signal("interaction_succeeded"):
+			ce.connect("interaction_succeeded", Callable(self, "_on_corridor_end_interaction_signal"))
 
 
 func _on_corridor_entered() -> void:
 	GameState.set_process_flag(FLAG_CORRIDOR_ENTERED, true)
 
 
+func _on_corridor_finite() -> void:
+	if current_stage == STAGE_CORRIDOR:
+		set_stage(STAGE_CORRIDOR_END)
+
+
+func _on_corridor_special_point_passed(index: int) -> void:
+	# 第三个特异点通过的瞬间就告知尽头位置，不再等角色走到尽头附近。
+	if index != 2 or _corridor_end_hint_shown or _corridor == null:
+		return
+	_corridor_end_hint_shown = true
+	var end_x := float(_corridor.get("end_wall_x"))
+	_show_flow_floating("尽头似乎有什么东西", Vector2(end_x - 120.0, 650.0), end_x, false)
+
+
+func _on_special_breath_hint_requested(message: String = "长按空格屏住呼吸，这样或许好受一点") -> void:
+	_show_flow_floating(message, Vector2(260.0, -300.0), INF, true)
+
+
+func _on_special_breath_hint_cleared() -> void:
+	_hide_flow_floating()
+
+
+func _on_corridor_input_freeze_changed(frozen: bool) -> void:
+	if not frozen:
+		_hide_flow_floating()
+
+
+func _on_corridor_end_interaction_signal() -> void:
+	var ce := get_node_or_null(corridor_end_item_path)
+	if ce != null and int(ce.get("current_state")) == 1:
+		on_corridor_end_interaction(1)
+
+
 ## item 确定交互成功 → ok 占位提示（黑字，短暂显示）。
 func _on_item_succeeded(it: Node) -> void:
+	if it is Node2D:
+		var shaker := it.get_node_or_null("ItemShake") as ItemShake
+		if shaker == null:
+			shaker = ItemShake.new()
+			shaker.name = "ItemShake"
+			(it as Node2D).add_child(shaker)
+		shaker.shake(4.0, 0.18)
 	if ok_popup_path != NodePath():
 		var pop := get_node_or_null(ok_popup_path)
 		if pop != null and pop.has_method("show_ok"):
@@ -676,16 +1328,49 @@ func _on_item_succeeded(it: Node) -> void:
 			pop.show_ok(pos)
 
 
-## E 键按下 → 对范围内（get_overlapping_bodies 含 Player）的 item 调 touched()。
+## E 键按下 → 对统一范围判定命中的 item 调 touched()。
 func _on_interact_pressed() -> void:
-	if _player == null:
+	if _player == null or DialogueManager.is_dialogue_active():
 		return
 	var items := _find_items()
 	for it in items:
 		if it is Area2D:
 			var area := it as Area2D
-			if area.has_method("touched") and area.get_overlapping_bodies().has(_player):
+			var in_range := false
+			if area.has_method("is_player_in_interaction_range"):
+				in_range = bool(area.call("is_player_in_interaction_range", _player))
+			else:
+				in_range = area.get_overlapping_bodies().has(_player)
+			if area.has_method("touched") and in_range:
+				if area.name == "BedroomHallDoor" and current_stage < STAGE_LIGHT:
+					if not _hall_door_subtitle_shown:
+						_hall_door_subtitle_shown = true
+						_show_flow_subtitle([
+							"门紧锁着，进不去里面的房间",
+							"门锁旁边挂着三个相框",
+							"大小像是正好能塞进一张试卷",
+						], "hall_door")
+					return
+				if area.name == "EndItem" and current_stage < STAGE_LIGHT \
+					and not GameState.get_process_flag(FLAG_BEDROOM_INTERACTIONS_DONE):
+					if not _end_item_subtitle_shown:
+						_end_item_subtitle_shown = true
+						_show_flow_subtitle([
+							"盒子里面躺着数架望远镜",
+							"或许许久无人打理，沾满灰尘",
+						], "")
+					return
+				if area.name == "EndItem" and current_stage == STAGE_LIVING \
+					and GameState.get_process_flag(FLAG_BEDROOM_INTERACTIONS_DONE):
+					if not _bedroom_return_end_dialogue_shown:
+						_bedroom_return_end_dialogue_shown = true
+						_show_flow_subtitle([
+							"可惜了，多好的东西白白摔到地上",
+							"捡起来擦擦看还能不能用",
+						], "bedroom_return_end")
+					return
 				area.touched()
+				return
 
 
 ## 收集 items_root_path + bedroom_items_path 下的 Item（Area2D）子节点（f1：卧室 E 链需覆盖 Rooms/Bedroom 的 WallItem/DoorItem/EndItem）。
@@ -721,6 +1406,20 @@ func _apply_gate_blocker() -> void:
 	blocker.visible = blocked
 
 
+## 书房门锁定时停用检测区并立即关门：防止已开始的开门动画跨越锁定阈值，也不让后续靠近重触发。
+## 收集完客厅、厨房试卷后 study_gate_open=true，会重新启用原有自动门行为。
+func _sync_study_door_lock() -> void:
+	if _door_study_living == null:
+		return
+	var locked: bool = _left_study and not GameState.get_process_flag(FLAG_STUDY_GATE_OPEN)
+	if _door_study_living.has_method("set_auto_open_enabled"):
+		_door_study_living.call("set_auto_open_enabled", not locked)
+	if _door_study_living is Area2D:
+		(_door_study_living as Area2D).monitoring = not locked
+	if locked and not _door_study_living.has_method("set_auto_open_enabled") and _door_study_living.has_method("_do_close"):
+		_door_study_living.call("_do_close")
+
+
 func _resolve_scene_refs() -> void:
 	if player_path != NodePath():
 		var n := get_node_or_null(player_path)
@@ -728,12 +1427,14 @@ func _resolve_scene_refs() -> void:
 			_player = n as Node2D
 	if corridor_path != NodePath():
 		_corridor = get_node_or_null(corridor_path)
+	if corridor_assembly_path != NodePath():
+		_corridor_assembly = get_node_or_null(corridor_assembly_path)
 	if bedroom_path != NodePath():
 		_bedroom = get_node_or_null(bedroom_path)
 	if breath_path != NodePath():
 		_breath = get_node_or_null(breath_path)
 	if darkness_mask_path != NodePath():
-		_mask = get_node_or_null(darkness_mask_path)
+		_mask = get_node_or_null(darkness_mask_path)  # 保留解析（呼吸缺氧遮罩独立使用场景 DarknessMask；本类演出不再使用）
 	if screen_shake_path != NodePath():
 		_screen_shake = get_node_or_null(screen_shake_path)
 	if particle_burst_path != NodePath():
@@ -747,37 +1448,72 @@ func _apply_phase_arg() -> void:
 			var p := int(arg.trim_prefix("--phase="))
 			if p >= STAGE_STUDY and p <= STAGE_BEDROOM:
 				set_stage(p)
+				if p >= STAGE_BEDROOM and _bedroom != null and _bedroom.has_method("begin"):
+					(_bedroom as Node).begin()
 				_phase_debug_loaded = true
 
 
 func _process(delta: float) -> void:
+	if _intro_active:
+		_update_intro(delta)
 	if _phase_debug_loaded:
 		return
 	if _player == null:
 		return
+	if _flow_floating_text != null and _flow_floating_text.visible:
+		_update_flow_floating_position()
+	if not _tv_subtitle_shown and _player.global_position.x >= LIVING_TV_X \
+		and current_stage >= STAGE_LEAVE_STUDY and current_stage < STAGE_LIGHT \
+		and not DialogueManager.is_dialogue_active():
+		_tv_subtitle_shown = true
+		_show_flow_subtitle(["这间房子相当整洁，电视柜上一丝灰尘都没有留下"], "")
+	if _flow_floating_text != null and _flow_floating_text.visible \
+		and _player.global_position.x >= _flow_text_clear_x:
+		_hide_flow_floating()
+	if (current_stage == STAGE_CORRIDOR or current_stage == STAGE_CORRIDOR_END) \
+		and not _corridor_end_hint_shown and _corridor != null \
+		and _player.global_position.x >= float(_corridor.get("end_wall_x")) - 240.0:
+		_corridor_end_hint_shown = true
+		_show_flow_floating("尽头似乎有什么东西", Vector2(float(_corridor.get("end_wall_x")) - 120.0, 650.0), float(_corridor.get("end_wall_x")), false)
+	if current_stage == STAGE_LIVING and GameState.get_process_flag(FLAG_BEDROOM_INTERACTIONS_DONE) \
+		and not _bedroom_return_end_dialogue_shown and not DialogueManager.is_dialogue_active():
+		var returned_end := get_node_or_null("Items/EndItem") as Node2D
+		if returned_end != null and _player.global_position.x >= returned_end.global_position.x - 180.0:
+			_bedroom_return_end_dialogue_shown = true
+			_show_flow_subtitle([
+				"可惜了，多好的东西白白摔到地上",
+				"捡起来擦擦看还能不能用",
+			], "bedroom_return_end")
 	if current_stage == STAGE_STUDY:
-		if _player.global_position.x >= study_right_x:
+		_poll_study_door_fallback()
+		# t14 锁门余量：x ≥ study_lock_x（完全出书房）才触发 on_player_left_study（锁门+blocker）。
+		if _player.global_position.x >= study_lock_x:
 			on_player_left_study()
 	elif current_stage == STAGE_LIGHT:
-		_process_light(delta)
+		_process_light_show(delta)
 
 
-## LIGHT 分步驱动：A→B 依玩家出门；B→C 依二次靠门；C→D→E 依计时。
-func _process_light(delta: float) -> void:
-	match _light_step:
-		LIGHT_A:
-			if _player.global_position.x >= study_right_x:
-				_enter_light_b()
-		LIGHT_B:
-			if _light_b_reset_done and _player.global_position.x >= study_right_x:
-				_enter_light_c()
-		LIGHT_C:
-			_light_c_t += delta
-			if _light_c_t >= LIGHT_C_DUR:
-				_enter_light_d()
-		LIGHT_D:
-			_light_d_t += delta
-			if _light_d_t >= LIGHT_D_DUR:
-				_finish_light_e()
-		_:
-			pass
+## t14 兜底轮询：窗口环境 body_entered 信号偶发丢失时，STAGE_STUDY 玩家接近书房-客厅左门
+## （x ∈ [door_fallback_min_x, door_fallback_max_x]）且门未开 → 直接 open()（每帧检查，open 幂等）。
+func _poll_study_door_fallback() -> void:
+	if _door_study_living == null:
+		return
+	var is_open: bool = bool(_door_study_living.get("is_open"))
+	if is_open:
+		return
+	var px: float = _player.global_position.x
+	if px >= door_fallback_min_x and px <= door_fallback_max_x:
+		if _door_study_living.has_method("open"):
+			_door_study_living.open()
+
+
+## 光影演出驱动：未触发时检测角色走到书房右侧；触发后遮罩跟随粒子向右揭露已组装走廊。
+func _process_light_show(delta: float) -> void:
+	if not _light_triggered:
+		if _player != null and _player.global_position.x >= LIGHT_TRIGGER_X:
+			_trigger_light_show()
+		return
+	_light_show_t += delta
+	_update_light_side_reveal()
+	if _light_show_t >= LIGHT_SHAKE_DUR:
+		_finish_light_show()

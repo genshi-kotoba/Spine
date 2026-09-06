@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PlayerMotionProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/PlayerMotionProfile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+max_speed = 400.0
+start_to_max_time = 0.18
+reverse_to_max_time = 0.14
+stop_to_rest_time = 0.12
+gravity = 980.0

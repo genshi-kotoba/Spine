@@ -31,11 +31,18 @@ func _process(delta: float) -> void:
 
 ## 摄像机水平跟随角色；继续跟随会导致视野超出地图边缘时停止移动。
 ## camera_smoothing>0 时对 clamp 后的目标位置做平滑插值（0=现立即跟随）。
+## 窄图保护：地图宽小于视口宽时（如 bedroom 960 < 1920）clamp 区间倒挂，固定居中地图中心。
 func _update_camera(delta: float) -> void:
 	var half_width := get_viewport_rect().size.x * 0.5 * _camera.zoom.x
 	var target_x := _player.position.x
-	# clamp() 返回 Variant：用显式类型标注避免 "inferred from Variant" 警告被当作错误
-	var clamped_x: float = clamp(target_x, map_min_x + half_width, map_max_x - half_width)
+	var min_bound := map_min_x + half_width
+	var max_bound := map_max_x - half_width
+	var clamped_x: float
+	if min_bound > max_bound:
+		clamped_x = (map_min_x + map_max_x) * 0.5
+	else:
+		# clamp() 返回 Variant：用显式类型标注避免 "inferred from Variant" 警告被当作错误
+		clamped_x = clamp(target_x, min_bound, max_bound)
 	if camera_smoothing > 0.0:
 		var alpha := 1.0 - exp(-camera_smoothing * delta)
 		_camera.global_position.x = lerpf(_camera.global_position.x, clamped_x, alpha)

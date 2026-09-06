@@ -34,6 +34,14 @@ extends Area2D
 ## 高亮时的 modulate（默认 1.3 倍提亮，可在编辑器调整）
 @export var highlight_modulate: Color = Color(1.3, 1.3, 1.3)
 
+## 初始可交互开关（godot_c2_c4_prompt §3.1：false 时 touched 不响应、不高亮；
+## 解锁时由流程脚本调 set_interaction_enabled(true)）
+@export var interactable: bool = true
+
+## GameState 状态键（godot_c2_c4_prompt §2：非空时状态机由 GameState 统一监控管理——
+## set_state 写 GameState.set_object_state(state_id, str(state))；_ready 按存档恢复，恢复不发信号）
+@export var state_id: String = ""
+
 ## 玩家是否处于交互范围内（body_entered/exited 跟踪；供高亮与子类范围判定复用）
 var player_in_range: bool = false
 
@@ -57,9 +65,15 @@ var current_state: int = 0
 
 func _ready() -> void:
 	current_state = initial_state
+	# 按存档恢复（直接赋值不走 set_state：不发 state_changed、不连锁触发，恢复交由场景脚本重建）
+	if state_id != "":
+		var saved := GameState.get_object_state(state_id)
+		if saved != "":
+			current_state = int(saved)
+	_interaction_enabled = interactable
 	_sync_collision_shape()
 	_setup_force_trigger()
-	_apply_state_table(initial_state)
+	_apply_state_table(current_state)
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
 	# 初始化后广播当前交互可用性（供 ItemMarker 等门控联动；与 E 提示「靠近才显示」独立）
@@ -71,11 +85,11 @@ func set_highlight(on: bool) -> void:
 	modulate = highlight_modulate if on else Color.WHITE
 
 
-## 玩家进入范围：更新标志并按 highlight_enabled 自动提亮
+## 玩家进入范围：更新标志并按 highlight_enabled 自动提亮（不可交互时不高亮）
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
 		player_in_range = true
-		if highlight_enabled:
+		if highlight_enabled and _interaction_enabled:
 			set_highlight(true)
 
 
@@ -114,9 +128,11 @@ func _on_force_trigger_body_entered(body: Node2D) -> void:
 		call_item(force_trigger_state)
 
 
-## 状态变更唯一入口：记录状态 + 调 apply_state() 应用效果
+## 状态变更唯一入口：记录状态 + 同步 GameState（state_id 非空时）+ 调 apply_state() 应用效果
 func set_state(new_state: int) -> void:
 	current_state = new_state
+	if state_id != "":
+		GameState.set_object_state(state_id, str(new_state))
 	apply_state(new_state)
 
 
@@ -183,6 +199,11 @@ func is_interaction_available() -> bool:
 
 
 ## 外部门控：流程可调用。enabled=false 时 touched() 不触发（优先于 gate_flag）。
+## 同步高亮：关闭立即恢复常态；开启时若玩家在范围内且允许高亮则补亮。
 func set_interaction_enabled(enabled: bool) -> void:
 	_interaction_enabled = enabled
+	if not enabled:
+		set_highlight(false)
+	elif highlight_enabled and player_in_range:
+		set_highlight(true)
 	interaction_available.emit(is_interaction_available())

@@ -11,6 +11,10 @@ extends Area2D
 ## 包含范围（检测矩形）：决定 CollisionShape2D 的 RectangleShape2D size；_ready 时同步
 @export var size: Vector2 = Vector2(64, 64)
 
+## 角色站在物体正下方时的额外可达高度；不改变 X 轴范围（merge 自 Spine_to_merge）。
+## 白模物体常悬在地面上方，适度余量可避免视觉位置与角色脚底的高度差阻断交互。
+@export var vertical_interaction_padding: float = 96.0
+
 ## 交互门控进程旗标（GameState.get_process_flag 读取）：非空时 gate 未满足则不触发。
 ## 空 = 无 gate（兼容既有 TestItem 现行为）。
 @export var gate_flag: String = ""
@@ -45,6 +49,13 @@ extends Area2D
 ## 玩家是否处于交互范围内（body_entered/exited 跟踪；供高亮与子类范围判定复用）
 var player_in_range: bool = false
 
+@export_category("Interaction SFX")
+## 可选的交互成功音效（merge 自 Spine_to_merge）。留空时仍会发出 interaction_sfx_requested，但不会创建播放器。
+@export var interaction_sfx_stream: AudioStream
+## 音效总线不存在时回退到 Master，避免白模/不同项目配置下报错。
+@export var interaction_sfx_bus: StringName = &"Master"
+@export_range(-80.0, 6.0, 0.1) var interaction_sfx_volume_db: float = 0.0
+
 ## 外部交互开关（流程可调用 set_interaction_enabled）。false 时 touched() 不触发。
 var _interaction_enabled: bool = true
 
@@ -57,8 +68,16 @@ signal gate_blocked
 ## 信号：确定交互成功（gate 满足 且 _try_touch 消费成功）后发射，供 'ok' 占位提示/特效联动。
 signal interaction_succeeded
 
+## 信号：交互成功后的音效占位请求（merge 自 Spine_to_merge）。外部音频管理器可监听此信号；无资源时也安全发射。
+signal interaction_sfx_requested
+
+## 信号：可选音频资源实际开始播放时发射。
+signal interaction_sfx_played
+
 ## 状态机当前状态（int；状态集合由子类定义）
 var current_state: int = 0
+
+var _interaction_sfx_player: AudioStreamPlayer
 
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 
@@ -73,6 +92,7 @@ func _ready() -> void:
 	_interaction_enabled = interactable
 	_sync_collision_shape()
 	_setup_force_trigger()
+	_setup_interaction_sfx()
 	_apply_state_table(current_state)
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
@@ -176,6 +196,36 @@ func touched() -> void:
 		return
 	interaction_available.emit(true)
 	interaction_succeeded.emit()
+	_request_interaction_sfx()
+
+
+## 初始化可选音效播放器（merge 自 Spine_to_merge）。没有 stream 时不创建节点，保留纯白模零音频行为。
+func _setup_interaction_sfx() -> void:
+	var existing_player := get_node_or_null("InteractionSfxPlayer") as AudioStreamPlayer
+	if existing_player != null:
+		_interaction_sfx_player = existing_player
+	elif interaction_sfx_stream != null:
+		_interaction_sfx_player = AudioStreamPlayer.new()
+		_interaction_sfx_player.name = "InteractionSfxPlayer"
+		add_child(_interaction_sfx_player)
+	else:
+		return
+	if interaction_sfx_stream != null:
+		_interaction_sfx_player.stream = interaction_sfx_stream
+	_interaction_sfx_player.volume_db = interaction_sfx_volume_db
+	if AudioServer.get_bus_index(interaction_sfx_bus) >= 0:
+		_interaction_sfx_player.bus = interaction_sfx_bus
+	else:
+		_interaction_sfx_player.bus = &"Master"
+
+
+## 发出统一音效占位请求，并在配置资源时播放音效；默认空资源无副作用。
+func _request_interaction_sfx() -> void:
+	interaction_sfx_requested.emit()
+	if _interaction_sfx_player == null or _interaction_sfx_player.stream == null:
+		return
+	_interaction_sfx_player.play()
+	interaction_sfx_played.emit()
 
 
 ## 子类覆写的实际触发逻辑（touched 通过 gate/交互开关检查后调用）。默认空。
@@ -196,6 +246,34 @@ func is_interaction_available() -> bool:
 	if gate_flag != "":
 		gate_ok = GameState.get_process_flag(gate_flag)
 	return _interaction_enabled and gate_ok
+
+
+## 统一的玩家范围判定（merge 自 Spine_to_merge，c3 子类使用）。
+##
+## Item 的根节点通常只是场景锚点；白模编辑时 CollisionShape2D 会被单独移动到
+## 实际可交互位置。因此所有交互消费者都必须使用碰撞形状的 global_position，不能
+## 退回到 Item 根节点。矩形边界与 Godot Area2D/CharacterBody2D 的重叠语义一致，
+## 同时保留 Y 轴范围约束，避免玩家只在 X 方向接近时误触发。
+func is_player_in_interaction_range(player: Node2D) -> bool:
+	if player == null or not is_instance_valid(player):
+		return false
+	if not _interaction_enabled or (gate_flag != "" and not GameState.get_process_flag(gate_flag)):
+		return false
+	if _collision_shape == null or _collision_shape.disabled:
+		return false
+	if _collision_shape.shape is RectangleShape2D:
+		var item_shape := _collision_shape.shape as RectangleShape2D
+		var item_half := item_shape.size * _collision_shape.global_scale.abs() * 0.5
+		var player_shape := player.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		var player_half := Vector2.ZERO
+		if player_shape != null and not player_shape.disabled and player_shape.shape is RectangleShape2D:
+			player_half = (player_shape.shape as RectangleShape2D).size * player_shape.global_scale.abs() * 0.5
+		var delta := (player.global_position - _collision_shape.global_position).abs()
+		var vertical_reach := item_half.y + player_half.y + maxf(vertical_interaction_padding, 0.0)
+		return delta.x <= item_half.x + player_half.x and delta.y <= vertical_reach
+	if self is Area2D:
+		return (self as Area2D).get_overlapping_bodies().has(player)
+	return global_position.distance_to(player.global_position) <= 180.0
 
 
 ## 外部门控：流程可调用。enabled=false 时 touched() 不触发（优先于 gate_flag）。

@@ -116,8 +116,6 @@ signal story_sfx_requested(cue: String)
 ## 光影后超限走廊直接从书房门接出，镜头边界只覆盖该短走廊。
 @export var corridor_camera_left: float = 0.0
 @export var corridor_camera_right: float = 11520.0
-@export var intro_floating_text_path: NodePath
-@export var flow_floating_text_path: NodePath
 
 var _player: Node2D = null
 var _left_study: bool = false
@@ -136,12 +134,6 @@ var _intro_waiting_breath: bool = false
 var _intro_breathed: bool = false
 var _intro_text_stage: int = 0
 var _intro_text_elapsed: float = 0.0
-var _intro_floating_text: Node = null
-var _flow_floating_text: Node = null
-var _flow_text_clear_x: float = INF
-var _flow_text_clear_time_msec: int = 0
-var _flow_text_world_anchor := Vector2.ZERO
-var _flow_text_follow_player := false
 var _flow_dialogue_action: String = ""
 var _tv_subtitle_shown: bool = false
 var _hall_door_subtitle_shown: bool = false
@@ -347,48 +339,14 @@ func _on_flow_dialogue_finished() -> void:
 			pass
 
 
-func _show_flow_floating(value: String, world_anchor: Vector2, clear_x: float = INF, follow_player: bool = false, duration_sec: float = INF) -> void:
-	if _flow_floating_text == null or not is_instance_valid(_flow_floating_text):
-		return
-	if _flow_floating_text.has_method("set_phrases"):
-		_flow_floating_text.call("set_phrases", PackedStringArray([value]))
-	elif _flow_floating_text is Label:
-		(_flow_floating_text as Label).text = value
-	elif _flow_floating_text is RichTextLabel:
-		(_flow_floating_text as RichTextLabel).text = value
-	_flow_text_world_anchor = world_anchor
-	_flow_text_follow_player = follow_player
-	_update_flow_floating_position()
-	_flow_floating_text.visible = true
-	if _flow_floating_text.has_method("set_revealed"):
-		_flow_floating_text.call("set_revealed", true, 0.2)
-	_flow_text_clear_x = clear_x
-	_flow_text_clear_time_msec = 0 if is_inf(duration_sec) else Time.get_ticks_msec() + int(maxf(duration_sec, 0.0) * 1000.0)
+func _show_flow_floating(value: String, _world_anchor: Vector2, _clear_x: float = INF, _follow_player: bool = false, _duration_sec: float = INF) -> void:
+	# C3 悬浮提示直接复用 main 分支 MODE_GLITCH。
+	DialogueManager.start_lines([value], DialogueManager.MODE_GLITCH)
 
 
 func _hide_flow_floating() -> void:
-	if _flow_floating_text == null or not is_instance_valid(_flow_floating_text):
-		return
-	if _flow_floating_text.has_method("set_revealed"):
-		_flow_floating_text.call("set_revealed", false, 0.25)
-	else:
-		_flow_floating_text.visible = false
-	_flow_text_clear_x = INF
-	_flow_text_follow_player = false
-	_flow_text_clear_time_msec = 0
-
-
-func _update_flow_floating_position() -> void:
-	if _flow_floating_text == null or not is_instance_valid(_flow_floating_text):
-		return
-	var anchor := _flow_text_world_anchor
-	if _flow_text_follow_player and _player != null:
-		anchor = _player.global_position + _flow_text_world_anchor
-	var parent := _flow_floating_text.get_parent()
-	if parent is CanvasLayer:
-		_flow_floating_text.position = get_viewport().get_canvas_transform() * anchor
-	else:
-		_flow_floating_text.global_position = anchor
+	# MODE_GLITCH 按 main 模块自身的逐句生命周期自动隐藏。
+	pass
 
 
 # ─── 卧室门三态（§5.2）───
@@ -1044,7 +1002,6 @@ func _physical_assertions() -> bool:
 
 func _ready_extra() -> void:
 	_resolve_scene_refs()
-	_flow_floating_text = get_node_or_null(flow_floating_text_path)
 	_activate_camera()
 	_setup_room_table()
 	_bind_doors()
@@ -1067,7 +1024,6 @@ func _begin_intro_sequence() -> void:
 	_intro_breathed = false
 	_intro_text_stage = 0
 	_intro_text_elapsed = 0.0
-	_intro_floating_text = get_node_or_null(intro_floating_text_path)
 	StoryMonitor.lock_input()
 	if _breath != null and _breath.has_method("set_countdown_rate"):
 		_breath.call("set_countdown_rate", INTRO_BREATH_RATE, true)
@@ -1088,32 +1044,13 @@ func _on_intro_dialogue_finished() -> void:
 
 
 func _set_intro_text(value: String) -> void:
-	if _intro_floating_text == null or not is_instance_valid(_intro_floating_text):
-		return
-	if _intro_floating_text.has_method("set_phrases"):
-		_intro_floating_text.call("set_phrases", PackedStringArray([value]))
-	elif _intro_floating_text is Label:
-		(_intro_floating_text as Label).text = value
-	elif _intro_floating_text is RichTextLabel:
-		(_intro_floating_text as RichTextLabel).text = value
-	var floating_canvas := _intro_floating_text as CanvasItem
-	if floating_canvas != null:
-		floating_canvas.visible = true
-		floating_canvas.modulate.a = 0.0
-	if _intro_floating_text.has_method("set_revealed"):
-		_intro_floating_text.call("set_revealed", true, 0.2)
-	elif floating_canvas != null:
-		floating_canvas.modulate.a = 1.0
+	# 开场悬浮提示直接使用 main 分支 MODE_GLITCH 组件。
+	DialogueManager.start_lines([value], DialogueManager.MODE_GLITCH)
 
 
 func _hide_intro_text() -> void:
-	if _intro_floating_text == null or not is_instance_valid(_intro_floating_text):
-		return
-	if _intro_floating_text.has_method("set_revealed"):
-		_intro_floating_text.call("set_revealed", false, 0.2)
-	var floating_canvas := _intro_floating_text as CanvasItem
-	if floating_canvas != null:
-		floating_canvas.visible = false
+	# MODE_GLITCH 按自身生命周期自动清理。
+	pass
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -1135,16 +1072,6 @@ func _unhandled_input(event: InputEvent) -> void:
 func _update_intro(delta: float) -> void:
 	if not _intro_active:
 		return
-	if _intro_floating_text != null and is_instance_valid(_intro_floating_text) and _player != null:
-		var target_world := _player.global_position + Vector2(260.0, -300.0)
-		# IntroFloatingText is rendered above DarknessMask in a dedicated CanvasLayer,
-		# so convert its world anchor into viewport coordinates instead of using camera space directly.
-		var floating_parent := _intro_floating_text.get_parent()
-		if floating_parent is CanvasLayer:
-			var viewport := get_viewport()
-			_intro_floating_text.position = viewport.get_canvas_transform() * target_world
-		else:
-			_intro_floating_text.global_position = target_world
 	if _intro_text_stage < 2:
 		return
 	_intro_text_elapsed += delta
@@ -1467,20 +1394,11 @@ func _process(delta: float) -> void:
 		return
 	if _player == null:
 		return
-	if _flow_floating_text != null and _flow_floating_text.visible:
-		_update_flow_floating_position()
 	if not _tv_subtitle_shown and _player.global_position.x >= LIVING_TV_X \
 		and current_stage >= STAGE_LEAVE_STUDY and current_stage < STAGE_LIGHT \
 		and not DialogueManager.is_dialogue_active():
 		_tv_subtitle_shown = true
 		_show_flow_subtitle(["这间房子相当整洁，电视柜上一丝灰尘都没有留下"], "")
-	if _flow_floating_text != null and _flow_floating_text.visible \
-		and _player.global_position.x >= _flow_text_clear_x:
-		_hide_flow_floating()
-	if _flow_floating_text != null and _flow_floating_text.visible \
-		and _flow_text_clear_time_msec > 0 \
-		and Time.get_ticks_msec() >= _flow_text_clear_time_msec:
-		_hide_flow_floating()
 	if (current_stage == STAGE_CORRIDOR or current_stage == STAGE_CORRIDOR_END) \
 		and not _corridor_end_hint_shown and _corridor != null \
 		and _player.global_position.x >= float(_corridor.get("end_wall_x")) - 240.0:

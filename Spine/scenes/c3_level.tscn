@@ -23,7 +23,6 @@
 [ext_resource type="Script" uid="uid://dxl118a4wp34q" path="res://scripts/components/RoomTable.gd" id="22"]
 [ext_resource type="PackedScene" uid="uid://dc4yso4br36vf" path="res://scenes/c3_floor.tscn" id="23"]
 [ext_resource type="Script" uid="uid://bbmpcjmv60ouk" path="res://scripts/c3/flow/CorridorAssembly.gd" id="25"]
-[ext_resource type="PackedScene" path="res://scenes/floating_wall_text.tscn" id="26_intro_text"]
 
 [sub_resource type="RectangleShape2D" id="item_col"]
 size = Vector2(179.5, 269)
@@ -61,8 +60,6 @@ wall_hide_paths = Array[NodePath]([NodePath("WhiteModel/RoomArtwork")])
 bedroom_left_wall_path = NodePath("Rooms/Bedroom/Environment/WallLeft")
 world_camera_right = 3840.0
 corridor_camera_right = 4600.0
-intro_floating_text_path = NodePath("IntroFloatingLayer/IntroFloatingText")
-flow_floating_text_path = NodePath("IntroFloatingLayer/FlowFloatingText")
 
 [node name="Player" parent="." unique_id=1121437611 instance=ExtResource("1")]
 position = Vector2(320, 948)
@@ -405,33 +402,6 @@ player = NodePath("../Player")
 [node name="Bubble" type="Node2D" parent="Breath" unique_id=1638232650]
 script = ExtResource("6")
 player_path = NodePath("../../Player")
-
-[node name="IntroFloatingLayer" type="CanvasLayer" parent="." unique_id=996401127]
-layer = 2
-
-[node name="IntroFloatingText" parent="IntroFloatingLayer" instance=ExtResource("26_intro_text")]
-visible = false
-layout_size = Vector2(760, 260)
-min_font_size = 28
-max_font_size = 40
-animated = true
-text_color = Color(1, 1, 1, 1)
-accent_color = Color(1, 1, 1, 1)
-shadow_color = Color(0.04, 0.04, 0.05, 0.95)
-glow_color = Color(1, 1, 1, 0.32)
-outline_size = 4
-
-[node name="FlowFloatingText" parent="IntroFloatingLayer" instance=ExtResource("26_intro_text")]
-visible = false
-layout_size = Vector2(760, 260)
-min_font_size = 28
-max_font_size = 40
-animated = true
-text_color = Color(1, 1, 1, 1)
-accent_color = Color(1, 1, 1, 1)
-shadow_color = Color(0.04, 0.04, 0.05, 0.95)
-glow_color = Color(1, 1, 1, 0.32)
-outline_size = 4
 
 [node name="Effects" type="Node2D" parent="." unique_id=2086481683]
 

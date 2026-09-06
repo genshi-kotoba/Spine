@@ -46,7 +46,7 @@ C5 楼层：单背景 + 3 个隐形触发区顺序唤起 tr1/tr2/tr3 对话 + �
 
 - 接口：`start(paths: Array[String])`、信号 `sequence_finished`。状态机用 Tween + await，不用 Timer 堆叠。
 - 单文件流程：CenterContainer（全屏）+ VBoxContainer（`separation = 9`）逐行建 Label（白字、字号 18、
-  水平居中、初始 alpha 0、mouse_filter=IGNORE）→ 逐行 Tween alpha 0→1（**1.0s/行**（2026-09-06 由 0.5s 调整），严格串行，亮起保持）→
+  水平居中、初始 alpha 0、mouse_filter=IGNORE）→ 逐行 Tween alpha 0→1（**1.0s/行**（2026-09-06 由 0.5s 调整），每行亮起后**停顿 0.5s** 再亮起下行，严格串行，亮起保持）→
   末行亮起后整体保持 **3.0s** → 全部行 **0.5s** 内一起淡出（parallel tween）→ queue_free → 下一文件。
 - 第 7 个文件淡出后：`sequence_finished.emit()` → C5Floor `get_tree().quit()`。
 - 文件顺序：`texts/1.txt` … `texts/7.txt`（D1）。空文件跳过；缺失 push_error + 跳过，不中断序列。

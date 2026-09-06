@@ -1,7 +1,7 @@
 class_name EndingTextSequence
 extends CanvasLayer
 ## EndingTextSequence — 结尾文字序列组件（docs/c5_floor_constraints.md §5）
-## start(paths) 逐文件播放：逐行亮起（1.0s/行，串行保持）→ 整体保持 3.0s →
+## start(paths) 逐文件播放：逐行亮起（1.0s/行 + 行间停顿 0.5s，串行保持）→ 整体保持 3.0s →
 ## 全部行 0.5s 一起淡出 → 下一文件。全部播完发 sequence_finished。
 ## 状态机用 Tween + await，不用 Timer 堆叠；输入锁由调用方负责；不支持跳过。
 
@@ -14,6 +14,8 @@ const FONT_SIZE := 18
 const LINE_SPACING := 9
 ## 单行亮起时长（秒）
 const LINE_FADE_SEC := 1.0
+## 行间停顿（秒）：一行亮起完成后等待再亮起下一行
+const LINE_GAP_SEC := 0.5
 ## 单文件末行亮起后的整体保持时长（秒）
 const HOLD_SEC := 3.0
 ## 单文件全体淡出时长（秒）
@@ -56,11 +58,14 @@ func _play_file(lines: Array[String]) -> void:
 		lab.modulate.a = 0.0
 		vbox.add_child(lab)
 		labels.append(lab)
-	# 严格逐行串行亮起，亮起后保持
-	for lab: Label in labels:
+	# 严格逐行串行亮起，亮起后保持；行间停顿 LINE_GAP_SEC（末行后不停，直接进整体保持）
+	for i: int in labels.size():
+		var lab: Label = labels[i]
 		var tween := create_tween()
 		tween.tween_property(lab, "modulate:a", 1.0, LINE_FADE_SEC)
 		await tween.finished
+		if i < labels.size() - 1:
+			await get_tree().create_timer(LINE_GAP_SEC).timeout
 	# 末行亮起后整体保持
 	await get_tree().create_timer(HOLD_SEC).timeout
 	# 全部行一起淡出

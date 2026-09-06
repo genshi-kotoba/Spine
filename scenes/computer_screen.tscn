@@ -1,49 +1,48 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://c38h0iixeqok6"]
 
 [ext_resource type="Script" uid="uid://47gx0oqr746q" path="res://scripts/scenes/ComputerScreen.gd" id="1"]
 [ext_resource type="Script" uid="uid://bm23h78xokupc" path="res://scripts/objects/MailIcon.gd" id="3"]
 [ext_resource type="Script" uid="uid://dha5fndjas66h" path="res://scripts/objects/WorkIcon.gd" id="4"]
 [ext_resource type="Texture2D" uid="uid://dutjawr7phlr5" path="res://assets/sprites/computer_screen.PNG" id="5"]
-[ext_resource type="Texture2D" uid="uid://qyu7y42ocekb" path="res://assets/sprites/mail_icon.png" id="7"]
-[ext_resource type="Texture2D" uid="uid://up4df1mau73g" path="res://assets/sprites/work_icon.png" id="8"]
 
 [sub_resource type="RectangleShape2D" id="mail_shape"]
-size = Vector2(256, 256)
+size = Vector2(74, 64)
 
 [sub_resource type="RectangleShape2D" id="work_shape"]
 size = Vector2(64, 64)
 
-[node name="ComputerScreen" type="Node2D"]
+[node name="ComputerScreen" type="Node2D" unique_id=2141151366]
 script = ExtResource("1")
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=238838689]
 position = Vector2(960, 620)
 
-[node name="Background" type="Sprite2D" parent="."]
+[node name="BlackBars" type="ColorRect" parent="."]
+z_index = -10
+offset_right = 1920.0
+offset_bottom = 1240.0
+color = Color(0, 0, 0, 1)
+
+[node name="Background" type="Sprite2D" parent="." unique_id=151149376]
 position = Vector2(960, 620)
-scale = Vector2(1.5, 1.5)
 texture = ExtResource("5")
 
-[node name="MailIcon" type="Area2D" parent="."]
+[node name="MailIcon" type="Area2D" parent="." unique_id=1461891341]
 position = Vector2(160, 620)
 script = ExtResource("3")
 object_id = "mail_icon"
 initial_state = "idle"
 
-[node name="Sprite2D" type="Sprite2D" parent="MailIcon"]
-texture = ExtResource("7")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="MailIcon"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MailIcon" unique_id=487564472]
+position = Vector2(238, -506)
 shape = SubResource("mail_shape")
 
-[node name="WorkIcon" type="Area2D" parent="."]
+[node name="WorkIcon" type="Area2D" parent="." unique_id=195914206]
 position = Vector2(160, 930)
 script = ExtResource("4")
 object_id = "work_icon"
 initial_state = "idle"
 
-[node name="Sprite2D" type="Sprite2D" parent="WorkIcon"]
-texture = ExtResource("8")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="WorkIcon"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WorkIcon" unique_id=285971131]
+position = Vector2(237, -708)
 shape = SubResource("work_shape")

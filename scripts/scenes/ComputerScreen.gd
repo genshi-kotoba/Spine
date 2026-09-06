@@ -20,8 +20,22 @@ var _work_screen: WorkScreen = null
 
 func _ready() -> void:
 	super._ready()
+	_fit_background()
 	_mail_icon.open_mailbox.connect(open_mailbox)
 	_work_icon.open_work.connect(open_work)
+
+
+## 背景 contain 适配（v1.3）：按图片原比例完整放入窗口，居中，上下余量由 BlackBars 纯黑填充。
+## 换图后无需改代码——运行时按实际纹理尺寸计算缩放。
+func _fit_background() -> void:
+	var bg := $Background as Sprite2D
+	if bg == null or bg.texture == null:
+		return
+	var viewport_size: Vector2 = get_viewport_rect().size
+	var tex_size: Vector2 = bg.texture.get_size()
+	var fit_scale: float = minf(viewport_size.x / tex_size.x, viewport_size.y / tex_size.y)
+	bg.scale = Vector2(fit_scale, fit_scale)
+	bg.position = viewport_size * 0.5
 
 
 ## 打开邮箱弹层并锁定底层输入（互斥：先关 work_screen）

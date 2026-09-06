@@ -1,14 +1,13 @@
 class_name ComputerScreen
 extends MainScene
 ## ComputerScreen — 场景二：电脑桌面
-## 固定摄像机纯点击交互；自定义鼠标光标；左侧 mail / work 双图标；
+## 固定摄像机纯点击交互；系统原生光标（v1.2 去除自定义光标）；左侧 mail / work 双图标；
 ## 点击分别打开 mailbox_screen / work_screen 弹层（打开期间锁定底层输入）。
 ## 弹层互斥（docs/desktop_screens_constraints.md §4.4 决策 F7）：打开一个前先关闭另一个。
 
 
 const MAILBOX_SCENE := preload("res://scenes/mailbox_screen.tscn")
 const WORK_SCENE := preload("res://scenes/work_screen.tscn")
-const CURSOR_TEXTURE := preload("res://assets/sprites/cursor_icon.png")
 
 @onready var _mail_icon: MailIcon = $MailIcon
 @onready var _work_icon: WorkIcon = $WorkIcon
@@ -21,14 +20,8 @@ var _work_screen: WorkScreen = null
 
 func _ready() -> void:
 	super._ready()
-	Input.set_custom_mouse_cursor(CURSOR_TEXTURE)
 	_mail_icon.open_mailbox.connect(open_mailbox)
 	_work_icon.open_work.connect(open_work)
-
-
-func _exit_tree() -> void:
-	# 恢复默认光标，避免污染其他场景
-	Input.set_custom_mouse_cursor(null, Input.CURSOR_ARROW)
 
 
 ## 打开邮箱弹层并锁定底层输入（互斥：先关 work_screen）

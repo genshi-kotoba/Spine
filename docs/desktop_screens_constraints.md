@@ -113,8 +113,8 @@ MailboxScreen(CanvasLayer, layer=10)
 ```
 c2 curten E → GameState["c2_curten"]="1" ─┐
 c4 waste×12 → 全 "1" ─────────────────────┴→ MailWorkManager._recheck
-    → desktop_mails_unlocked / desktop_work_version（只升不降）
-    → mails_changed / work_version_changed → 弹层即时刷新
+	→ desktop_mails_unlocked / desktop_work_version（只升不降）
+	→ mails_changed / work_version_changed → 弹层即时刷新
 MailIcon 点击 → open_mailbox → ComputerScreen.open_mailbox（互斥关 work，lock_input）
 WorkIcon 点击 → open_work → ComputerScreen.open_work（互斥关 mailbox，lock_input）
 「工作」→ link 序列：渐黑 0.4s → 1s → link{v} 行1(粗斜) → 2s → 行2 淡入 0.4s → 3s → 切场景
@@ -177,3 +177,7 @@ Select-String -Path project.godot -Pattern 'MailWorkManager'
 
 - 2026-09-06 初版：desktop_screens 约束文档先行产出（prompt §1~7 全覆盖）。回滚要点：删除本文件即可。
 - 2026-09-06 v1.1（bug 修正）：prompt §5「切场景前无需解锁输入（场景销毁自然释放）」**假设错误**——StoryMonitor 是 Autoload，切场景不销毁，锁状态会带入下一场景（实测：链接序列进 c2 后键盘失效）。修正：`_on_work_pressed` 切场景前显式 `StoryMonitor.unlock_input()`。本节取代 prompt 该句与 §4.3 第 5 步括注。
+
+## 修订记录（补充）
+
+- 2026-09-06 v1.2：computer_screen 去除自定义鼠标光标（CURSOR_TEXTURE/set_custom_mouse_cursor 全删），改回系统原生光标。用户指示覆盖 scene1 prompt 的 cursor_icon 约定；cursor_icon.png 素材保留在库不再引用。

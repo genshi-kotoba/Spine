@@ -392,6 +392,7 @@ func _on_flow_floating_finished(box: Node, action: String) -> void:
 		_intro_study_exit_locked = false
 		_apply_gate_blocker()
 		_sync_study_door_lock()
+		_suspend_player_movement_until_released()
 
 
 func _hide_flow_floating() -> void:
@@ -1169,6 +1170,11 @@ func _hide_intro_text() -> void:
 	_intro_text_box = null
 
 
+func _suspend_player_movement_until_released() -> void:
+	if _player != null and _player.has_method("suspend_movement_until_released"):
+		_player.call("suspend_movement_until_released")
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not _intro_active or not _intro_waiting_breath or _intro_breathed:
 		return
@@ -1198,6 +1204,7 @@ func _update_intro(delta: float) -> void:
 		_set_intro_text(INTRO_THIRD_TEXT)
 		_intro_waiting_breath = false
 		StoryMonitor.unlock_input()
+		_suspend_player_movement_until_released()
 	elif _intro_text_stage == 3:
 		if not _intro_exit_hint_started and _intro_text_elapsed >= INTRO_THIRD_HINT_DELAY:
 			_intro_exit_hint_started = true

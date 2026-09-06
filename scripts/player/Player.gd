@@ -39,13 +39,35 @@ var _facing: int = Facing.RIGHT
 ## 反向过程中即使速度穿过 0 也保持反向速率，直到抵达新的目标速度。
 var _reversal_active := false
 
+## A direction key pressed while a cutscene is active must not become a movement
+## impulse on the first unlocked physics frame. The direction has to be released
+## before normal movement can be re-armed.
+var _movement_rearm_required := false
+
+
+func suspend_movement_until_released() -> void:
+	velocity = Vector2.ZERO
+	_reversal_active = false
+	_movement_rearm_required = not is_zero_approx(Input.get_axis("move_left", "move_right"))
+
 
 func _physics_process(delta: float) -> void:
 	if StoryMonitor.input_locked:
 		velocity = Vector2.ZERO
 		_reversal_active = false
+		if not is_zero_approx(Input.get_axis("move_left", "move_right")):
+			_movement_rearm_required = true
 		# 锁输入：velocity 清零 → 动画自然回落 static，朝向不变
 		_update_animation()
+		return
+
+	var direction := Input.get_axis("move_left", "move_right")
+	if _movement_rearm_required:
+		velocity = Vector2.ZERO
+		_reversal_active = false
+		_update_animation()
+		if is_zero_approx(direction):
+			_movement_rearm_required = false
 		return
 
 	# 出生落地吸附：首帧向下发射线找地板表面，把角色贴到实际碰撞面上
@@ -57,7 +79,6 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y += _get_gravity() * delta
 
-	var direction := Input.get_axis("move_left", "move_right")
 	# 朝向更新唯一来源：非零移动输入；松手/顶墙/锁输入保持原朝向
 	if not is_zero_approx(direction):
 		var new_facing: int = Facing.RIGHT if direction > 0.0 else Facing.LEFT

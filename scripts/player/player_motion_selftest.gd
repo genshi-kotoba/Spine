@@ -47,9 +47,15 @@ func _run() -> void:
 	StoryMonitor.input_locked = true
 	_step_player(player, 1)
 	StoryMonitor.input_locked = false
+	_step_player(player, 1)
+	var held_direction_blocked := absf(player.velocity.x) <= 0.1
 	Input.action_release("move_left")
+	_step_player(player, 1)
+	var released_direction_cleared := absf(player.velocity.x) <= 0.1
 	Input.action_press("move_right")
 	_step_player(player, 1)
+	checks.append("unlock_held_direction_blocked" if held_direction_blocked else "unlock_held_direction_blocked_FAIL")
+	checks.append("unlock_release_cleared" if released_direction_cleared else "unlock_release_cleared_FAIL")
 	checks.append("lock_reset" if player.velocity.x > 15.0 and player.velocity.x < 35.0 else "lock_reset_FAIL")
 	Input.action_release("move_right")
 

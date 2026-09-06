@@ -17,6 +17,12 @@ signal wall_updated(state: int)
 ## 交互次数上限（spec「E×3」）。
 @export var interactions_max: int = 3
 
+## 可选：卧室背景墙纸 Sprite2D（docs/c3_bedroom_wallpaper_constraints.md）。
+## 非空时 apply_state 按状态切换其贴图；index = state，越界/空纹理忽略。
+@export var wallpaper_target: NodePath
+## 各状态对应的墙纸贴图（index = state）。
+@export var wallpaper_state_textures: Array[Texture2D] = []
+
 
 func _ready() -> void:
 	states = {
@@ -49,6 +55,21 @@ func apply_state(new_state: int) -> void:
 	super.apply_state(clamped_state)
 	var color := color_for_state(clamped_state)
 	_apply_polygon_color_recursive(self, color)
+	_apply_wallpaper(clamped_state)
+
+
+## 按状态切换背景墙纸贴图（可选联动；未配置 wallpaper_target 时零副作用）。
+func _apply_wallpaper(state: int) -> void:
+	if wallpaper_target == NodePath():
+		return
+	var sp := get_node_or_null(wallpaper_target) as Sprite2D
+	if sp == null:
+		return
+	if state < 0 or state >= wallpaper_state_textures.size():
+		return
+	var tex: Texture2D = wallpaper_state_textures[state]
+	if tex != null:
+		sp.texture = tex
 
 
 func _apply_polygon_color_recursive(node: Node, color: Color) -> void:

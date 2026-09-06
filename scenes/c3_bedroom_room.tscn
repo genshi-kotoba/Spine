@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/scenes/RoomBase.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/wallpaper1.png" id="2"]
 
 ; C3 ending bedroom: one 1280px room from the three-room floor, with no embedded player or auto door.
 [node name="C3BedroomRoom" type="Node2D"]
@@ -11,3 +12,9 @@ stand_surface_y = 988.0
 floor_color = Color(0.09, 0.09, 0.11, 1)
 wall_color = Color(0.025, 0.025, 0.035, 1)
 door_enabled = false
+
+; 卧室背景墙纸（docs/c3_bedroom_wallpaper_constraints.md）：铺满背墙可视区，
+; 上下溢出被 RoomBase 后绘制的 Environment 天花/地板色块遮挡；贴图由 WallItem 按状态切换。
+[node name="Wallpaper" type="Sprite2D" parent="."]
+position = Vector2(640, 598)
+texture = ExtResource("2")

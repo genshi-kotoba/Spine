@@ -1436,13 +1436,14 @@ func _on_interact_pressed() -> void:
 					return
 				if area.name == "EndItem" and current_stage == STAGE_LIVING \
 					and GameState.get_process_flag(FLAG_BEDROOM_INTERACTIONS_DONE):
+					# 首次 E 只播一次性字幕；再次 E 落入 touched() 触发白屏结局（v1.1 修复 return 缩进）
 					if not _bedroom_return_end_dialogue_shown:
 						_bedroom_return_end_dialogue_shown = true
 						_show_flow_subtitle([
 							"可惜了，多好的东西白白摔到地上",
 							"捡起来擦擦看还能不能用",
 						], "bedroom_return_end")
-					return
+						return
 				area.touched()
 				return
 

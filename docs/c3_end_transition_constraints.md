@@ -1,6 +1,9 @@
 # C3 结局转场改造：约束文档
 
-版本：v1.0（2026-09-06）
+版本：v1.1（2026-09-06）
+v1.1 修复：`_on_interact_pressed` 的 EndItem/STAGE_LIVING 分支 `return` 缩进错误——
+首次 E 显示一次性字幕「可惜了…」后**永远 return**，后续 E 永远到不了 `touched()`，结局无法触发。
+修正：字幕分支 return 内移（首 E 只播字幕），再次 E 落入 `area.touched()` 正常走白屏链路。
 依据：docs/prompts/godot_c3end_c5_prompt.md 任务 A
 关联：scripts/c3/flow/C3Flow.gd、scripts/autoload/MailWorkManager.gd、scripts/scenes/ComputerScreen.gd、scenes/computer_screen.tscn
 

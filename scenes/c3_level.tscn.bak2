@@ -23,9 +23,6 @@
 [ext_resource type="Script" uid="uid://dxl118a4wp34q" path="res://scripts/components/RoomTable.gd" id="22"]
 [ext_resource type="PackedScene" uid="uid://dc4yso4br36vf" path="res://scenes/c3_floor.tscn" id="23"]
 [ext_resource type="Script" uid="uid://bbmpcjmv60ouk" path="res://scripts/c3/flow/CorridorAssembly.gd" id="25"]
-[ext_resource type="Texture2D" path="res://assets/sprites/wallpaper1.png" id="26"]
-[ext_resource type="Texture2D" path="res://assets/sprites/wallpaper2.png" id="27"]
-[ext_resource type="Texture2D" path="res://assets/sprites/wallpaper3.png" id="28"]
 
 [sub_resource type="RectangleShape2D" id="item_col"]
 size = Vector2(179.5, 269)
@@ -81,8 +78,6 @@ z_index = 2
 position = Vector2(360, 880)
 script = ExtResource("10")
 size = Vector2(120, 200)
-wallpaper_target = NodePath("../Wallpaper")
-wallpaper_state_textures = Array[Texture2D]([ExtResource("26"), ExtResource("26"), ExtResource("27"), ExtResource("28")])
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Rooms/Bedroom/WallItem" unique_id=392079148]
 shape = SubResource("item_col")

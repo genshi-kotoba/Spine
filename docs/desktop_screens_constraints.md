@@ -165,7 +165,7 @@ Select-String -Path project.godot -Pattern 'MailWorkManager'
 - F6 c2_curten 已由 VanishItem 写 GameState，C2Floor.gd 零改动（prompt「依赖修补」条件不满足）。
 - F7 弹层互斥：开一个前关另一个（prompt 默认）。
 - F8 mailbox 初始居中 (714, 378)（top-left 换算）；work 占位同。
-- F9 LinkTitle 字号 32、LinkBody 24（占位审美，可随美术调）。
+- F9 LinkTitle 字号 34、LinkBody 34（2026-09-06 由 32 统一 +2；更早版本 Title 32/Body 24，已统一）。
 
 剩余假设：
 

@@ -1,32 +1,33 @@
 class_name ItemMarker
 extends Node2D
-## ItemMarker — 可复用「可交互」黄色星星标记组件（C3 前置需求⑥，§15）
-## 当 item「交互可用」且「玩家与 item 同房间」时显示黄色星星；不可交互或异房则隐藏。
-## 同房间远程可见：不要求靠近，与 E 提示（InteractHint 靠近才显示）是两套独立逻辑。
-## 驱动：连接宿主 Item 的 interaction_available 信号（set_interactable 回调），并在 _process 轮询
-## 宿主 is_interaction_available() 以响应门控/进程旗标变化；经 RoomTable 做同房判定。
-## 独立可复用模块：挂 item 子节点即用；无房间名/关卡字面量；默认 Polygon2D 五角星（零贴图、零外部依赖）。
+## ItemMarker — 可复用 item 高光组件。
+## 同房间且交互可用时显示 item 描边；远处为白色，进入 item 的交互范围后为金色。
+## 交互范围直接复用宿主 Item 的 Area2D 碰撞范围，与 E 键和 InteractHint 保持一致。
 
-## 星星颜色（默认黄）。
-@export var star_color: Color = Color(1, 0.84, 0.18, 1)
-## 星星外半径（px）。
-@export var star_size: float = 12.0
-## 星星贴图（空 → Polygon2D 星形占位；设置时用 Sprite2D）。
-@export var star_texture: Texture2D
+## 远处提示色：表示同房间内存在可交互 item。
+@export var far_outline_color: Color = Color(1, 1, 1, 1)
+## 进入交互范围后的高亮色。
+@export var near_outline_color: Color = Color(1, 0.84, 0.18, 1)
+## 描边宽度（px）。
+@export var outline_width: float = 5.0
+## 描边与 item 可见表面的间距（px）。默认 0，描边紧贴可见边界。
+@export var outline_padding: float = 0.0
+## 无可读碰撞范围时的回退距离（px）。
+@export var interaction_distance: float = 180.0
 ## 本 item 所属房间 id；空 → 由 item.x 经 RoomTable 派生。
 @export var room_id: String = ""
 ## 指向 RoomTable 节点的 NodePath（同场景共享一个 RoomTable）。
 @export var room_table_path: NodePath
 ## 指向 Player 的 NodePath（空 → 组 "player" 或场景树内查找）。
 @export var player_path: NodePath
-## 星星相对 item 的偏移（头顶上方，默认 (0,-40)）。
-@export var offset: Vector2 = Vector2(0, -40)
+## 描边相对 item 的偏移；默认直接包围 item。
+@export var offset: Vector2 = Vector2.ZERO
 
 var _item: Node2D = null
 var _player: Node2D = null
 var _room_table: RoomTable = null
 var _available_flag: bool = false
-var _visual: CanvasItem = null
+var _visual: Line2D = null
 
 
 func _ready() -> void:
@@ -46,8 +47,11 @@ func _process(_delta: float) -> void:
 		available = _item.is_interaction_available()
 	var show := available and _same_room()
 	visible = show
-	if _visual != null:
-		_visual.modulate.a = 1.0 if show else 0.0
+	if _visual == null:
+		return
+	_visual.modulate.a = 1.0 if show else 0.0
+	if show:
+		_visual.default_color = near_outline_color if _is_in_interaction_range() else far_outline_color
 
 
 ## 宿主 Item 的 interaction_available 信号回调。
@@ -55,35 +59,89 @@ func set_interactable(flag: bool) -> void:
 	_available_flag = flag
 
 
-## 构造星形视觉：有 star_texture 用 Sprite2D，否则 Polygon2D 五角星（白模零贴图）。
+## 返回当前玩家是否已进入宿主 Item 的真实交互范围。
+func is_in_interaction_range() -> bool:
+	return _is_in_interaction_range()
+
+
+## 返回当前描边颜色，供演示场景和 headless 自检读取。
+func get_current_outline_color() -> Color:
+	return _visual.default_color if _visual != null else far_outline_color
+
+
+## 构造矩形描边。优先读取 Item 的实际 Polygon2D 可见边界，避免描边与物体表面产生间隙。
 func _build_visual() -> void:
-	_visual = get_node_or_null("Star") as CanvasItem
+	_visual = get_node_or_null("Outline") as Line2D
 	if _visual == null:
-		if star_texture != null:
-			var sprite := Sprite2D.new()
-			sprite.name = "Star"
-			sprite.texture = star_texture
-			add_child(sprite)
-			_visual = sprite
-		else:
-			var star := Polygon2D.new()
-			star.name = "Star"
-			star.color = star_color
-			star.polygon = _make_star_points(star_size)
-			add_child(star)
-			_visual = star
-	if _visual is Node2D:
-		(_visual as Node2D).position = offset
+		_visual = Line2D.new()
+		_visual.name = "Outline"
+		add_child(_visual)
+	_visual.width = outline_width
+	_visual.default_color = far_outline_color
+	_visual.antialiased = true
+	_visual.closed = true
+	_visual.z_index = 10
+	_visual.position = offset
+	var bounds: Rect2 = _get_visual_bounds()
+	if bounds.size == Vector2.ZERO:
+		var item_size: Vector2 = _get_item_size()
+		if item_size == Vector2.ZERO:
+			item_size = Vector2(64, 64)
+		bounds = Rect2(-item_size * 0.5, item_size)
+	var padding: Vector2 = Vector2.ONE * outline_padding
+	bounds = bounds.grow(padding.x)
+	_visual.points = PackedVector2Array([
+		bounds.position,
+		Vector2(bounds.end.x, bounds.position.y),
+		bounds.end,
+		Vector2(bounds.position.x, bounds.end.y)
+	])
 
 
-func _make_star_points(r: float) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	var inner := r * 0.45
-	for i in range(10):
-		var angle := -PI * 0.5 + i * (PI / 5.0)
-		var radius := r if i % 2 == 0 else inner
-		pts.append(Vector2(cos(angle), sin(angle)) * radius)
-	return pts
+func _get_visual_bounds() -> Rect2:
+	if _item == null:
+		return Rect2()
+	var found := false
+	var min_point := Vector2.ZERO
+	var max_point := Vector2.ZERO
+	for child in _item.get_children():
+		if child is Polygon2D:
+			var polygon: Polygon2D = child as Polygon2D
+			for point in polygon.polygon:
+				var local_point: Vector2 = polygon.transform * point
+				if not found:
+					min_point = local_point
+					max_point = local_point
+					found = true
+				else:
+					min_point = min_point.min(local_point)
+					max_point = max_point.max(local_point)
+		elif child is Sprite2D:
+			var sprite: Sprite2D = child as Sprite2D
+			if sprite.texture != null:
+				var sprite_size: Vector2 = sprite.texture.get_size() * sprite.scale.abs()
+				var sprite_min: Vector2 = sprite.position - sprite_size * 0.5
+				var sprite_max: Vector2 = sprite.position + sprite_size * 0.5
+				if not found:
+					min_point = sprite_min
+					max_point = sprite_max
+					found = true
+				else:
+					min_point = min_point.min(sprite_min)
+					max_point = max_point.max(sprite_max)
+	return Rect2(min_point, max_point - min_point) if found else Rect2()
+
+
+func _get_item_size() -> Vector2:
+	if _item == null:
+		return Vector2(64, 64)
+	var configured_size: Variant = _item.get("size")
+	if configured_size is Vector2 and configured_size.x > 0.0 and configured_size.y > 0.0:
+		return configured_size
+	var shape_node := _item.get_node_or_null("CollisionShape2D")
+	if shape_node is CollisionShape2D and shape_node.shape is RectangleShape2D:
+		return (shape_node.shape as RectangleShape2D).size
+	return Vector2.ZERO
 
 
 func _resolve_player() -> void:
@@ -124,7 +182,7 @@ func _connect_availability() -> void:
 		_item.connect("interaction_available", Callable(self, "set_interactable"))
 
 
-## 同房间判定：玩家与 item 属于同一房间。无 RoomTable 或玩家不可得时视为同房（不误隐藏）。
+## 同房间判定：玩家与 item 属于同一房间。无 RoomTable 或玩家不可得时视为同房。
 func _same_room() -> bool:
 	if _room_table == null or _item == null:
 		return true
@@ -133,9 +191,41 @@ func _same_room() -> bool:
 		return true
 	var item_room: String = room_id
 	if item_room == "":
-		item_room = _room_table.get_room_of(_item.global_position.x)
+		item_room = _room_table.get_room_of(_get_interaction_anchor_global().x)
 	var player_room: String = _room_table.get_room_of(player.global_position.x)
 	return item_room != "" and item_room == player_room
+
+
+## 使用 Item/Player 矩形碰撞边界，与 Player.interact_pressed 的触发条件一致。
+func _is_in_interaction_range() -> bool:
+	if _player == null or not is_instance_valid(_player) or _item == null:
+		return false
+	if _item.has_method("is_player_in_interaction_range"):
+		return bool(_item.call("is_player_in_interaction_range", _player))
+	# Legacy hosts without Item's shared API still use the collision anchor when present.
+	var item_size := _get_item_size()
+	var player_half_size := _get_player_half_size()
+	if item_size.x > 0.0 and item_size.y > 0.0:
+		var item_half_size := item_size * 0.5
+		var delta := (_player.global_position - _get_interaction_anchor_global()).abs()
+		return delta.x <= item_half_size.x + player_half_size.x and delta.y <= item_half_size.y + player_half_size.y
+	if _item is Area2D:
+		return (_item as Area2D).get_overlapping_bodies().has(_player)
+	return _item.global_position.distance_to(_player.global_position) <= interaction_distance
+
+
+func _get_interaction_anchor_global() -> Vector2:
+	if _item == null:
+		return Vector2.ZERO
+	var shape_node := _item.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	return shape_node.global_position if shape_node != null else _item.global_position
+
+
+func _get_player_half_size() -> Vector2:
+	var shape_node := _player.get_node_or_null("CollisionShape2D")
+	if shape_node is CollisionShape2D and shape_node.shape is RectangleShape2D:
+		return (shape_node.shape as RectangleShape2D).size * 0.5
+	return Vector2.ZERO
 
 
 ## 手动开关（流程直接控制）。

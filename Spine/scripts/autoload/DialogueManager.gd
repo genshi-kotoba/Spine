@@ -10,11 +10,14 @@ signal dialogue_finished
 enum {
 	MODE_INTERACTIVE = 0,  ## 按键切换（锁定输入）
 	MODE_AUTO = 1,         ## 自动切换（不锁定输入）
+	MODE_GLITCH = 2,       ## 故障散落字幕（生命周期同 MODE_AUTO，仅显示方式不同）
 }
 
 const BOX_SCENE := preload("res://ui/dialogue_box.tscn")
+const GLITCH_BOX_SCENE := preload("res://ui/glitch_dialogue_box.tscn")
 
 var _box: DialogueBox = null
+var _glitch_box = null  ## GlitchDialogueBox（路径实例化，避免依赖全局类缓存）
 var _active: bool = false
 var _queue: Array[Dictionary] = []
 
@@ -23,6 +26,10 @@ func _ready() -> void:
 	_box = BOX_SCENE.instantiate()
 	_box.dialogue_finished.connect(_on_box_finished)
 	add_child(_box)
+	_glitch_box = GLITCH_BOX_SCENE.instantiate()
+	_glitch_box.dialogue_finished.connect(_on_box_finished)
+	add_child(_glitch_box)
+	print("[dialogue_manager] glitch box ready")
 
 
 func is_dialogue_active() -> bool:
@@ -37,11 +44,33 @@ func start_dialogue(file_path: String, mode: int) -> void:
 	_begin(file_path, mode)
 
 
+## 直接播放运行时提供的句子；适合交互反馈等不需要独立文件的短字幕。
+func start_lines(lines: Array, mode: int = MODE_INTERACTIVE) -> void:
+	var clean_lines: Array = []
+	for line in lines:
+		var clean := str(line).strip_edges()
+		if not clean.is_empty():
+			clean_lines.append(clean)
+	if clean_lines.is_empty():
+		return
+	if _active:
+		_queue.append({"lines": clean_lines, "mode": mode})
+		return
+	_begin_lines(clean_lines, mode)
+
+
 func _begin(file_path: String, mode: int) -> void:
-	var lines := _load_lines(file_path)
+	_begin_lines(_load_lines(file_path), mode)
+
+
+func _begin_lines(lines: Array, mode: int) -> void:
 	_active = true
 	dialogue_started.emit()
-	_box.show_dialogue(lines, mode)
+	print("[dialogue_manager] begin mode=%d lines=%d" % [mode, lines.size()])
+	if mode == MODE_GLITCH:
+		_glitch_box.show_dialogue(lines)
+	else:
+		_box.show_dialogue(lines, mode)
 
 
 ## 按行读取文本文件：换行分句，忽略空行
@@ -66,4 +95,7 @@ func _on_box_finished() -> void:
 	dialogue_finished.emit()
 	if not _queue.is_empty():
 		var next: Dictionary = _queue.pop_front()
-		_begin(next["file_path"], next["mode"])
+		if next.has("lines"):
+			_begin_lines(next["lines"], next["mode"])
+		else:
+			_begin(next["file_path"], next["mode"])

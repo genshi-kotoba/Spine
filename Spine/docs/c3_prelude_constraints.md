@@ -18,7 +18,7 @@
 3. **可配置光影遮罩**：只留出想要的场景；评估 CanvasModulate+Light2D 与挖孔 shader 两方案并定案。
 4. **可复用特效组件库**：底色粒子爆炸/震撼、全屏撼动=相机 shake+房间边沿粒子、部分撼动=item 局部；全部参数化快速复用。
 5. **卧室通用 room 白模**：与厨房/现有 room 同级结构。
-6. **可交互状态标记（ItemMarker 黄色星星）**：item 可交互时显示黄色星星；同房间可远程显示（不要求靠近）；作为单独模块可复用（契约见 §15）。
+6. **可交互状态标记（ItemMarker 远近描边）**：item 可交互时显示描边；同房间远处显示白色描边，进入交互距离后显示金色描边；作为单独模块可复用（契约见 §15）。
 
 ---
 ## 2. 工程事实与现有骨架盘点
@@ -300,7 +300,7 @@ Room (Node2D; script = scripts/scenes/RoomBase.gd，可选)
 | ③ | 光影遮罩 | DarknessMask（挖孔 canvas_item shader）；参数 center/radius/color/softness/enabled；白模场景加载 0 错误；`follow_player` 时「只留玩家所在区域」；方案 B 定案 + 白模可行性依据 | headless 加载 + 窗口运行截图 + 代码走查 |
 | ④ | 特效库 | ParticleBurst/ScreenShake/ItemShake 组件、参数齐全、方法触发；全屏撼动=screen_shake+房间边沿burst；部分撼动=item_shake；组件可复用（无房间/关卡字面量） | headless 加载 + 窗口运行读回 + 截图 |
 | ⑤ | 卧室 room 白模 | `room_bedroom_whitemodel.tscn` 独立加载 0 错误；尺寸/颜色/门/出生点可配；白模零贴图；站立面 y=988；可与现有层同级实例化 | headless 加载 + 场景树检查 + 截图 |
-| ⑥ | 可交互状态标记 | ItemMarker 组件：交互可用(interaction_available/gate 满足)→显示黄色星星，不可交互隐藏；同房远程可见(不要求靠近)；独立可复用(挂 item 子节点, 参数化 color/size/room_id/room_table)；白模 Polygon2D 星形, 零外部依赖 | 代码走查 + headless 读回 + 运行 + 截图 |
+| ⑥ | 可交互状态标记 | ItemMarker 组件：交互可用(interaction_available/gate 满足)→显示描边，不可交互隐藏；同房远处白色、进入交互范围金色；独立可复用(挂 item 子节点, 参数化颜色/描边/room_id/room_table)；Line2D 零外部依赖 | 代码走查 + headless 读回 + 运行 + 截图 |
 
 ---
 ## 13. T2 verify 命令清单（实现 t2 / 验证 t3 直接使用）
@@ -369,7 +369,7 @@ git -C F:\Godot\Spine log --oneline -3     # 本地提交、英文信息、无 p
 - D5 卧室 room 白模 = 独立房间场景单元（room_bedroom_whitemodel.tscn），可复用实例化。
 - D6 item 扩展 = gate_flag / initial_state / states / force_trigger_node / force_trigger_state / set_interaction_enabled / interaction_available / gate_blocked，不破坏既有 Item API（TestItem 现行为不变）。
 - D7 资产 = Kenney Input Prompts（CC0）落盘 `assets/ui/e_key.png` + `docs/CREDITS.md` 许可台账。
-- D8 可交互状态标记(⑥) = ItemMarker 组件，房间判定**定案 = 场景级房间区间表**（RoomTable, room_id→x 区间，见 §15.3）；与 InteractHint 靠近逻辑独立、不新增玩法；不侵入 item.gd / InteractHint.gd（只读 interaction_available）。
+- D8 可交互状态标记(⑥) = ItemMarker 组件，房间判定**定案 = 场景级房间区间表**（RoomTable, room_id→x 区间，见 §15.3）；描边颜色按 Item Area2D 交互范围切换；不侵入 item.gd / InteractHint.gd（只读 interaction_available）。
 
 **剩余假设（评审/集成前显式确认；均来自仓库既有约定或规格字面，无新增玩法设计）：**
 
@@ -378,21 +378,21 @@ git -C F:\Godot\Spine log --oneline -3     # 本地提交、英文信息、无 p
 - J3 「指定游戏进程」的具体旗标名/时序（如 `exam_completed` / `oxygen_ok`）需阶段二确认；本模块只定义 Item 读取 gate 接口。
 - J4 特效库「震撼/爆炸」的视觉强度/颜色默认值：白模阶段用可辨参数，正式值待 C3 打磨；参数化，不锁定具体值。
 - J6 可交互状态标记(⑥) 房间判定：默认 room_id 由 item.x 派生（区间表）；显式 room_id 为覆盖项；跨不连续房间/多房间边界以阶段二 C3 房间布局为准（RoomTable 按实际 x 区间配置）。
-## 15. ⑥ 可交互状态标记（ItemMarker 黄色星星）契约
+## 15. ⑥ 可交互状态标记（ItemMarker 远近描边）契约
 
-> 依据：用户新规格（本模块第 6 项前置需求）：**item 可交互时显示黄色星星；在同房间里可以远程显示（不要求靠近）；作为单独模块可复用。**
+> 依据：当前用户规格：**item 可交互时显示描边；远处提示可交互显示白色描边；进入能够交互的距离显示金色描边；作为单独模块可复用。**
 > 本文为本前置模块的第 6 项需求，追加于 ①–⑤ 之后；实现（t2）、验证（t3）、评审（t4）均以本文为准。**设计权铁律：只收录上述需求，不新增玩法。**
 
 ### 15.1 用户规格原文（⑥）
-1. item 可交互时显示黄色星星；
-2. 在同房间里可以远程显示（不要求靠近）；
+1. item 可交互时显示描边；
+2. 进入 item 的交互范围显示金色描边；同房间远处显示白色描边；
 3. 作为单独模块可复用。
 
 ### 15.2 显示条件（①）
-- **显示条件**：item **交互可用**时显示黄色星星；不可交互时隐藏。
+- **显示条件**：item **交互可用**且玩家与 item 同房时显示描边；不可交互或异房时隐藏。
   - 交互可用 = `interaction_available(enabled=true)` 或 gate 满足（前置 Item 已暴露 `interaction_available(enabled)` 信号；`gate_flag` 未满足 / `set_interaction_enabled(false)` 时满足为 false）。
   - ItemMarker 连接 item 的 `interaction_available(enabled)` 信号（**只读访问，不改 item.gd**）；enabled=true → 显示，false → 隐藏。
-- **与 E 提示（InteractHint）两套独立逻辑**：InteractHint = 靠近（body_entered/body_exited, body is Player）才显示；ItemMarker = **交互可用就显示（不要求靠近）**，并支持同房间远程可见。二者独立、可并存、互不侵入。
+- **颜色状态**：ItemMarker 读取宿主 Item 的 `Area2D.get_overlapping_bodies()`；玩家进入同一交互范围时使用金色，否则使用白色。`InteractHint` 仍负责 E 键图标，两者独立、可并存、互不侵入。
 
 ### 15.3 同房间远程可见 + 房间判定方案定案（②）
 - **定案 = 场景级房间区间表（RoomTable 节点，room_id → x 区间）**。
@@ -403,8 +403,8 @@ git -C F:\Godot\Spine log --oneline -3     # 本地提交、英文信息、无 p
 
 ### 15.4 组件契约（③，独立可复用，不侵入既有）
 - **`scripts/components/ItemMarker.gd`**（Node2D，挂 item 子节点；参数化）：
-  - `@export var star_color: Color = Color(1, 0.84, 0.18, 1)`（黄）、`@export var star_size: float = 12.0`、`@export var star_texture: Texture2D`（空 → Polygon2D 星形占位）、`@export var room_id: String = ""`（空 → 由 item.x 派生）、`@export var room_table_path: NodePath`、`@export var player_path: NodePath`、`@export var offset: Vector2 = Vector2(0, -40)`。
-  - 行为：`_ready` 取 `item = get_parent()`（须为 Item），连接 `item.interaction_available`；取 player（`player_path` 或组 `player`）；取 RoomTable（`room_table_path`）。`_process` 计算 `visible = interaction_available_flag and same_room()` → 设 visible。`func set_interactable(flag: bool)`（信号回调）。
+  - `@export var far_outline_color: Color = Color(1, 1, 1, 1)`（白）、`@export var near_outline_color: Color = Color(1, 0.84, 0.18, 1)`（金）、`@export var outline_width: float = 5.0`、`@export var outline_padding: float = 0.0`（默认紧贴表面）、`@export var room_id: String = ""`、`@export var room_table_path: NodePath`、`@export var player_path: NodePath`、`@export var offset: Vector2 = Vector2.ZERO`。
+  - 行为：`_ready` 取 `item = get_parent()`（须为 Item），优先读取 Item 的 `Polygon2D`/`Sprite2D` 可见外接边界构造 `Line2D`（无可见节点时才回退到 `size`/`CollisionShape2D`）；连接 `item.interaction_available`；取 player（`player_path` 或组 `player`）；取 RoomTable（`room_table_path`）。`_process` 计算 `visible = interaction_available_flag and same_room()`，并按 Item/Player 矩形碰撞边界在金/白描边间切换（Area2D overlap 只作为无尺寸配置时的回退）。`func set_interactable(flag: bool)`（信号回调）。
   - **不侵入** InteractHint.gd / item.gd 现有契约（item.gd 已暴露 interaction_available 只读信号；ItemMarker 只读，不写、不改二者）。
   - **fail-open 语义**：`same_room()` 在**无 RoomTable 或玩家不可得**时退化为 `true`（即仅按 `interaction_available` 显示，不因缺房间表误隐藏）。**适用前提**：仅在配置了 RoomTable（房间 x 区间）的场景才启用「异房隐藏」；未配置房间表时默认同一房间、恒显示。依赖 RoomTable 的房间判定需显式设置 `room_table_path`。
 - **`scripts/components/RoomTable.gd`**（数据源，可复用，不含房间名/关卡字面量）：
@@ -412,17 +412,17 @@ git -C F:\Godot\Spine log --oneline -3     # 本地提交、英文信息、无 p
   - 三房 x 区间由场景配置（白模三房 [0,1280]/[1280,2560]/[2560,3840]），代码零硬编码。
 
 ### 15.5 占位资产（④）
-- 默认 `Polygon2D` 五角星（零贴图、零外部依赖）；可选 `star_texture`（Kenney / 程序化，优先零外部依赖，本模块默认 Polygon2D 星形，不引入外部资产）。
+- 默认 `Line2D` 矩形描边（零贴图、零外部依赖）；描边尺寸从 Item 的实际可见边界派生，无可见边界时才从 `size`/`CollisionShape2D` 派生。
 - 不新增输入映射；纯视觉标记。
 
 ### 15.6 验收标准（⑤）
 | # | 验收标准 | 证据方式 |
 |---|---|---|
-| ⑥a | item 交互可用（interaction_available(true)/gate 满足）→ 显示黄色星星；不可交互 → 隐藏 | 代码走查 + headless 读回 + 运行 |
-| ⑥b | 同房远程可见：玩家与 item 同房 → 星星可见（不靠近）；异房 → 隐藏 | 运行（跨房移动读回）+ 截图 |
+| ⑥a | item 交互可用且同房 → 显示描边；不可交互/异房 → 隐藏 | 代码走查 + headless 读回 + 运行 |
+| ⑥b | 同房远处为白色描边，进入 Item Area2D 交互范围后为金色描边 | 运行（跨房/近远移动读回）+ 截图 |
 | ⑥c | 独立可复用：ItemMarker 挂 item 子节点即用；与 InteractHint 靠近逻辑互不冲突（两套独立） | 代码走查 + 演示场景两节点各配 |
-| ⑥d | 参数化：color/size/texture/room_id/room_table_path/player_path/offset 可配 | 代码走查 |
-| ⑥e | 无文本/无新输入；白模 Polygon2D 星形；零外部依赖 | headless 加载 0 错误 + 资产断言 |
+| ⑥d | 参数化：远/近颜色、描边宽度/间距、room_id/room_table_path/player_path/offset 可配 | 代码走查 |
+| ⑥e | 无文本/无新输入；Line2D 描边；零外部依赖 | headless 加载 0 错误 + 资产断言 |
 
 ### 15.7 T2 附加 verify
 ```powershell

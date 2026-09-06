@@ -21,6 +21,7 @@ extends Node2D
 
 ## 父 Area2D（作为交互范围检测的 item / InteractableObject）。
 var _owner_area: Area2D = null
+var _player: Node2D = null
 
 @onready var _visual: Node2D = $Visual
 
@@ -37,6 +38,20 @@ func _ready() -> void:
 		_owner_area.body_exited.connect(_on_body_exited)
 
 
+func _process(_delta: float) -> void:
+	# Item ranges can be moved in the editor independently of the Area2D root. Poll the
+	# same shared range API used by E/highlight so the hint cannot drift or lag behind
+	# physics body_entered/body_exited delivery after a teleport.
+	if _owner_area == null or not _owner_area.has_method("is_player_in_interaction_range"):
+		return
+	if _player == null or not is_instance_valid(_player):
+		_player = _resolve_player()
+	var in_range := _player != null and bool(_owner_area.call("is_player_in_interaction_range", _player))
+	var should_show := in_range
+	if should_show != _visible_target:
+		_apply_visibility(should_show)
+
+
 func _apply_visual_setup() -> void:
 	if _visual == null:
 		return
@@ -48,7 +63,39 @@ func _apply_visual_setup() -> void:
 			sprite.visible = true
 		else:
 			sprite.visible = false
-		_visual.position = head_offset
+		_visual.position = _interaction_anchor_offset() + head_offset
+
+
+func _interaction_anchor_offset() -> Vector2:
+	if _owner_area == null:
+		return Vector2.ZERO
+	var shape_node := _owner_area.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape_node == null:
+		return Vector2.ZERO
+	return _owner_area.to_local(shape_node.global_position)
+
+
+func _resolve_player() -> Node2D:
+	var grouped := get_tree().get_first_node_in_group("player") as Node2D
+	if grouped != null:
+		return grouped
+	var scene := get_tree().current_scene
+	if scene != null:
+		var direct := scene.get_node_or_null("Player") as Node2D
+		if direct != null:
+			return direct
+		return _scan_for_player(scene)
+	return null
+
+
+func _scan_for_player(node: Node) -> Node2D:
+	if node is Player:
+		return node as Node2D
+	for child in node.get_children():
+		var found := _scan_for_player(child)
+		if found != null:
+			return found
+	return null
 
 
 func _on_body_entered(body: Node2D) -> void:
@@ -80,6 +127,9 @@ func set_visible_forced(v: bool) -> void:
 
 
 func _apply_visibility(v: bool) -> void:
+	if _visible_target == v and visible == v:
+		return
+	_visible_target = v
 	if _tween != null:
 		_tween.kill()
 		_tween = null

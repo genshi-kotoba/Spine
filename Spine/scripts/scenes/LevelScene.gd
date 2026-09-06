@@ -19,13 +19,22 @@ var _overlapping: Array[InteractableObject] = []
 
 
 func _ready() -> void:
-	_camera.make_current()
+	# Some reusable floor scenes contain a preview Player for standalone editing. If an
+	# embedding scene disables that preview body, it must not claim the shared viewport camera.
+	if _camera != null and _player != null \
+		and _player.process_mode != Node.PROCESS_MODE_DISABLED \
+		and _player.visible:
+		_camera.make_current()
 	for object in find_children("*", "InteractableObject"):
 		object.body_entered.connect(_on_object_body_entered.bind(object))
 		object.body_exited.connect(_on_object_body_exited.bind(object))
 
 
 func _process(delta: float) -> void:
+	if _player == null or _camera == null \
+		or _player.process_mode == Node.PROCESS_MODE_DISABLED \
+		or not _player.visible:
+		return
 	_update_camera(delta)
 
 
@@ -47,7 +56,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if StoryMonitor.input_locked:
 		return
 	if event.is_action_pressed("interact") and not _overlapping.is_empty():
-		_overlapping.front().interact()
+		var object: InteractableObject = _overlapping.front() as InteractableObject
+		object.interact()
+		if object.has_method("request_interaction_sfx"):
+			object.request_interaction_sfx()
 		# TODO: UI 提示可选
 
 

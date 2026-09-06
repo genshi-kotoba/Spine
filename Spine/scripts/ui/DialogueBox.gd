@@ -13,6 +13,7 @@ const COOLDOWN_SEC := 1.0
 const AUTO_LINE_SEC := 4.0
 
 @onready var _label: RichTextLabel = $DialogueLabel
+@onready var _backdrop: ColorRect = $DialogueBackdrop
 @onready var _auto_timer: Timer = $AutoTimer
 
 var _lines: Array = []
@@ -24,6 +25,7 @@ var _cooldown_until_msec: int = 0
 
 func _ready() -> void:
 	_label.hide()
+	_backdrop.hide()
 	_auto_timer.wait_time = AUTO_LINE_SEC
 	_auto_timer.one_shot = true
 	_auto_timer.timeout.connect(_on_auto_timeout)
@@ -40,6 +42,7 @@ func show_dialogue(lines: Array, mode: int = MODE_INTERACTIVE) -> void:
 	# 首句显示即启动冷却：防止触发对话的同一按键立刻切走首句
 	_cooldown_until_msec = Time.get_ticks_msec() + int(COOLDOWN_SEC * 1000)
 	_label.show()
+	_backdrop.show()
 	_show_current()
 
 
@@ -83,6 +86,7 @@ func _finish() -> void:
 	_active = false
 	_auto_timer.stop()
 	_label.hide()
+	_backdrop.hide()
 	if _mode == MODE_INTERACTIVE:
 		StoryMonitor.unlock_input()
 	dialogue_finished.emit()

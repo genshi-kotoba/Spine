@@ -14,6 +14,7 @@ var _flow: Node = null
 var _player: Node2D = null
 var _door: Node = null
 var _door2: Node = null
+var _locked_open_events: int = 0
 
 
 func _initialize() -> void:
@@ -25,6 +26,7 @@ func _run() -> void:
 	await _scenario_c()
 	await _reset_study_state(false)
 	await _scenario_a()
+	await _scenario_e()
 	await _reset_study_state(true)
 	await _scenario_b()
 	_scenario_d()
@@ -73,6 +75,7 @@ func _scenario_a() -> void:
 	var stage_at_1310 := -1
 	var stage_after_lock := -1
 	var blocker_after_lock := false
+	var door_closed_after_lock := false
 	for i in range(700):
 		await physics_frame
 		var px: float = _player.global_position.x
@@ -86,6 +89,7 @@ func _scenario_a() -> void:
 		if crossed and px >= 1320.0:
 			stage_after_lock = int(_flow.get("current_stage"))
 			blocker_after_lock = _blocker_active()
+			door_closed_after_lock = not bool(_door.get("is_open"))
 			break
 	Input.action_release("move_right")
 	_checks.append("a_door_opened" if opened_before_cross else "a_door_opened_FAIL")
@@ -93,6 +97,7 @@ func _scenario_a() -> void:
 	_checks.append("a_still_study_at1310" if stage_at_1310 == 1 else "a_still_study_at1310_FAIL(%d)" % stage_at_1310)
 	_checks.append("a_locked_at1320" if stage_after_lock == 2 else "a_locked_at1320_FAIL(%d)" % stage_after_lock)
 	_checks.append("a_blocker_enabled" if blocker_after_lock else "a_blocker_enabled_FAIL")
+	_checks.append("a_locked_door_closed" if door_closed_after_lock else "a_locked_door_closed_FAIL")
 
 
 ## 场景 B：断开门信号（模拟窗口环境 body_entered/exited 丢失）→ 兜底轮询仍开门、可出门、锁定。
@@ -124,6 +129,39 @@ func _scenario_b() -> void:
 	_checks.append("b_locked" if locked else "b_locked_FAIL")
 
 
+## 场景 E：首次离开书房锁门后，即使玩家重新靠近触发区，门也不能再次触发 open/开门动画。
+func _scenario_e() -> void:
+	_locked_open_events = 0
+	var opened_cb := Callable(self, "_on_locked_door_opened")
+	if not _door.is_connected("door_opened", opened_cb):
+		_door.connect("door_opened", opened_cb)
+	if bool(_door.get("is_open")):
+		_door.call("_do_close")
+	await physics_frame
+	_player.global_position = Vector2(1260.0, 940.0)
+	var opened_while_locked := false
+	for i in range(20):
+		await physics_frame
+		if bool(_door.get("is_open")):
+			opened_while_locked = true
+	var direct_open_events_before := _locked_open_events
+	_door.call("open")
+	await physics_frame
+	var direct_open_suppressed := not bool(_door.get("is_open")) and _locked_open_events == direct_open_events_before
+	var auto_open_disabled := _door.has_method("is_auto_open_enabled") and not bool(_door.call("is_auto_open_enabled"))
+	_checks.append("e_locked_monitoring_off" if not bool(_door.get("monitoring")) else "e_locked_monitoring_off_FAIL")
+	_checks.append("e_locked_door_closed" if not opened_while_locked else "e_locked_door_closed_FAIL")
+	_checks.append("e_locked_no_open_event" if _locked_open_events == 0 else "e_locked_no_open_event_FAIL(%d)" % _locked_open_events)
+	_checks.append("e_locked_auto_open_disabled" if auto_open_disabled else "e_locked_auto_open_disabled_FAIL")
+	_checks.append("e_locked_direct_open_suppressed" if direct_open_suppressed else "e_locked_direct_open_suppressed_FAIL")
+	if _door.is_connected("door_opened", opened_cb):
+		_door.disconnect("door_opened", opened_cb)
+
+
+func _on_locked_door_opened() -> void:
+	_locked_open_events += 1
+
+
 func _scenario_d() -> void:
 	var m1: float = float(_door.get("trigger_margin"))
 	var m2: float = float(_door2.get("trigger_margin"))
@@ -137,6 +175,7 @@ func _reset_study_state(signals_off: bool) -> void:
 	root.get_node("GameState").set_process_flag("study_gate_open", true)
 	_flow.call("set_stage", 1)
 	_flow.call("_apply_gate_blocker")
+	_flow.call("_sync_study_door_lock")
 	_player.global_position = Vector2(320.0, 940.0)
 	if bool(_door.get("is_open")):
 		_door.call("_do_close")

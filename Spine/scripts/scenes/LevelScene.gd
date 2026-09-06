@@ -56,7 +56,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if StoryMonitor.input_locked:
 		return
 	if event.is_action_pressed("interact") and not _overlapping.is_empty():
-		_overlapping.front().interact()
+		var object: InteractableObject = _overlapping.front() as InteractableObject
+		object.interact()
+		if object.has_method("request_interaction_sfx"):
+			object.request_interaction_sfx()
 		# TODO: UI 提示可选
 
 

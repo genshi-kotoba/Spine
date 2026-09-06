@@ -20,9 +20,22 @@ var current_state: String = ""
 ## 动画节点引用（有动画的对象在场景中挂载；无动画对象退化为静态贴图切换）
 @onready var _animated_sprite: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D")
 
+@export_category("Interaction SFX")
+## 可选的交互成功音效。留空时仍发出 interaction_sfx_requested，便于外部音频管理器接入。
+@export var interaction_sfx_stream: AudioStream
+@export var interaction_sfx_bus: StringName = &"Master"
+@export_range(-80.0, 6.0, 0.1) var interaction_sfx_volume_db: float = 0.0
+
+## 统一音效占位请求；兼容旧式 InteractableObject 交互链路。
+signal interaction_sfx_requested
+signal interaction_sfx_played
+
+var _interaction_sfx_player: AudioStreamPlayer
+
 
 func _ready() -> void:
 	input_event.connect(_on_input_event)
+	_setup_interaction_sfx()
 	var saved := GameState.get_object_state(object_id)
 	change_state(saved if saved != "" else initial_state)
 
@@ -69,3 +82,33 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		interact()
+		_request_interaction_sfx()
+
+
+## 供 LevelScene 等外部交互路由在 interact() 后调用的统一音效占位。
+func request_interaction_sfx() -> void:
+	_request_interaction_sfx()
+
+
+func _setup_interaction_sfx() -> void:
+	var existing_player := get_node_or_null("InteractionSfxPlayer") as AudioStreamPlayer
+	if existing_player != null:
+		_interaction_sfx_player = existing_player
+	elif interaction_sfx_stream != null:
+		_interaction_sfx_player = AudioStreamPlayer.new()
+		_interaction_sfx_player.name = "InteractionSfxPlayer"
+		add_child(_interaction_sfx_player)
+	else:
+		return
+	if interaction_sfx_stream != null:
+		_interaction_sfx_player.stream = interaction_sfx_stream
+		_interaction_sfx_player.volume_db = interaction_sfx_volume_db
+	_interaction_sfx_player.bus = interaction_sfx_bus if AudioServer.get_bus_index(interaction_sfx_bus) >= 0 else &"Master"
+
+
+func _request_interaction_sfx() -> void:
+	interaction_sfx_requested.emit()
+	if _interaction_sfx_player == null or _interaction_sfx_player.stream == null:
+		return
+	_interaction_sfx_player.play()
+	interaction_sfx_played.emit()

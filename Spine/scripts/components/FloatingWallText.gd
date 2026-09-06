@@ -57,6 +57,10 @@ extends Node2D
 	set(value):
 		shadow_color = value
 		_request_rebuild()
+@export var glow_color: Color = Color(1.0, 1.0, 1.0, 0.28):
+	set(value):
+		glow_color = value
+		_request_rebuild()
 @export_range(0, 16, 1) var outline_size: int = 3:
 	set(value):
 		outline_size = value
@@ -237,6 +241,18 @@ func _rebuild() -> void:
 
 func _add_label(holder: Node2D, value: String, font_size: int, measured: Vector2, accent: bool) -> void:
 	var label_position := -measured * 0.5
+	# Soft white halo behind the glyphs; the dark outline keeps the text readable over the scene.
+	var glow := Label.new()
+	glow.name = "Glow"
+	glow.text = value
+	glow.position = label_position
+	glow.add_theme_font_override("font", _font)
+	glow.add_theme_font_size_override("font_size", font_size)
+	glow.add_theme_color_override("font_color", glow_color)
+	glow.add_theme_color_override("font_outline_color", glow_color)
+	glow.add_theme_constant_override("outline_size", outline_size + 5)
+	holder.add_child(glow)
+
 	var displaced := Label.new()
 	displaced.name = "OffsetPrint"
 	displaced.text = value
@@ -253,7 +269,7 @@ func _add_label(holder: Node2D, value: String, font_size: int, measured: Vector2
 	label.position = label_position
 	label.add_theme_font_override("font", _font)
 	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", accent_color if accent else text_color)
+	label.add_theme_color_override("font_color", Color.WHITE if not accent else text_color)
 	label.add_theme_color_override("font_outline_color", shadow_color)
 	label.add_theme_constant_override("outline_size", outline_size)
 	holder.add_child(label)

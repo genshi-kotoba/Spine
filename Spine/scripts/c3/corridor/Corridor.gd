@@ -9,8 +9,12 @@ extends Node2D
 signal corridor_entered                ## 玩家进入走廊起点。
 signal special_point_passed(index: int) ## 屏息通过第 index 个特异点。
 signal teleport_triggered              ## 未屏息 → 传送到第一特异点前 1/4。
+signal special_breath_hint_requested    ## 第二次接近第一个特异点时冻结并提示屏息。
+signal special_breath_hint_cleared      ## 玩家开始屏息，解除冻结。
 signal corridor_finite                 ## 走到走廊尽头判定（固定走廊=到达 end_wall_x）。
 signal end_wall_reached                ## 玩家到达尽头。
+signal breath_hint_requested(message: String) ## 第二次未屏息靠近第一特异点时请求流程层显示提示。
+signal corridor_input_freeze_changed(frozen: bool) ## 走廊局部冻结状态变化（不触碰全局输入锁）。
 
 ## —— 节点 ——
 @export var player: NodePath
@@ -26,6 +30,7 @@ signal end_wall_reached                ## 玩家到达尽头。
 @export var first_special_x: float = 2080.0     ## 第一个特异点 x。
 @export var special_span: float = 800.0         ## 特异点的统一间距。
 @export var teleport_back_distance: float = 480.0 ## 失败回传距离，保持玩家仍在走廊内。
+@export var special_hint_proximity_distance: float = 180.0 ## 第二次失败后，在跨过第一点前提前提示。
 
 ## —— 屏息 / 旗标 ——
 @export var hold_breath_unlocked_flag: String = "hold_breath_unlocked"
@@ -44,6 +49,13 @@ signal end_wall_reached                ## 玩家到达尽头。
 @export var hold_rocking_interval: float = 0.42
 @export var special_pass_shake_amplitude: float = 22.0
 @export var special_pass_shake_duration: float = 0.45
+
+## 入口衔接处的循环粒子。发射器只创建一次，位置在局部区域内随机偏移。
+@export var entrance_fx_enabled: bool = true
+@export var entrance_burst_interval: float = 0.9
+@export var entrance_burst_center: Vector2 = Vector2(80.0, 720.0)
+@export var entrance_burst_area: Vector2 = Vector2(150.0, 110.0)
+@export var entrance_burst_color: Color = Color(0.65, 0.78, 0.95, 0.9)
 
 const MODE_IDLE := 0
 const MODE_CORRIDOR := 1
@@ -68,10 +80,17 @@ var _breath_burst: ParticleBurst = null
 var _teleport_burst: ParticleBurst = null
 var _breath_shake: ScreenShake = null
 var _hold_rocking_active := false
+var _first_special_failed: bool = false
+var _breath_hint_active: bool = false
+var _corridor_input_frozen: bool = false
+var _entrance_fx_elapsed: float = 0.0
+var _entrance_burst: ParticleBurst = null
+var _entrance_rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
 	add_to_group("c3corridor")
+	_entrance_rng.randomize()
 	_resolve_refs()
 	_resolve_breath_system()
 	_ensure_input()
@@ -84,13 +103,20 @@ func _process(delta: float) -> void:
 		_hold_time = 0.0
 		_set_breath_fx(false)
 		_reset_hold_visual()
+		_release_corridor_input_freeze()
 		return
+	_update_entrance_fx(delta)
 	if StoryMonitor.input_locked:
 		_hold_time = 0.0
 		_set_breath_fx(false)
 		_reset_hold_visual()
 		return
 	_update_hold(delta)
+	if _corridor_input_frozen:
+		if is_holding_breath():
+			_release_corridor_input_freeze()
+		else:
+			return
 	var p := _get_player()
 	if p == null:
 		return
@@ -98,6 +124,9 @@ func _process(delta: float) -> void:
 		if p.global_position.x >= corridor_start_x:
 			_enter_corridor()
 	elif _mode == MODE_CORRIDOR:
+		# 屏息教程只在第一次撞到特异点并传送后出现；不要在靠近时提前冻结角色。
+		if _corridor_input_frozen and not is_holding_breath():
+			return
 		_check_specials()
 		if p.global_position.x >= end_wall_x:
 			_enter_finite()
@@ -117,6 +146,8 @@ func _update_hold(delta: float) -> void:
 	else:
 		_hold_time = 0.0
 	var corridor_hold := is_holding_breath() and (_mode == MODE_CORRIDOR or _mode == MODE_FINITE)
+	if _breath_hint_active and corridor_hold:
+		_clear_breath_hint()
 	_set_breath_fx(corridor_hold and not _is_hypoxia_visual_active())
 	_update_hold_visual(corridor_hold and not _is_hypoxia_visual_active(), delta)
 
@@ -136,6 +167,9 @@ func is_holding_breath() -> bool:
 func _enter_corridor() -> void:
 	_mode = MODE_CORRIDOR
 	_next_special = 0
+	_first_special_failed = false
+	_breath_hint_active = false
+	_release_corridor_input_freeze()
 	# 从走廊起点开始记边沿，这样首次跨越固定坐标时才触发判定。
 	_last_player_x = corridor_start_x
 	GameState.set_process_flag(corridor_entered_flag, true)
@@ -181,7 +215,11 @@ func _handle_special_crossing(index: int) -> bool:
 		if index >= _next_special:
 			_next_special = index + 1
 		return true
-	_teleport_back()
+	if index == 0:
+		_first_special_failed = true
+		_teleport_back()
+		# 教程在第一次碰撞传送后出现，但不锁角色；玩家可自由走动并按住空格。
+		_request_breath_hint()
 	return false
 
 
@@ -203,6 +241,7 @@ func _trigger_special_pass_shake() -> void:
 
 
 func _teleport_back() -> void:
+	_release_corridor_input_freeze()
 	_player.global_position.x = first_special_x - teleport_back_distance
 	_next_special = 0
 	_last_player_x = _player.global_position.x
@@ -312,6 +351,74 @@ func _run_teleport_fx() -> void:
 	_trigger_shake(30.0, 0.8)
 
 
+## 入口衔接处循环发射。ParticleBurst 实例和随机源均缓存，避免每帧分配节点。
+func _update_entrance_fx(delta: float) -> void:
+	var corridor_visible := _mode == MODE_CORRIDOR or _mode == MODE_FINITE
+	if not entrance_fx_enabled or not corridor_visible or entrance_burst_interval <= 0.0:
+		_entrance_fx_elapsed = 0.0
+		return
+	_entrance_fx_elapsed += delta
+	if _entrance_fx_elapsed < entrance_burst_interval:
+		return
+	_entrance_fx_elapsed = fmod(_entrance_fx_elapsed, entrance_burst_interval)
+	_ensure_entrance_burst()
+	if _entrance_burst == null:
+		return
+	var extent := Vector2(maxf(entrance_burst_area.x, 0.0), maxf(entrance_burst_area.y, 0.0))
+	_entrance_burst.position = entrance_burst_center + Vector2(
+		_entrance_rng.randf_range(-extent.x, extent.x),
+		_entrance_rng.randf_range(-extent.y, extent.y)
+	)
+	_entrance_burst.set_color(entrance_burst_color)
+	_entrance_burst.burst()
+
+
+func _ensure_entrance_burst() -> void:
+	if _entrance_burst != null and is_instance_valid(_entrance_burst):
+		return
+	_entrance_burst = ParticleBurst.new()
+	_entrance_burst.name = "EntranceBurst"
+	_entrance_burst.amount = 28
+	_entrance_burst.lifetime = 0.65
+	_entrance_burst.initial_velocity = 220.0
+	_entrance_burst.gravity = 180.0
+	_entrance_burst.size = 4.0
+	_entrance_burst.set_color(entrance_burst_color)
+	add_child(_entrance_burst)
+
+
+## 第一次碰到第一特异点并传送后显示屏息教程，不冻结玩家输入。
+func _request_breath_hint() -> void:
+	if _breath_hint_active:
+		return
+	_breath_hint_active = true
+	var message := "长按空格屏住呼吸，这样或许好受一点"
+	special_breath_hint_requested.emit()
+	breath_hint_requested.emit(message)
+
+
+func _clear_breath_hint() -> void:
+	if not _breath_hint_active:
+		return
+	_breath_hint_active = false
+	special_breath_hint_cleared.emit()
+
+
+func _release_corridor_input_freeze() -> void:
+	if not _corridor_input_frozen:
+		return
+	_corridor_input_frozen = false
+	var p := _get_player()
+	if p != null:
+		p.set_physics_process(true)
+	special_breath_hint_cleared.emit()
+	corridor_input_freeze_changed.emit(false)
+
+
+func is_corridor_input_frozen() -> bool:
+	return _corridor_input_frozen
+
+
 ## 全屏震动复用 C3 场景共享的 ScreenShake，不能为同一台相机创建第二个旋转写入者。
 func _trigger_shake(amp: float, dur: float) -> void:
 	if _breath_shake == null or not is_instance_valid(_breath_shake):
@@ -385,8 +492,11 @@ func set_enabled(enabled_value: bool) -> void:
 	if not enabled:
 		_hold_time = 0.0
 		_hold_release_required = false
+		_first_special_failed = false
+		_breath_hint_active = false
 		_set_breath_fx(false)
 		_reset_hold_visual()
+		_release_corridor_input_freeze()
 
 
 func _run_corridor_breath_self_check() -> void:
@@ -416,6 +526,7 @@ func run_self_check() -> bool:
 	p.global_position.x = first_special_x + 10.0
 	_check_specials()
 	checks.append("teleport1" if (absf(p.global_position.x - (first_special_x - teleport_back_distance)) < 0.5 and _next_special == 0) else "teleport_FAIL1")
+	checks.append("breath_hint_after_teleport" if _breath_hint_active and not _corridor_input_frozen else "breath_hint_after_teleport_FAIL")
 	# 3. 屏息通过三特异点
 	GameState.set_process_flag(hold_breath_unlocked_flag, true)
 	_hold_release_required = false

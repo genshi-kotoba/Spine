@@ -117,14 +117,28 @@ func _build_book_mountain(root: Node2D) -> void:
 		root.add_child(book)
 
 
-## 特异点③：墙上悬浮文本框（占位文本「提升一分，干掉千人」）。
+## 特异点③：墙上故障文本框（多句循环式占位）。
 func _build_floating_text(root: Node2D) -> void:
-	var label := Label.new()
-	label.name = "Text"
-	label.text = "提升一分，干掉千人"
-	label.position = Vector2(-130, 320)
-	label.add_theme_font_size_override("font_size", 34)
-	root.add_child(label)
+	var lines := ["提升一分，干掉千人", "努力", "你一定可以", "你凭什么不行", "我就说你怎么了"]
+	# Godot 默认字体不保证包含中文字形；使用与对话组件一致的系统字体回退，
+	# 并把整组置于墙体/遮罩之上，确保走廊中段始终可见。
+	var font := SystemFont.new()
+	font.font_names = PackedStringArray(["Microsoft YaHei", "SimSun", "PingFang SC", "Noto Sans CJK SC"])
+	root.z_index = 100
+	for i in range(lines.size()):
+		var label := Label.new()
+		label.name = "GlitchText%d" % i
+		label.text = lines[i]
+		label.position = Vector2(-150.0 + (i % 2) * 18.0, 300.0 + i * 48.0)
+		label.rotation = deg_to_rad(-10.0 if i % 2 == 0 else 8.0)
+		label.pivot_offset = Vector2(80.0, 18.0)
+		label.z_index = 100
+		label.add_theme_font_override("font", font)
+		label.add_theme_font_size_override("font_size", 34)
+		label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.86, 1.0))
+		label.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.04, 0.98))
+		label.add_theme_constant_override("outline_size", 6)
+		root.add_child(label)
 
 
 ## 旧内容清理：旧段循环时代的 Special0/1/2 移除（固定视觉 CorridorWall/CorridorFloorVisual 保留）。

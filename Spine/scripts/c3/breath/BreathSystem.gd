@@ -76,6 +76,10 @@ var _screen_shake: ScreenShake = null
 ## 剩余计时（breathe_timeout 倒计时）。
 var _countdown: float = 0.0
 
+## 倒计时倍率与输入锁期间是否继续运行。开场演出使用 2 倍并允许锁定期间消耗。
+var _countdown_rate_multiplier: float = 1.0
+var _countdown_runs_when_locked: bool = false
+
 ## 缺氧进行中。
 var _hypoxia_active: bool = false
 
@@ -110,7 +114,9 @@ func _process(delta: float) -> void:
 		return
 	if StoryMonitor.input_locked:
 		_reset_hold()
-		if _hypoxia_exiting:
+		if _countdown_runs_when_locked:
+			_advance_countdown(delta)
+		elif _hypoxia_exiting:
 			_update_hypoxia_exit(delta)
 		return
 	_sync_breathe_input()
@@ -121,12 +127,29 @@ func _process(delta: float) -> void:
 	if _hypoxia_exiting:
 		_update_hypoxia_exit(delta)
 		return
-	_countdown -= delta
+	_advance_countdown(delta)
+	_update_hold(delta)
+
+
+## 配置氧气倒计时速度；可选地允许在 StoryMonitor 锁定时继续消耗。
+func set_countdown_rate(multiplier: float, run_when_input_locked: bool = false) -> void:
+	_countdown_rate_multiplier = maxf(multiplier, 0.0)
+	_countdown_runs_when_locked = run_when_input_locked
+
+
+func _advance_countdown(delta: float) -> void:
+	if _hypoxia_active:
+		_update_hypoxia(delta)
+		return
+	if _hypoxia_exiting:
+		_update_hypoxia_exit(delta)
+		return
+	_countdown -= delta * _countdown_rate_multiplier
 	_sync_bubble_capacity()
 	if _countdown <= 0.0:
+		_countdown = 0.0
 		_break_bubble()
 		_start_hypoxia()
-	_update_hold(delta)
 
 
 func _unhandled_input(event: InputEvent) -> void:

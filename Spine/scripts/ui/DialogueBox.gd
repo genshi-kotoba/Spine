@@ -2,7 +2,7 @@ class_name DialogueBox
 extends CanvasLayer
 ## DialogueBox — 剧情对话 UI
 ## 文本左右居中、距画面下边缘 100px（锚点布局，分辨率变化保持相对位置）。
-## 交互模式：任意键切句 + 1s 冷却 + 锁定输入；自动模式：每句 4s 自动切换，不锁输入。
+## 交互模式：Enter 切句 + 1s 冷却 + 锁定输入；自动模式：每句 4s 自动切换，不锁输入。
 
 ## 播完一段对话时发出（DialogueManager 监听以驱动队列）
 signal dialogue_finished
@@ -13,6 +13,7 @@ const COOLDOWN_SEC := 1.0
 const AUTO_LINE_SEC := 4.0
 
 @onready var _label: RichTextLabel = $DialogueLabel
+@onready var _backdrop: ColorRect = $DialogueBackdrop
 @onready var _auto_timer: Timer = $AutoTimer
 
 var _lines: Array = []
@@ -24,6 +25,7 @@ var _cooldown_until_msec: int = 0
 
 func _ready() -> void:
 	_label.hide()
+	_backdrop.hide()
 	_auto_timer.wait_time = AUTO_LINE_SEC
 	_auto_timer.one_shot = true
 	_auto_timer.timeout.connect(_on_auto_timeout)
@@ -40,6 +42,7 @@ func show_dialogue(lines: Array, mode: int = MODE_INTERACTIVE) -> void:
 	# 首句显示即启动冷却：防止触发对话的同一按键立刻切走首句
 	_cooldown_until_msec = Time.get_ticks_msec() + int(COOLDOWN_SEC * 1000)
 	_label.show()
+	_backdrop.show()
 	_show_current()
 
 
@@ -59,7 +62,8 @@ func next_line() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _active or _mode != MODE_INTERACTIVE:
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
+	if event is InputEventKey and event.pressed and not event.echo \
+		and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
 		# 全程拦截按键，防止穿透到游戏场景
 		get_viewport().set_input_as_handled()
 		if Time.get_ticks_msec() < _cooldown_until_msec:
@@ -83,6 +87,7 @@ func _finish() -> void:
 	_active = false
 	_auto_timer.stop()
 	_label.hide()
+	_backdrop.hide()
 	if _mode == MODE_INTERACTIVE:
 		StoryMonitor.unlock_input()
 	dialogue_finished.emit()

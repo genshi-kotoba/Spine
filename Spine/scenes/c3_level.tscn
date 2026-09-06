@@ -24,6 +24,7 @@
 [ext_resource type="PackedScene" uid="uid://dc4yso4br36vf" path="res://scenes/c3_floor.tscn" id="23"]
 [ext_resource type="Script" uid="uid://ib5ohivdymht" path="res://scripts/components/OkPopup.gd" id="24"]
 [ext_resource type="Script" uid="uid://bbmpcjmv60ouk" path="res://scripts/c3/flow/CorridorAssembly.gd" id="25"]
+[ext_resource type="PackedScene" path="res://scenes/floating_wall_text.tscn" id="26_intro_text"]
 
 [sub_resource type="RectangleShape2D" id="item_col"]
 size = Vector2(179.5, 269)
@@ -57,10 +58,13 @@ camera_path = NodePath("Player/Camera2D")
 corridor_assembly_path = NodePath("CorridorAssembly")
 corridor_floor_path = NodePath("CorridorFloor")
 corridor_end_wall_path = NodePath("CorridorEndWall")
+room_right_wall_collision_path = NodePath("WhiteModel/Environment/WallRight/CollisionShape2D")
 wall_hide_paths = Array[NodePath]([NodePath("WhiteModel/RoomArtwork")])
 bedroom_left_wall_path = NodePath("Rooms/Bedroom/Environment/WallLeft")
 world_camera_right = 3840.0
 corridor_camera_right = 4600.0
+intro_floating_text_path = NodePath("IntroFloatingLayer/IntroFloatingText")
+flow_floating_text_path = NodePath("IntroFloatingLayer/FlowFloatingText")
 
 [node name="Player" parent="." unique_id=1121437611 instance=ExtResource("1")]
 position = Vector2(320, 948)
@@ -84,6 +88,7 @@ size = Vector2(120, 200)
 shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/WallItem" unique_id=56438296]
+visible = false
 color = Color(0.3, 0.29, 0.32, 1)
 polygon = PackedVector2Array(-140, -360, 140, -360, 140, 100, -140, 100)
 
@@ -111,6 +116,7 @@ gate_flag = "bedroom_unlocked"
 shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Rooms/Bedroom/DoorItem" unique_id=10942205]
+visible = false
 color = Color(0.3, 0.32, 0.35, 1)
 polygon = PackedVector2Array(-50, -140, 50, -140, 50, 140, -50, 140)
 
@@ -161,7 +167,8 @@ position = Vector2(39, -63)
 shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/EndItem" unique_id=1128351008]
-position = Vector2(50.5, -119)
+visible = false
+position = Vector2(39, -63)
 scale = Vector2(0.53, 0.31428573)
 color = Color(0.35, 0.33, 0.3, 1)
 polygon = PackedVector2Array(-50, -140, 50, -140, 50, 140, -50, 140)
@@ -191,7 +198,8 @@ position = Vector2(151, -60)
 shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/PaperLiving" unique_id=1629414146]
-position = Vector2(151, -100.5)
+visible = false
+position = Vector2(151, -60)
 scale = Vector2(1.36, 0.33888888)
 color = Color(0.95, 0.95, 0.9, 1)
 polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
@@ -221,7 +229,8 @@ position = Vector2(584, -84)
 shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/PaperKitchen" unique_id=1579242279]
-position = Vector2(590.5, -183.5)
+visible = false
+position = Vector2(584, -84)
 scale = Vector2(1.31, 0.22777778)
 color = Color(0.95, 0.95, 0.9, 1)
 polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
@@ -252,7 +261,8 @@ position = Vector2(1.5, -81.5)
 shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/StudyPaperA" unique_id=1732134577]
-position = Vector2(2.5, -82.5)
+visible = false
+position = Vector2(1.5, -81.5)
 scale = Vector2(1.71, 0.31666666)
 color = Color(0.95, 0.95, 0.9, 1)
 polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
@@ -284,7 +294,8 @@ position = Vector2(414, -95)
 shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/StudyPaperB" unique_id=1130552044]
-position = Vector2(416.5, -132)
+visible = false
+position = Vector2(414, -95)
 scale = Vector2(1.51, 0.85555553)
 color = Color(0.95, 0.95, 0.9, 1)
 polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
@@ -314,6 +325,7 @@ position = Vector2(-10, 29)
 shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/BedroomHallDoor" unique_id=992458825]
+visible = false
 position = Vector2(-13, -217)
 scale = Vector2(2.1, 1.6928571)
 color = Color(0.3, 0.32, 0.35, 1)
@@ -343,6 +355,7 @@ gate_flag = "corridor_end"
 shape = SubResource("item_col")
 
 [node name="Visual" type="Polygon2D" parent="Items/CorridorEndItem" unique_id=14179207]
+visible = false
 color = Color(0.7, 0.6, 0.4, 1)
 polygon = PackedVector2Array(-50, -90, 50, -90, 50, 90, -50, 90)
 
@@ -394,6 +407,33 @@ player = NodePath("../Player")
 [node name="Bubble" type="Node2D" parent="Breath" unique_id=1638232650]
 script = ExtResource("6")
 player_path = NodePath("../../Player")
+
+[node name="IntroFloatingLayer" type="CanvasLayer" parent="." unique_id=996401127]
+layer = 2
+
+[node name="IntroFloatingText" parent="IntroFloatingLayer" instance=ExtResource("26_intro_text")]
+visible = false
+layout_size = Vector2(760, 260)
+min_font_size = 28
+max_font_size = 40
+animated = true
+text_color = Color(1, 1, 1, 1)
+accent_color = Color(1, 1, 1, 1)
+shadow_color = Color(0.04, 0.04, 0.05, 0.95)
+glow_color = Color(1, 1, 1, 0.32)
+outline_size = 4
+
+[node name="FlowFloatingText" parent="IntroFloatingLayer" instance=ExtResource("26_intro_text")]
+visible = false
+layout_size = Vector2(760, 260)
+min_font_size = 28
+max_font_size = 40
+animated = true
+text_color = Color(1, 1, 1, 1)
+accent_color = Color(1, 1, 1, 1)
+shadow_color = Color(0.04, 0.04, 0.05, 0.95)
+glow_color = Color(1, 1, 1, 0.32)
+outline_size = 4
 
 [node name="Effects" type="Node2D" parent="." unique_id=2086481683]
 

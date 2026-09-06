@@ -89,6 +89,17 @@ func begin() -> void:
 	print("[bedroom_ending] begin: respawn player to %s" % str(_bedroom_global(bedroom_spawn)))
 
 
+## 进入卧室时墙纸已经被撕开一半；真实流程只留下两次可交互步骤。
+## 不放入 begin()，避免破坏组件自检从零开始的三次交互契约。
+func prime_arrival_reveal() -> void:
+	if _wall_interactions > 0 or _sequence_done:
+		return
+	_wall_interactions = 1
+	var w := get_node_or_null(wall_item) as BedroomWallItem
+	if w != null:
+		w.set_state(1)
+
+
 ## 完成态以持久流程旗标为准；_sequence_done 只是不跨节点重建的运行时缓存。
 func _is_sequence_completed() -> bool:
 	return _sequence_done or (

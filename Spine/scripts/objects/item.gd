@@ -7,9 +7,14 @@ extends Area2D
 ## 本类与既有可交互对象体系并行、相互独立：本类不写全局状态字典、不参与其存档。
 ## C3 前置扩展（需求②）：gate_flag 进程门控、set_interaction_enabled 外部开关、
 ## force_trigger 强制触发（无视 gate/输入锁）、states 表驱动 apply_state、interaction_available/gate_blocked 信号。
+## 交互成功还会发出 interaction_sfx_requested；配置 interaction_sfx_stream 时自动播放可选音效。
 
 ## 包含范围（检测矩形）：决定 CollisionShape2D 的 RectangleShape2D size；_ready 时同步
 @export var size: Vector2 = Vector2(64, 64)
+
+## 角色站在物体正下方时的额外可达高度；不改变 X 轴范围。
+## 白模物体常悬在地面上方，适度余量可避免视觉位置与角色脚底的高度差阻断交互。
+@export var vertical_interaction_padding: float = 96.0
 
 ## 交互门控进程旗标（GameState.get_process_flag 读取）：非空时 gate 未满足则不触发。
 ## 空 = 无 gate（兼容既有 TestItem 现行为）。
@@ -28,6 +33,13 @@ extends Area2D
 ## 强制触发目标状态；< 0 时忽略（force_trigger 不生效）。
 @export var force_trigger_state: int = -1
 
+@export_category("Interaction SFX")
+## 可选的交互成功音效。留空时仍会发出 interaction_sfx_requested，但不会创建播放器。
+@export var interaction_sfx_stream: AudioStream
+## 音效总线不存在时回退到 Master，避免白模/不同项目配置下报错。
+@export var interaction_sfx_bus: StringName = &"Master"
+@export_range(-80.0, 6.0, 0.1) var interaction_sfx_volume_db: float = 0.0
+
 ## 外部交互开关（流程可调用 set_interaction_enabled）。false 时 touched() 不触发。
 var _interaction_enabled: bool = true
 
@@ -40,8 +52,16 @@ signal gate_blocked
 ## 信号：确定交互成功（gate 满足 且 _try_touch 消费成功）后发射，供 'ok' 占位提示/特效联动。
 signal interaction_succeeded
 
+## 信号：交互成功后的音效占位请求。外部音频管理器可监听此信号；无资源时也安全发射。
+signal interaction_sfx_requested
+
+## 信号：可选音频资源实际开始播放时发射。
+signal interaction_sfx_played
+
 ## 状态机当前状态（int；状态集合由子类定义）
 var current_state: int = 0
+
+var _interaction_sfx_player: AudioStreamPlayer
 
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 
@@ -50,6 +70,7 @@ func _ready() -> void:
 	current_state = initial_state
 	_sync_collision_shape()
 	_setup_force_trigger()
+	_setup_interaction_sfx()
 	_apply_state_table(initial_state)
 	# 初始化后广播当前交互可用性（供 ItemMarker 等门控联动；与 E 提示「靠近才显示」独立）
 	interaction_available.emit(is_interaction_available())
@@ -128,6 +149,36 @@ func touched() -> void:
 		return
 	interaction_available.emit(true)
 	interaction_succeeded.emit()
+	_request_interaction_sfx()
+
+
+## 初始化可选音效播放器。没有 stream 时不创建节点，保留纯白模零音频行为。
+func _setup_interaction_sfx() -> void:
+	var existing_player := get_node_or_null("InteractionSfxPlayer") as AudioStreamPlayer
+	if existing_player != null:
+		_interaction_sfx_player = existing_player
+	elif interaction_sfx_stream != null:
+		_interaction_sfx_player = AudioStreamPlayer.new()
+		_interaction_sfx_player.name = "InteractionSfxPlayer"
+		add_child(_interaction_sfx_player)
+	else:
+		return
+	if interaction_sfx_stream != null:
+		_interaction_sfx_player.stream = interaction_sfx_stream
+	_interaction_sfx_player.volume_db = interaction_sfx_volume_db
+	if AudioServer.get_bus_index(interaction_sfx_bus) >= 0:
+		_interaction_sfx_player.bus = interaction_sfx_bus
+	else:
+		_interaction_sfx_player.bus = &"Master"
+
+
+## 发出统一音效占位请求，并在配置资源时播放音效；默认空资源无副作用。
+func _request_interaction_sfx() -> void:
+	interaction_sfx_requested.emit()
+	if _interaction_sfx_player == null or _interaction_sfx_player.stream == null:
+		return
+	_interaction_sfx_player.play()
+	interaction_sfx_played.emit()
 
 
 ## 子类覆写的实际触发逻辑（touched 通过 gate/交互开关检查后调用）。默认空。
@@ -171,7 +222,8 @@ func is_player_in_interaction_range(player: Node2D) -> bool:
 		if player_shape != null and not player_shape.disabled and player_shape.shape is RectangleShape2D:
 			player_half = (player_shape.shape as RectangleShape2D).size * player_shape.global_scale.abs() * 0.5
 		var delta := (player.global_position - _collision_shape.global_position).abs()
-		return delta.x <= item_half.x + player_half.x and delta.y <= item_half.y + player_half.y
+		var vertical_reach := item_half.y + player_half.y + maxf(vertical_interaction_padding, 0.0)
+		return delta.x <= item_half.x + player_half.x and delta.y <= vertical_reach
 	if self is Area2D:
 		return (self as Area2D).get_overlapping_bodies().has(player)
 	return global_position.distance_to(player.global_position) <= 180.0

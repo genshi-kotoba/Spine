@@ -7,6 +7,7 @@ font_names = PackedStringArray("Microsoft YaHei", "SimSun", "PingFang SC", "Noto
 
 [node name="DialogueBox" type="CanvasLayer"]
 layer = 20
+offset = Vector2(0, 130)
 script = ExtResource("1")
 
 [node name="DialogueLabel" type="RichTextLabel" parent="."]
@@ -22,6 +23,16 @@ bbcode_enabled = true
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
+
+[node name="DialogueBackdrop" type="ColorRect" parent="."]
+z_index = -1
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -190.0
+offset_bottom = -58.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.88)
 
 [node name="AutoTimer" type="Timer" parent="."]
 wait_time = 4.0

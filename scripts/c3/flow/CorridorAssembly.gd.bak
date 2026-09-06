@@ -93,129 +93,52 @@ func _build_judgment_zone(root: Node2D) -> void:
 	root.add_child(lab)
 
 
-## 特异点①：贴满墙真实奖状（3 张素材随机混排，约 20-30 张重叠）。
+## 特异点①：贴满墙奖状（白色/浅黄占位块，贴墙 y 带）。
 func _build_certificate_wall(root: Node2D) -> void:
-	var textures: Array[Texture2D] = [
-		preload("res://assets/corridor/certificates/certificate_1.png"),
-		preload("res://assets/corridor/certificates/certificate_2.png"),
-		preload("res://assets/corridor/certificates/certificate_3.png"),
-	]
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 0xC3CE271
-	# 真实奖状贴在特异点一上方，故意错位、旋转并重叠，形成杂乱墙面。
-	for i in range(24):
-		var cert := Sprite2D.new()
-		cert.name = "Cert%02d" % i
-		cert.texture = textures[rng.randi_range(0, textures.size() - 1)]
-		cert.position = Vector2(rng.randf_range(-300.0, 300.0), rng.randf_range(150.0, 760.0))
-		cert.rotation = rng.randf_range(-0.20, 0.20)
-		var scale := rng.randf_range(0.16, 0.23)
-		cert.scale = Vector2(scale, scale)
-		cert.modulate = Color(1.0, 1.0, 1.0, rng.randf_range(0.86, 1.0))
-		cert.z_index = 4 + i
-		root.add_child(cert)
+	for r in range(4):
+		for c in range(3):
+			var plate := Polygon2D.new()
+			plate.name = "Cert"
+			plate.position = Vector2(c * 60.0 - 60.0, r * 46.0 + 320.0)
+			plate.color = Color(0.95, 0.90, 0.70, 1)
+			plate.polygon = PackedVector2Array([Vector2(-24, -17), Vector2(24, -17), Vector2(24, 17), Vector2(-24, 17)])
+			root.add_child(plate)
 
 
-## 特异点②：从 corridor/books 素材动态堆叠高书山；目录为空时使用程序化书本回退。
+## 特异点②：地上书山（地面堆放书占位块，y≈988 地面带）。
 func _build_book_mountain(root: Node2D) -> void:
-	var textures := _load_book_textures()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 0xC3B005
-	var colors: Array[Color] = [
-		Color("#7b302b"), Color("#31566b"), Color("#596436"),
-		Color("#8a6538"), Color("#46385f"), Color("#263d3b")
-	]
-	# The rows run from the floor to roughly 3/4 of the wall. Lower rows are wider
-	# and denser, producing a triangular book pile instead of a flat line of props.
-	var row_count := 12
-	for row in range(row_count):
-		var t := float(row) / float(row_count - 1)
-		var y := lerpf(948.0, 285.0, t)
-		var half_width := lerpf(300.0, 72.0, t)
-		var count := maxi(2, int(round(lerpf(11.0, 2.0, t))))
-		var step := (half_width * 2.0) / float(count)
-		for column in range(count):
-			var book := _make_book("Book_%02d_%02d" % [row, column], textures, colors, rng, step)
-			var x := -half_width + step * (float(column) + 0.5)
-			# Small horizontal jitter lets covers overlap naturally while keeping the
-			# silhouette within the intended mountain width.
-			book.position = Vector2(x + rng.randf_range(-step * 0.22, step * 0.22), y + rng.randf_range(-13.0, 13.0))
-			book.rotation = rng.randf_range(-0.16, 0.16) * (1.0 - t * 0.35)
-			root.add_child(book)
-
-
-func _load_book_textures() -> Array[Texture2D]:
-	var textures: Array[Texture2D] = []
-	var dir_path := "res://assets/corridor/books"
-	var dir := DirAccess.open(dir_path)
-	if dir == null:
-		return textures
-	var files := dir.get_files()
-	for file_name in files:
-		var ext := file_name.get_extension().to_lower()
-		if ext not in ["png", "jpg", "jpeg", "webp"]:
-			continue
-		var texture := load(dir_path.path_join(file_name)) as Texture2D
-		if texture != null:
-			textures.append(texture)
-	return textures
-
-
-func _make_book(book_name: String, textures: Array[Texture2D], colors: Array[Color], rng: RandomNumberGenerator, step: float) -> Node2D:
-	var book := Node2D.new()
-	book.name = book_name
-	var book_width := clampf(step * rng.randf_range(0.82, 1.18), 42.0, 126.0)
-	var book_height := rng.randf_range(22.0, 42.0)
-	if not textures.is_empty():
-		var cover := Sprite2D.new()
-		cover.name = "BookCover"
-		cover.texture = textures[rng.randi_range(0, textures.size() - 1)]
-		var source_size := cover.texture.get_size()
-		var source_width := maxf(source_size.x, 1.0)
-		var source_height := maxf(source_size.y, 1.0)
-		cover.scale = Vector2(book_width / source_width, book_height / source_height)
-		cover.modulate = Color(0.82, 0.82, 0.82, 1.0)
-		book.add_child(cover)
-		# A subtle dark spine keeps very thin/bright source covers readable in a pile.
-		var spine := Polygon2D.new()
-		spine.name = "BookSpine"
-		spine.color = Color(0.08, 0.06, 0.05, 0.42)
-		spine.polygon = PackedVector2Array([
-			Vector2(-book_width * 0.5, -book_height * 0.5),
-			Vector2(-book_width * 0.5 + 5.0, -book_height * 0.5),
-			Vector2(-book_width * 0.5 + 5.0, book_height * 0.5),
-			Vector2(-book_width * 0.5, book_height * 0.5)
-		])
-		book.add_child(spine)
-	else:
-		var fallback := Polygon2D.new()
-		fallback.name = "BookFallback"
-		fallback.color = colors[rng.randi_range(0, colors.size() - 1)]
-		fallback.polygon = PackedVector2Array([
-			Vector2(-book_width * 0.5, -book_height * 0.5),
-			Vector2(book_width * 0.5, -book_height * 0.5),
-			Vector2(book_width * 0.5, book_height * 0.5),
-			Vector2(-book_width * 0.5, book_height * 0.5)
-		])
-		book.add_child(fallback)
-		var spine := Polygon2D.new()
-		spine.name = "BookSpine"
-		spine.color = Color(0.10, 0.08, 0.07, 0.48)
-		spine.polygon = PackedVector2Array([
-			Vector2(-book_width * 0.5, -book_height * 0.5),
-			Vector2(-book_width * 0.5 + 5.0, -book_height * 0.5),
-			Vector2(-book_width * 0.5 + 5.0, book_height * 0.5),
-			Vector2(-book_width * 0.5, book_height * 0.5)
-		])
-		book.add_child(spine)
-	return book
+	var colors: Array[Color] = [Color(0.45, 0.35, 0.28, 1), Color(0.30, 0.42, 0.35, 1), Color(0.38, 0.34, 0.50, 1)]
+	for i in range(6):
+		var book := Polygon2D.new()
+		book.name = "Book"
+		book.position = Vector2(i * 44.0 - 110.0, 988.0 - (i % 3) * 18.0)
+		book.color = colors[i % colors.size()]
+		book.polygon = PackedVector2Array([Vector2(-20, -7), Vector2(20, -7), Vector2(20, 7), Vector2(-20, 7)])
+		root.add_child(book)
 
 
 ## 特异点③：墙上故障文本框（多句循环式占位）。
 func _build_floating_text(root: Node2D) -> void:
-	# 第三个特异点的故障文字统一由 main 分支 GlitchDialogueBox 按流程触发，
-	# 这里不再创建静态 Label，避免重复显示和跟随旧节点渲染。
+	var lines := ["提升一分，干掉千人", "努力", "你一定可以", "你凭什么不行", "我就说你怎么了"]
+	# Godot 默认字体不保证包含中文字形；使用与对话组件一致的系统字体回退，
+	# 并把整组置于墙体/遮罩之上，确保走廊中段始终可见。
+	var font := SystemFont.new()
+	font.font_names = PackedStringArray(["Microsoft YaHei", "SimSun", "PingFang SC", "Noto Sans CJK SC"])
 	root.z_index = 100
+	for i in range(lines.size()):
+		var label := Label.new()
+		label.name = "GlitchText%d" % i
+		label.text = lines[i]
+		label.position = Vector2(-150.0 + (i % 2) * 18.0, 300.0 + i * 48.0)
+		label.rotation = deg_to_rad(-10.0 if i % 2 == 0 else 8.0)
+		label.pivot_offset = Vector2(80.0, 18.0)
+		label.z_index = 100
+		label.add_theme_font_override("font", font)
+		label.add_theme_font_size_override("font_size", 34)
+		label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.86, 1.0))
+		label.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.04, 0.98))
+		label.add_theme_constant_override("outline_size", 6)
+		root.add_child(label)
 
 
 ## 旧内容清理：旧段循环时代的 Special0/1/2 移除（固定视觉 CorridorWall/CorridorFloorVisual 保留）。
@@ -253,14 +176,6 @@ func run_self_check() -> bool:
 		if s != null and is_instance_valid(s) and s.get_node_or_null("JudgeZone") != null and s.get_node_or_null("JudgeLabel") != null:
 			zones += 1
 	checks.append("zones3" if zones == 3 else "zones_FAIL(%d)" % zones)
-	var book_count := 0
-	var book_top := INF
-	if _special_nodes.size() > 1:
-		for child in _special_nodes[1].get_children():
-			if child.name.begins_with("Book"):
-				book_count += 1
-				book_top = minf(book_top, (child as Node2D).position.y)
-	checks.append("book_mountain" if book_count >= 40 and book_top <= 300.0 else "book_mountain_FAIL(%d,%.1f)" % [book_count, book_top])
 	checks.append("corridor_hidden_initial" if (_corridor is CanvasItem and not (_corridor as CanvasItem).visible) else "corridor_hidden_initial_FAIL")
 	checks.append("legacy_cleaned" if legacy_cleanup_done() else "legacy_cleaned_FAIL1")
 	var failed := false

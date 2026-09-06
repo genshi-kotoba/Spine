@@ -22,9 +22,7 @@
 [ext_resource type="Script" uid="uid://limmy5y0vghx" path="res://scripts/components/ItemMarker.gd" id="21"]
 [ext_resource type="Script" uid="uid://dxl118a4wp34q" path="res://scripts/components/RoomTable.gd" id="22"]
 [ext_resource type="PackedScene" uid="uid://dc4yso4br36vf" path="res://scenes/c3_floor.tscn" id="23"]
-[ext_resource type="Script" uid="uid://ib5ohivdymht" path="res://scripts/components/OkPopup.gd" id="24"]
 [ext_resource type="Script" uid="uid://bbmpcjmv60ouk" path="res://scripts/c3/flow/CorridorAssembly.gd" id="25"]
-[ext_resource type="PackedScene" path="res://scenes/floating_wall_text.tscn" id="26_intro_text"]
 
 [sub_resource type="RectangleShape2D" id="item_col"]
 size = Vector2(179.5, 269)
@@ -53,7 +51,6 @@ gate_blocker_path = NodePath("WhiteModel/Environment/StudyGateBlocker")
 room_table_path = NodePath("RoomTable")
 items_root_path = NodePath("Items")
 bedroom_items_path = NodePath("Rooms/Bedroom")
-ok_popup_path = NodePath("OkPopup")
 camera_path = NodePath("Player/Camera2D")
 corridor_assembly_path = NodePath("CorridorAssembly")
 corridor_floor_path = NodePath("CorridorFloor")
@@ -63,8 +60,6 @@ wall_hide_paths = Array[NodePath]([NodePath("WhiteModel/RoomArtwork")])
 bedroom_left_wall_path = NodePath("Rooms/Bedroom/Environment/WallLeft")
 world_camera_right = 3840.0
 corridor_camera_right = 4600.0
-intro_floating_text_path = NodePath("IntroFloatingLayer/IntroFloatingText")
-flow_floating_text_path = NodePath("IntroFloatingLayer/FlowFloatingText")
 
 [node name="Player" parent="." unique_id=1121437611 instance=ExtResource("1")]
 position = Vector2(320, 948)
@@ -408,33 +403,6 @@ player = NodePath("../Player")
 script = ExtResource("6")
 player_path = NodePath("../../Player")
 
-[node name="IntroFloatingLayer" type="CanvasLayer" parent="." unique_id=996401127]
-layer = 2
-
-[node name="IntroFloatingText" parent="IntroFloatingLayer" instance=ExtResource("26_intro_text")]
-visible = false
-layout_size = Vector2(760, 260)
-min_font_size = 28
-max_font_size = 40
-animated = true
-text_color = Color(1, 1, 1, 1)
-accent_color = Color(1, 1, 1, 1)
-shadow_color = Color(0.04, 0.04, 0.05, 0.95)
-glow_color = Color(1, 1, 1, 0.32)
-outline_size = 4
-
-[node name="FlowFloatingText" parent="IntroFloatingLayer" instance=ExtResource("26_intro_text")]
-visible = false
-layout_size = Vector2(760, 260)
-min_font_size = 28
-max_font_size = 40
-animated = true
-text_color = Color(1, 1, 1, 1)
-accent_color = Color(1, 1, 1, 1)
-shadow_color = Color(0.04, 0.04, 0.05, 0.95)
-glow_color = Color(1, 1, 1, 0.32)
-outline_size = 4
-
 [node name="Effects" type="Node2D" parent="." unique_id=2086481683]
 
 [node name="ParticleBurst" type="Node2D" parent="Effects" unique_id=269592970]
@@ -469,9 +437,6 @@ shape = SubResource("wall_side_col")
 [node name="Visual" type="Polygon2D" parent="CorridorEndWall" unique_id=996315961]
 color = Color(0.35, 0.33, 0.3, 1)
 polygon = PackedVector2Array(-10, -408.5, 10, -408.5, 10, 408.5, -10, 408.5)
-
-[node name="OkPopup" type="CanvasLayer" parent="." unique_id=278789223]
-script = ExtResource("24")
 
 [node name="OverlayLayer" type="CanvasLayer" parent="." unique_id=336904373]
 layer = 100

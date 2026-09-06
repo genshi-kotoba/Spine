@@ -64,3 +64,32 @@
 - 裁决⑧ ItemMarker 用对方版（星星→Line2D 描边高光；仅 c3+demo 使用，demo 同步换对方版）。
 - 裁决⑨ DarknessMask 用对方新默认色 Color(0.02,0.03,0.09,0.55)（「用户定案：非全黑」）+ side_mask/intensity API + shader 侧向遮罩分支。
 - 验证：红线 0；c3_level/item_marker_demo/fx_demo/e_hint_demo/darkness_demo/c2/c4/computer_screen 全 0 错误（含 Nonexistent function 检查）。
+
+## 第二轮合并（Spine 2 merge → Spine，2026-09-06 12:35 版）
+
+> 对方新源目录 `Spine 2 merge`。差分基准 = 上次合并源 Spine_to_merge（09:01），我方 c3 侧自一轮合并后零改动（已核验 SAME），可安全直盖。
+
+### 对方增量清单
+
+- **故障字幕升级**：GlitchDialogueBox 加 font_scale / world_anchor（世界锚定，相机跟随）/ persistent（不自动切句）/ 描边渲染；DialogueManager 的 start_dialogue/start_lines 加对应透传参数（向后兼容）。
+- **C3Flow 改版**：intro 三段提示与全部流程悬浮文字从 FloatingWallText 迁到独立 GlitchDialogueBox 实例（layer 26）；「不过」开场即解锁移动，书房出门锁延长至「总之」提示结束；INTRO_BREATH_RATE 2→4；特异点通过后 1s 播底部字幕；第三特异点五句故障文字并行触发；厨房对白后「←」方向提示；OkPopup 彻底移除；E 键判定改 _flow_interactive_dialogue_active。
+- **BreathSystem**：_initial_breathe_locked——首次缺氧前锁空格、倒计时加速，缺氧开始后恢复。
+- **CorridorAssembly**：特异点①换真奖状素材（certificate_1~3.png ×24 随机）；特异点②12 行三角书山（DirAccess 动态加载 assets/corridor/books，空目录走程序化回退）；特异点③静态 Label 删除（改 C3Flow 触发）；自检加 book_mountain 检查。
+- **c3_level.tscn**：删 OkPopup 节点与 IntroFloatingLayer（两个 FloatingWallText 实例）、删 3 个对应 export 赋值。
+
+### 裁决记录
+
+| # | 冲突点 | 裁决 |
+|---|---|---|
+| R1 | DialogueBox 任意键切句 | 双方已各自独立实现（我方另删 Backdrop），我方版为超集，**不动** |
+| R2 | DialogueManager | 用对方新版（font_scale/world_anchor 纯叠加），保留我方 start_lines 注释行 |
+| R3 | FloatingWallText 组件全家（脚本+2场景+demo脚本+文档，对方已废弃删除，新版 c3 零引用） | **跟随对方删除**（用户裁决） |
+| R4 | assets/corridor/books 对方未提供 | 先用程序化回退（对方自带机制），补素材后自动生效，不阻塞 |
+| R5 | OkPopup.gd 文件本体 | 保留在 components 库（c3 场景引用随新版 tscn 删除） |
+
+### 实施清单
+
+- 覆盖：GlitchDialogueBox.gd / DialogueManager.gd / BreathSystem.gd / C3Flow.gd / CorridorAssembly.gd / c3_level.tscn（.gd 均先留 .bak；.uid 保留我方不动）
+- 新增：assets/corridor/certificates/（3 png + .import）
+- 删除：scripts/components/FloatingWallText.gd(+uid)、scripts/scenes/FloatingWallTextDemo.gd(+uid)、scenes/floating_wall_text.tscn、scenes/floating_wall_text_demo.tscn、docs/floating_wall_text_module.md
+- 不动：DialogueBox.gd（R1）、dialogue3.txt（仅换行符差异）、project.godot、GameState.gd 等我方后续改动文件

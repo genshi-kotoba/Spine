@@ -1,6 +1,7 @@
-[gd_scene format=3 uid="uid://8nar38nj0gwg"]
+[gd_scene load_steps=3 format=3 uid="uid://8nar38nj0gwg"]
 
 [ext_resource type="Script" uid="uid://c6yq4y7ih1xb6" path="res://scripts/player/Player.gd" id="1"]
+[ext_resource type="Resource" path="res://scripts/player/default_player_motion.tres" id="2"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(32, 64)
@@ -8,6 +9,7 @@ size = Vector2(32, 64)
 [node name="Player" type="CharacterBody2D" unique_id=1238261288]
 z_index = 5
 script = ExtResource("1")
+motion_profile = ExtResource("2")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2070503681]
 shape = SubResource("1")

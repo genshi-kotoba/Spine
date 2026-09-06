@@ -18,11 +18,11 @@ size = Vector2(3840, 40)
 [sub_resource type="RectangleShape2D" id="wall_side_col"]
 size = Vector2(20, 817)
 
-[sub_resource type="RectangleShape2D" id="item_col"]
-size = Vector2(120, 200)
-
 [sub_resource type="RectangleShape2D" id="curten_col"]
 size = Vector2(1024, 1300)
+
+[sub_resource type="RectangleShape2D" id="item_col"]
+size = Vector2(120, 200)
 
 [node name="C2Floor" unique_id=251335560 instance=ExtResource("1")]
 script = ExtResource("2")
@@ -83,13 +83,13 @@ highlight_enabled = true
 interactable = false
 state_id = "c2_curten"
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Curten"]
-shape = SubResource("curten_col")
-
 [node name="Sprite2D" type="Sprite2D" parent="Items/Curten" index="0" unique_id=845399617]
 position = Vector2(4.000001, 309)
 scale = Vector2(3, 3)
 texture = ExtResource("9")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Items/Curten" index="1" unique_id=1536022619]
+shape = SubResource("curten_col")
 
 [node name="Lego3" type="Area2D" parent="Items" index="2" unique_id=1043009971]
 position = Vector2(900, 946)

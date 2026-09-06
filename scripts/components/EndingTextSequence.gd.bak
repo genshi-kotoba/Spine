@@ -1,7 +1,7 @@
 class_name EndingTextSequence
 extends CanvasLayer
 ## EndingTextSequence — 结尾文字序列组件（docs/c5_floor_constraints.md §5）
-## start(paths) 逐文件播放：逐行亮起（1.0s/行，串行保持）→ 整体保持 3.0s →
+## start(paths) 逐文件播放：逐行亮起（0.5s/行，串行保持）→ 整体保持 3.0s →
 ## 全部行 0.5s 一起淡出 → 下一文件。全部播完发 sequence_finished。
 ## 状态机用 Tween + await，不用 Timer 堆叠；输入锁由调用方负责；不支持跳过。
 
@@ -13,7 +13,7 @@ const FONT_SIZE := 18
 ## 行间距（= 字号的一半）
 const LINE_SPACING := 9
 ## 单行亮起时长（秒）
-const LINE_FADE_SEC := 1.0
+const LINE_FADE_SEC := 0.5
 ## 单文件末行亮起后的整体保持时长（秒）
 const HOLD_SEC := 3.0
 ## 单文件全体淡出时长（秒）

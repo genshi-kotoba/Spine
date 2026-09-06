@@ -13,3 +13,7 @@
 
 ## 回滚要点
 `git checkout <上一提交> -- scenes/start_screen.tscn scripts/scenes/StartScreen.gd`
+
+## 修订记录
+
+- 2026-09-06 v1.1：切到 computer_screen 时加 0.5s 渐亮过场。实现：切场景前在 SceneTree root 挂持久 CanvasLayer(层 128)+全屏黑 ColorRect(mouse_filter=IGNORE)，切场景后 tween modulate.a 1→0 0.5s 并 queue_free。computer_screen 零改动，其他入口不受影响。

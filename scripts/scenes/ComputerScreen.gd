@@ -11,6 +11,7 @@ const WORK_SCENE := preload("res://scenes/work_screen.tscn")
 
 @onready var _mail_icon: MailIcon = $MailIcon
 @onready var _work_icon: WorkIcon = $WorkIcon
+@onready var _fade_white: ColorRect = $FadeInLayer/FadeWhite
 
 ## 当前打开的邮箱弹层实例（空表示未打开）
 var _mailbox: MailboxScreen = null
@@ -23,6 +24,18 @@ func _ready() -> void:
 	_fit_background()
 	_mail_icon.open_mailbox.connect(open_mailbox)
 	_work_icon.open_work.connect(open_work)
+	_play_fade_in()
+
+
+## 进入淡入（docs/c3_end_transition_constraints.md §5）：白罩 alpha 1→0 0.5s 后隐藏。
+## 统一行为：任何入口（start_screen / c2、c3 结局 / 链接序列）进入都播放。
+func _play_fade_in() -> void:
+	if _fade_white == null:
+		return
+	var tween := create_tween()
+	tween.tween_property(_fade_white, "modulate:a", 0.0, 0.5)
+	await tween.finished
+	_fade_white.hide()
 
 
 ## 背景 contain 适配（v1.3）：按图片原比例完整放入窗口，居中，上下余量由 BlackBars 纯黑填充。

@@ -53,6 +53,11 @@ func _recheck() -> void:
 		if not mails.has(4):
 			mails.append(4)
 		target_work = max(target_work, 4)
+	# 条件三：c3 结局白屏转场完成 → mail3 + work3（docs/c3_end_transition_constraints.md §4）
+	if GameState.get_object_state("c3_end") == "1":
+		if not mails.has(3):
+			mails.append(3)
+		target_work = max(target_work, 3)
 	# 有新增才写回（避免重入死循环）
 	var saved: Array[int] = get_unlocked_mails()
 	if mails != saved:

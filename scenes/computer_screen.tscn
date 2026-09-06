@@ -47,3 +47,13 @@ initial_state = "idle"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="WorkIcon" unique_id=285971131]
 position = Vector2(384, -613)
 shape = SubResource("work_shape")
+
+[node name="FadeInLayer" type="CanvasLayer" parent="."]
+layer = 110
+
+[node name="FadeWhite" type="ColorRect" parent="FadeInLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)

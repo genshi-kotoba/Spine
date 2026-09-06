@@ -70,3 +70,13 @@ func _on_mailbox_closed() -> void:
 func _on_work_screen_closed() -> void:
 	_work_screen = null
 	StoryMonitor.unlock_input()
+
+
+## 调试键 R（docs/save_system_refactor_constraints.md 决策 D2/D4）：
+## 直接把 mailbox/work 设为第二状态（mails 1+2、work 版本 2 = 解锁 C3）。
+## 不注册输入映射，keycode 直检；弹层开着（输入锁）时不响应。
+func _unhandled_input(event: InputEvent) -> void:
+	if StoryMonitor.input_locked:
+		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R:
+		MailWorkManager.debug_set_unlock([1, 2], 2)

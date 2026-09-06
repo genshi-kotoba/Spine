@@ -10,11 +10,12 @@ extends CanvasLayer
 ## 弹层已关闭
 signal closed
 
-## 版本 → 目标场景（v4 未定义：按钮禁用，待补充）
+## 版本 → 目标场景（v4 = c5_floor，docs/c5_floor_constraints.md §7）
 const LINK_TARGETS: Dictionary = {
 	1: "res://scenes/c2_floor.tscn",
 	2: "res://scenes/c3_level.tscn",
 	3: "res://scenes/c4_floor.tscn",
+	4: "res://scenes/c5_floor.tscn",
 }
 
 ## 链接文件路径模板（%d = 版本号）
@@ -80,9 +81,9 @@ func _on_work_version_changed() -> void:
 	_update_work_button()
 
 
-## v4（未定义目标）禁用「工作」按钮
+## 无链接目标的版本禁用「工作」按钮（v4 已接入 c5_floor，docs/c5_floor_constraints.md §7）
 func _update_work_button() -> void:
-	_work_button.disabled = MailWorkManager.get_work_version() >= 4
+	_work_button.disabled = not LINK_TARGETS.has(MailWorkManager.get_work_version())
 
 
 ## 「工作」链接序列（防重入；切场景前解锁输入——StoryMonitor 是 Autoload 不随场景销毁）

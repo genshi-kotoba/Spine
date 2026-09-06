@@ -1,0 +1,93 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/floor_template.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/scenes/C5Floor.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/components/EndingTextSequence.gd" id="3"]
+
+[sub_resource type="RectangleShape2D" id="floor_col"]
+size = Vector2(3840, 40)
+
+[sub_resource type="RectangleShape2D" id="ceiling_col"]
+size = Vector2(3840, 40)
+
+[sub_resource type="RectangleShape2D" id="wall_side_col"]
+size = Vector2(20, 817)
+
+[sub_resource type="RectangleShape2D" id="trigger_col"]
+size = Vector2(240, 817)
+
+[node name="C5Floor" instance=ExtResource("1")]
+script = ExtResource("2")
+player_spawn_position = Vector2(320, 956)
+camera_position_offset = Vector2(0, -336.5)
+map_max_x = 3840.0
+camera_smoothing = 0.0
+
+[node name="Background" type="Node2D" parent="." index="1"]
+
+[node name="Rect" type="Polygon2D" parent="Background" index="0"]
+position = Vector2(1920, 619.5)
+color = Color(0.1, 0.1, 0.12, 1)
+polygon = PackedVector2Array(-1920, -640, 1920, -640, 1920, 640, -1920, 640)
+
+[node name="Environment" type="Node2D" parent="." index="2"]
+
+[node name="Floor" type="StaticBody2D" parent="Environment" index="0"]
+position = Vector2(1920, 1008)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Floor" index="0"]
+position = Vector2(5, -133)
+shape = SubResource("floor_col")
+
+[node name="Ceiling" type="StaticBody2D" parent="Environment" index="1"]
+position = Vector2(1920, 231)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/Ceiling" index="0"]
+shape = SubResource("ceiling_col")
+
+[node name="WallLeft" type="StaticBody2D" parent="Environment" index="2"]
+position = Vector2(0, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallLeft" index="0"]
+shape = SubResource("wall_side_col")
+
+[node name="WallRight" type="StaticBody2D" parent="Environment" index="3"]
+position = Vector2(3840, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Environment/WallRight" index="0"]
+shape = SubResource("wall_side_col")
+
+[node name="Triggers" type="Node2D" parent="." index="3"]
+
+[node name="Trigger1" type="Area2D" parent="Triggers" index="0"]
+position = Vector2(960, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Triggers/Trigger1" index="0"]
+shape = SubResource("trigger_col")
+
+[node name="Trigger2" type="Area2D" parent="Triggers" index="1"]
+position = Vector2(1920, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Triggers/Trigger2" index="0"]
+shape = SubResource("trigger_col")
+
+[node name="Trigger3" type="Area2D" parent="Triggers" index="2"]
+position = Vector2(2880, 619.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Triggers/Trigger3" index="0"]
+shape = SubResource("trigger_col")
+
+[node name="EndingLayer" type="CanvasLayer" parent="." index="4"]
+layer = 50
+
+[node name="BlackRect" type="ColorRect" parent="EndingLayer" index="0"]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="EndingTextSequence" type="CanvasLayer" parent="." index="5"]
+layer = 60
+script = ExtResource("3")

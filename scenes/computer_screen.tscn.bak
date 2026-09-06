@@ -35,7 +35,7 @@ object_id = "mail_icon"
 initial_state = "idle"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="MailIcon" unique_id=487564472]
-position = Vector2(440, -320)
+position = Vector2(388, -367)
 shape = SubResource("mail_shape")
 
 [node name="WorkIcon" type="Area2D" parent="." unique_id=195914206]
@@ -45,5 +45,5 @@ object_id = "work_icon"
 initial_state = "idle"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="WorkIcon" unique_id=285971131]
-position = Vector2(440, -565)
+position = Vector2(384, -613)
 shape = SubResource("work_shape")

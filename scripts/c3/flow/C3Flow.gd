@@ -150,6 +150,8 @@ var _hall_door_subtitle_shown: bool = false
 var _end_item_subtitle_shown: bool = false
 var _final_study_dialogue_started: bool = false
 var _corridor_end_hint_shown: bool = false
+## C3 结局转场防重入（docs/c3_end_transition_constraints.md §3.1）
+var _end_transition_done: bool = false
 var _corridor_third_special_text_shown: bool = false
 var _bedroom_arrival_dialogue_shown: bool = false
 var _bedroom_phone_dialogue_started: bool = false
@@ -196,6 +198,7 @@ func _reset_flags() -> void:
 	GameState.set_process_flag(FLAG_BEDROOM_UNLOCKED, false)
 	GameState.set_process_flag(FLAG_BEDROOM_INTERACTIONS_DONE, false)
 	GameState.set_process_flag(FLAG_END_WHITE, false)
+	_end_transition_done = false
 	current_stage = STAGE_STUDY
 	_study_papers_collected = 0
 	_light_triggered = false
@@ -707,10 +710,32 @@ func on_breath_disable() -> void:
 		(_breath as Node).set_enabled(false)
 
 
-## BedroomEndItem white_screen_end_requested → 全屏白屏（ColorRect 节点，无遮罩）。
+## BedroomEndItem white_screen_end_requested → 2s 渐变白 → c3_end 置档 → 切 computer_screen
+## （docs/c3_end_transition_constraints.md §3；防重入整局一次）。
 func on_white_screen_end() -> void:
-	_show_screen_overlay("white")
+	if _end_transition_done:
+		return
+	_end_transition_done = true
+	StoryMonitor.lock_input()
 	GameState.set_process_flag(FLAG_END_WHITE, true)
+	var n := get_node_or_null(white_screen_path) as ColorRect
+	if n == null:
+		push_error("[c3_flow] white_screen 节点缺失，直接完成转场")
+		_finish_end_transition()
+		return
+	n.modulate.a = 0.0
+	n.visible = true
+	var tween := create_tween()
+	tween.tween_property(n, "modulate:a", 1.0, 2.0)
+	await tween.finished
+	_finish_end_transition()
+
+
+## 转场收尾：写 c3_end（触发 MailWorkManager 条件三解锁 mail3/work3）→ 解锁 → 切桌面。
+func _finish_end_transition() -> void:
+	GameState.set_object_state("c3_end", "1")
+	StoryMonitor.unlock_input()
+	get_tree().change_scene_to_file("res://scenes/computer_screen.tscn")
 
 
 ## 黑屏 + 进入卧室 begin()（全屏黑 ColorRect，无遮罩）。
